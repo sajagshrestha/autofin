@@ -124,6 +124,7 @@ export class TransactionRepository extends BaseRepository {
 				transactionDate: transactions.transactionDate,
 				remarks: transactions.remarks,
 				emailId: transactions.emailId,
+				isAiCreated: transactions.isAiCreated,
 				rawEmailContent: transactions.rawEmailContent,
 				aiConfidence: transactions.aiConfidence,
 				aiExtractedData: transactions.aiExtractedData,

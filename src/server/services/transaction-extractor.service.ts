@@ -1,4 +1,4 @@
-import { generateText, Output } from "ai";
+import { generateText, stepCountIs, tool } from "ai";
 import { z } from "zod";
 import { getAIModel } from "@/server/lib/ai";
 import type { DiscordService } from "@/server/services/discord.service";
@@ -51,79 +51,76 @@ function resolveCategoryId(
  * categoryId is accepted as string (not strict enum) so we can tolerate the model
  * returning category name or malformed ID and resolve it in code.
  */
-function createExtractionSchema(_categoryIds: string[]) {
-	// Category selection: either pick existing or create new
-	// Accept both "categoryId" and "id" so model output matches (some models return "id")
-	const categorySchema = z.discriminatedUnion("action", [
-		z
-			.object({
-				action: z.literal("select_existing"),
-				categoryId: z
-					.string()
-					.optional()
-					.describe(
-						"The exact category ID from the available categories list (use the id value, e.g. 3dd91f8e-a7a1-44bc-8051-accc3b29ca76)",
-					),
-				id: z.string().optional(),
-				reason: z
-					.string()
-					.optional()
-					.describe(
-						"Brief explanation of why this category was chosen (optional)",
-					),
-			})
-			.transform((o) => ({
-				action: "select_existing",
-				categoryId: o.categoryId ?? o.id ?? "",
-				reason: o.reason,
-			})),
-		z
-			.object({
-				action: z.literal("create_new"),
-				newCategoryName: z
-					.string()
-					.min(2)
-					.max(50)
-					.optional()
-					.describe(
-						"Name for the new category (2-50 characters, be specific but concise)",
-					),
-				name: z.string().optional(),
-				newCategoryIcon: z
-					.string()
-					.optional()
-					.describe("A single emoji that represents this category"),
-				icon: z.string().optional(),
-				reason: z
-					.string()
-					.optional()
-					.describe(
-						"Brief explanation of why a new category is needed instead of using existing ones (optional)",
-					),
-			})
-			.transform((o) => ({
-				action: "create_new",
-				newCategoryName: (o.newCategoryName ?? o.name ?? "").slice(0, 50) || "",
-				newCategoryIcon: o.newCategoryIcon ?? o.icon ?? "📁",
-				reason: o.reason,
-			})),
-		z
-			.object({
-				action: z.literal("uncategorized"),
-				categoryId: z
-					.string()
-					.optional()
-					.describe(
-						"The ID of the Uncategorized category from the list (use when category cannot be determined)",
-					),
-				id: z.string().optional(),
-			})
-			.transform((o) => ({
-				action: "uncategorized",
-				categoryId: o.categoryId ?? o.id ?? "",
-			})),
-	]);
+/**
+ * Tool-calling models frequently omit the discriminant or pass a bare
+ * category id/name. Accept all of those shapes and normalize centrally.
+ */
+export function normalizeCategoryAction(value: unknown): CategoryAction {
+	if (typeof value === "string") {
+		return { action: "select_existing", categoryId: value };
+	}
+	const candidate = value as {
+		action?: CategoryAction["action"];
+		categoryId?: string;
+		id?: string;
+		newCategoryName?: string;
+		newCategoryIcon?: string;
+	} | null;
 
+	if (!candidate || typeof candidate !== "object") {
+		return { action: "uncategorized", categoryId: "" };
+	}
+
+	if (
+		candidate.action === "select_existing" ||
+		candidate.action === "uncategorized"
+	) {
+		return {
+			action: candidate.action,
+			categoryId: candidate.categoryId ?? candidate.id ?? "",
+		};
+	}
+
+	if (candidate.action === "create_new" || candidate.newCategoryName) {
+		return {
+			action: "create_new",
+			newCategoryName:
+				candidate.newCategoryName ??
+				(candidate as unknown as { name?: string }).name ??
+				"",
+			newCategoryIcon: candidate.newCategoryIcon ?? "📁",
+		};
+	}
+
+	// Action-less object with an id → treat as selecting that category.
+	const id = candidate.categoryId ?? candidate.id;
+	if (id) return { action: "select_existing", categoryId: id };
+
+	return { action: "uncategorized", categoryId: "" };
+}
+
+/**
+ * Tolerant, JSON-Schema-safe category input for the submit tool.
+ * Accepts: bare id/name string · full action object · action-less object.
+ */
+const categoryInput = z.union([
+	z.string(),
+	z.object({
+		action: z
+			.enum(["select_existing", "create_new", "uncategorized"])
+			.optional(),
+		categoryId: z.string().optional(),
+		id: z.string().optional(),
+		newCategoryName: z.string().optional(),
+		name: z.string().optional(),
+		newCategoryIcon: z.string().optional(),
+		icon: z.string().optional(),
+		reason: z.string().optional(),
+	}),
+	z.null(),
+]);
+
+function createExtractionSchema(_categoryIds: string[]) {
 	return z.object({
 		isTransaction: z
 			.boolean()
@@ -162,8 +159,8 @@ function createExtractionSchema(_categoryIds: string[]) {
 					.describe(
 						"Transaction remarks/description extracted from the email. This field often contains detailed merchant information, location, transaction reference numbers, and other details. Extract the complete remarks text as it appears in the email.",
 					),
-				category: categorySchema.describe(
-					"Category selection: either select an existing category by ID, or create a new category if none fit well",
+				category: categoryInput.describe(
+					"Either the exact category id from search_categories (string), or an object {action:'create_new', newCategoryName, newCategoryIcon}. Omit/null when uncategorized.",
 				),
 				confidence: z
 					.number()
@@ -173,6 +170,35 @@ function createExtractionSchema(_categoryIds: string[]) {
 			})
 			.nullable()
 			.describe("Extracted transaction data, null if not a transaction email"),
+	});
+}
+
+const SUBMIT_TOOL_NAME = "submit_extraction";
+const SEARCH_CATEGORIES_TOOL_NAME = "search_categories";
+
+/**
+ * Read-only helper the model can call mid-extraction to find exact category
+ * ids/names from the user's list instead of guessing.
+ */
+function buildSearchCategoriesTool(availableCategories: CategoryInfo[]) {
+	return tool({
+		description:
+			"Search the user's available categories by name (case-insensitive substring) before submitting.",
+		inputSchema: z.object({
+			query: z
+				.string()
+				.describe(
+					'Case-insensitive name substring, e.g. "food" or "transport"',
+				),
+		}),
+		execute: async ({ query }) => {
+			const needle = query.trim().toLowerCase();
+			const matches = availableCategories
+				.filter((category) => category.name.toLowerCase().includes(needle))
+				.slice(0, 10)
+				.map(({ id, name, icon }) => ({ id, name, icon }));
+			return { matches };
+		},
 	});
 }
 
@@ -310,69 +336,126 @@ export class TransactionExtractorService {
 	) {}
 
 	/**
-	 * Extract transaction data from an email using AI
-	 * The AI can select from existing categories or suggest creating a new one
+	 * Extract transaction data from a bank notification email.
 	 *
-	 * @param email - The email content to analyze
-	 * @param availableCategories - List of categories from the database
-	 * @returns Extracted transaction data with selected or new category
+	 * Runs a tool-call loop: the model may search the user's categories via
+	 * search_categories and must finish by calling submit_extraction with the
+	 * complete structured result.
 	 */
 	async extractFromEmail(
 		email: EmailInput,
 		availableCategories: CategoryInfo[],
 	): Promise<TransactionExtractionResult> {
-		const model = getAIModel();
-		const emailContent = this.formatEmailForPrompt(email);
-		const systemPrompt = buildSystemPrompt(availableCategories);
+		return this.runExtraction(
+			this.formatEmailForPrompt(email),
+			availableCategories,
+			"email",
+		);
+	}
 
-		// Create a map for quick category lookup
+	/**
+	 * Extract transaction data from an SMS using AI tool calls.
+	 */
+	async extractFromSms(
+		sms: SmsInput,
+		availableCategories: CategoryInfo[],
+	): Promise<TransactionExtractionResult> {
+		return this.runExtraction(
+			this.formatSmsForPrompt(sms),
+			availableCategories,
+			"sms",
+		);
+	}
+
+	isValidTransaction(result: TransactionExtractionResult): boolean {
+		return (
+			result.isTransaction &&
+			result.transaction !== null &&
+			result.transaction.amount > 0 &&
+			(result.transaction.type === "debit" ||
+				result.transaction.type === "credit")
+		);
+	}
+
+	private async runExtraction(
+		content: string,
+		availableCategories: CategoryInfo[],
+		source: "email" | "sms",
+	): Promise<TransactionExtractionResult> {
 		const categoryMap = new Map(availableCategories.map((c) => [c.id, c]));
-
-		// Find uncategorized as fallback
 		const uncategorized = availableCategories.find(
 			(c) => c.name.toLowerCase() === "uncategorized",
 		);
-
-		// Get category IDs for the schema enum
 		const categoryIds = availableCategories.map((c) => c.id);
 
-		// If no categories available, return not a transaction
 		if (categoryIds.length === 0) {
 			console.warn("No categories available for extraction");
-			return {
-				isTransaction: false,
-				transaction: null,
-			};
+			return { isTransaction: false, transaction: null };
 		}
 
-		try {
-			const schema = createExtractionSchema(categoryIds);
+		const notATransaction = (): TransactionExtractionResult => ({
+			isTransaction: false,
+			transaction: null,
+		});
 
+		try {
 			const result = await generateText({
-				model,
-				output: Output.object({ schema }),
-				system: systemPrompt,
-				prompt: emailContent,
+				model: getAIModel(),
+				system: buildSystemPrompt(availableCategories),
+				prompt: content,
+				tools: {
+					[SEARCH_CATEGORIES_TOOL_NAME]:
+						buildSearchCategoriesTool(availableCategories),
+					[SUBMIT_TOOL_NAME]: tool({
+						description:
+							"Submit the final extraction result. Call this exactly once when you are done analyzing the message.",
+						inputSchema: createExtractionSchema(categoryIds),
+						execute: async (args) => args,
+					}),
+				},
+				stopWhen: stepCountIs(6),
+				// After the result was successfully submitted, no more tool calls
+				// are needed. (Gate on results — a failed validation attempt must
+				// still allow the model to retry.)
+				prepareStep: ({ steps }) =>
+					steps.some((step) =>
+						step.toolResults.some((res) => res.toolName === SUBMIT_TOOL_NAME),
+					)
+						? { toolChoice: "none" as const }
+						: {},
 			});
 
-			const extracted = result.output;
-
+			// NOTE: result.toolCalls only exposes the FINAL step — with a
+			// multi-step loop the submit happens earlier, so scan all steps.
+			// v6 runtime exposes arguments as `input` on tool-call parts.
+			const submitCall = result.steps
+				.flatMap((step) => step.toolCalls)
+				.find((call) => call.toolName === SUBMIT_TOOL_NAME) as
+				| {
+						input?: z.infer<ReturnType<typeof createExtractionSchema>>;
+						args?: z.infer<ReturnType<typeof createExtractionSchema>>;
+				  }
+				| undefined;
+			const extracted = submitCall?.input ?? submitCall?.args;
+			if (!extracted) {
+				console.warn(
+					`[${source}] No successful ${SUBMIT_TOOL_NAME} call.`,
+					result.toolCalls.map((call) => call.toolName),
+				);
+				return notATransaction();
+			}
 			if (!extracted.isTransaction || !extracted.transaction) {
-				return {
-					isTransaction: false,
-					transaction: null,
-				};
+				return notATransaction();
 			}
 
 			const txn = extracted.transaction;
-			const categoryAction = txn.category as CategoryAction;
+			const categoryAction = normalizeCategoryAction(txn.category);
 
 			let categoryId: string | null = null;
 			let categoryName: string | null = null;
 			let newCategory: { name: string; icon: string } | null = null;
 
 			if (categoryAction.action === "select_existing") {
-				// Use existing category (resolve ID/name from model to valid categoryId)
 				const resolvedId = resolveCategoryId(
 					categoryAction.categoryId,
 					categoryMap,
@@ -384,56 +467,39 @@ export class TransactionExtractorService {
 				categoryId = selectedCategory?.id || uncategorized?.id || null;
 				categoryName = selectedCategory?.name || uncategorized?.name || null;
 
-				console.log(
-					`AI selected existing category: ${categoryName} (${categoryId})${categoryAction.reason ? ` - Reason: ${categoryAction.reason}` : ""}`,
-				);
+				if (categoryAction.reason) {
+					console.log(
+						`[${source}] Category "${categoryName}": ${categoryAction.reason}`,
+					);
+				}
 			} else if (categoryAction.action === "uncategorized") {
-				// AI explicitly chose uncategorized (resolve ID/name to valid categoryId)
 				const resolvedId = resolveCategoryId(
 					categoryAction.categoryId,
 					categoryMap,
 					uncategorized,
 				);
-				const selectedCategory = resolvedId
-					? categoryMap.get(resolvedId)
-					: null;
-				categoryId = selectedCategory?.id || uncategorized?.id || null;
+				categoryId = resolvedId || uncategorized?.id || null;
 				categoryName =
-					selectedCategory?.name || uncategorized?.name || "Uncategorized";
-
-				console.log(
-					`AI selected uncategorized category: ${categoryName} (${categoryId})`,
-				);
+					categoryMap.get(categoryId ?? "")?.name ?? "Uncategorized";
 			} else if (categoryAction.action === "create_new") {
 				const name = categoryAction.newCategoryName?.trim();
 				if (!name) {
-					// No new category name – default to Uncategorized
 					categoryId = uncategorized?.id ?? null;
 					categoryName = uncategorized?.name ?? "Uncategorized";
-					console.log(
-						`No new category name – using Uncategorized: ${categoryName} (${categoryId})`,
-					);
 				} else {
 					const existingCategory = findCategoryByName(
 						name,
 						availableCategories,
 					);
-
 					if (existingCategory) {
 						categoryId = existingCategory.id;
 						categoryName = existingCategory.name;
-						console.log(
-							`AI suggested new category "${name}" but matched existing category: ${categoryName} (${categoryId})`,
-						);
 					} else {
 						newCategory = {
 							name,
-							icon: categoryAction.newCategoryIcon,
+							icon: categoryAction.newCategoryIcon || "📁",
 						};
 						categoryName = name;
-						console.log(
-							`AI suggests new category: ${categoryAction.newCategoryIcon} ${name}${categoryAction.reason ? ` - Reason: ${categoryAction.reason}` : ""}`,
-						);
 					}
 				}
 			}
@@ -457,147 +523,8 @@ export class TransactionExtractorService {
 			};
 		} catch (error) {
 			this.loggerService.error("AI extraction failed", error);
-			void this.discordService.notifyExtractorFailed("email", error);
-
-			// Return a safe default on error
-			return {
-				isTransaction: false,
-				transaction: null,
-			};
-		}
-	}
-
-	/**
-	 * Extract transaction data from an SMS using AI
-	 *
-	 * @param sms - The SMS content to analyze
-	 * @param availableCategories - List of categories from the database
-	 * @returns Extracted transaction data with selected or new category
-	 */
-	async extractFromSms(
-		sms: SmsInput,
-		availableCategories: CategoryInfo[],
-	): Promise<TransactionExtractionResult> {
-		const model = getAIModel();
-		const smsContent = this.formatSmsForPrompt(sms);
-		const systemPrompt = buildSystemPrompt(availableCategories);
-
-		// Create a map for quick category lookup
-		const categoryMap = new Map(availableCategories.map((c) => [c.id, c]));
-
-		// Find uncategorized as fallback
-		const uncategorized = availableCategories.find(
-			(c) => c.name.toLowerCase() === "uncategorized",
-		);
-
-		// Get category IDs for the schema enum
-		const categoryIds = availableCategories.map((c) => c.id);
-
-		if (categoryIds.length === 0) {
-			console.warn("No categories available for extraction");
-			return {
-				isTransaction: false,
-				transaction: null,
-			};
-		}
-
-		try {
-			const schema = createExtractionSchema(categoryIds);
-
-			const result = await generateText({
-				model,
-				output: Output.object({ schema }),
-				system: systemPrompt,
-				prompt: smsContent,
-			});
-
-			const extracted = result.output;
-
-			if (!extracted.isTransaction || !extracted.transaction) {
-				return {
-					isTransaction: false,
-					transaction: null,
-				};
-			}
-
-			const txn = extracted.transaction;
-			const categoryAction = txn.category as CategoryAction;
-
-			let categoryId: string | null = null;
-			let categoryName: string | null = null;
-			let newCategory: { name: string; icon: string } | null = null;
-
-			if (categoryAction.action === "select_existing") {
-				const resolvedId = resolveCategoryId(
-					categoryAction.categoryId,
-					categoryMap,
-					uncategorized,
-				);
-				const selectedCategory = resolvedId
-					? categoryMap.get(resolvedId)
-					: null;
-				categoryId = selectedCategory?.id || uncategorized?.id || null;
-				categoryName = selectedCategory?.name || uncategorized?.name || null;
-			} else if (categoryAction.action === "uncategorized") {
-				const resolvedId = resolveCategoryId(
-					categoryAction.categoryId,
-					categoryMap,
-					uncategorized,
-				);
-				const selectedCategory = resolvedId
-					? categoryMap.get(resolvedId)
-					: null;
-				categoryId = selectedCategory?.id || uncategorized?.id || null;
-				categoryName =
-					selectedCategory?.name || uncategorized?.name || "Uncategorized";
-			} else if (categoryAction.action === "create_new") {
-				const name = categoryAction.newCategoryName?.trim();
-				if (!name) {
-					categoryId = uncategorized?.id ?? null;
-					categoryName = uncategorized?.name ?? "Uncategorized";
-				} else {
-					const existingCategory = findCategoryByName(
-						name,
-						availableCategories,
-					);
-
-					if (existingCategory) {
-						categoryId = existingCategory.id;
-						categoryName = existingCategory.name;
-					} else {
-						newCategory = {
-							name,
-							icon: categoryAction.newCategoryIcon,
-						};
-						categoryName = name;
-					}
-				}
-			}
-
-			return {
-				isTransaction: true,
-				transaction: {
-					amount: txn.amount,
-					type: txn.type,
-					merchant: txn.merchant,
-					accountLastFour: txn.accountLastFour,
-					bankName: txn.bankName,
-					date: txn.date,
-					time: txn.time,
-					remarks: txn.remarks,
-					confidence: txn.confidence,
-					categoryId,
-					categoryName,
-					newCategory,
-				},
-			};
-		} catch (error) {
-			this.loggerService.error("AI SMS extraction failed", error);
-			void this.discordService.notifyExtractorFailed("sms", error);
-			return {
-				isTransaction: false,
-				transaction: null,
-			};
+			void this.discordService.notifyExtractorFailed(source, error);
+			return notATransaction();
 		}
 	}
 
@@ -637,19 +564,6 @@ export class TransactionExtractorService {
 		parts.push(email.body);
 
 		return parts.join("\n");
-	}
-
-	/**
-	 * Check if extraction result has valid transaction data
-	 */
-	isValidTransaction(result: TransactionExtractionResult): boolean {
-		return (
-			result.isTransaction &&
-			result.transaction !== null &&
-			result.transaction.amount > 0 &&
-			(result.transaction.type === "debit" ||
-				result.transaction.type === "credit")
-		);
 	}
 }
 

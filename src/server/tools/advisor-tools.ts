@@ -193,5 +193,52 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 				};
 			},
 		},
+
+		{
+			name: "searchCategories",
+			title: "Search categories",
+			description:
+				"Search the user's spending categories by name (case-insensitive substring). Returns ids usable as categoryId in listTransactions. Empty query lists everything.",
+			inputSchema: z.object({
+				query: z
+					.string()
+					.optional()
+					.describe('Case-insensitive name substring, e.g. "food"'),
+				limit: z.number().int().min(1).max(25).default(15),
+			}),
+			execute: async (args, ctx) => {
+				const { query, limit = 15 } = args as {
+					query?: string;
+					limit?: number;
+				};
+				const container = getContainer();
+				const categories = await container.categoryRepo.findAllForUser(
+					ctx.userId,
+				);
+
+				const needle = query?.trim().toLowerCase();
+				const filtered =
+					needle && needle.length > 0
+						? categories.filter((category) =>
+								category.name.toLowerCase().includes(needle),
+							)
+						: categories;
+
+				return {
+					total: filtered.length,
+					categories: filtered.slice(0, limit).map((category) => ({
+						id: category.id,
+						name: category.name,
+						icon: category.icon,
+						kind:
+							category.userId === null
+								? ("default" as const)
+								: category.isAiCreated
+									? ("ai" as const)
+									: ("custom" as const),
+					})),
+				};
+			},
+		},
 	];
 }
