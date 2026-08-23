@@ -10,6 +10,7 @@ import {
 	X,
 } from "lucide-react";
 import { useState } from "react";
+import { useAdvisorChat } from "@/components/ai-chat/advisor-chat-context";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "./Logo";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
 
 export default function Header() {
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const { openChat } = useAdvisorChat();
 	const { user, signOut } = useAuth();
 	const navigate = useNavigate();
 	const routerState = useRouterState();
@@ -154,6 +156,22 @@ export default function Header() {
 
 						<nav className="flex-1 p-4 space-y-1">
 							{NAV_ITEMS.map((item) => {
+								if (item.to === "/chat") {
+									return (
+										<button
+											key={item.to}
+											type="button"
+											onClick={() => {
+												setIsMobileMenuOpen(false);
+												openChat();
+											}}
+											className="flex w-full items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors hover:bg-accent text-foreground"
+										>
+											<item.icon className="h-5 w-5" />
+											<span>{item.label}</span>
+										</button>
+									);
+								}
 								const active = isActive(item.to, item.exact);
 								return (
 									<Link
