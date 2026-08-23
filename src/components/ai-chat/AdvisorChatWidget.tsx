@@ -43,6 +43,7 @@ function ChatMessages() {
 	const { messages, sendMessage, status, stop, error, setMessages } = chat;
 	const busy = status === "submitted" || status === "streaming";
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: re-scroll whenever the stream advances
 	useEffect(() => {
 		const el = scrollRef.current;
 		if (el) el.scrollTop = el.scrollHeight;

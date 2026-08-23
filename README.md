@@ -108,6 +108,18 @@ Server:
 - `GMAIL_PUBSUB_VERIFICATION_TOKEN` — optional shared secret for the webhook
 - `GMAIL_WATCH_RESYNC_INTERVAL` — watch renewal cadence for the Inngest loop
 
+## MCP server
+
+The advisor tools are also exposed as a **stateless MCP server** at
+`POST /api/mcp` (Streamable-HTTP flavor: `initialize`, `tools/list`,
+`tools/call`; notifications answered with 202).
+
+Auth is a per-user deterministic bearer token (`Settings → Connect AI
+assistants` shows the URL, token, and a ready-to-paste client config).
+Rotating `MCP_TOKEN_SECRET` revokes every token. The four tools mirror the
+in-app chat: `getSpendingSummary`, `getSpendingByCategory`,
+`getMonthlyTrend`, `listTransactions`.
+
 ## Gmail pipeline
 
 1. **Settings → Connect**: the app builds a Google authorization URL

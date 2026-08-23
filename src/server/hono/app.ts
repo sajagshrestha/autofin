@@ -10,6 +10,8 @@ import { authRouter } from "@/server/hono/routes/auth";
 import { categoriesRouter } from "@/server/hono/routes/categories";
 import { chatRouter } from "@/server/hono/routes/chat";
 import { gmailRouter } from "@/server/hono/routes/gmail";
+import { integrationsRouter } from "@/server/hono/routes/integrations";
+import { mcpRouter } from "@/server/hono/routes/mcp";
 import { publicInfraRouter } from "@/server/hono/routes/public-infra";
 import { statementsRouter } from "@/server/hono/routes/statements";
 import { transactionsRouter } from "@/server/hono/routes/transactions";
@@ -28,6 +30,7 @@ const api = new Hono()
 	.route("/categories", categoriesRouter)
 	.route("/chat", chatRouter)
 	.route("/statements", statementsRouter)
+	.route("/integrations", integrationsRouter)
 	.route("/gmail", gmailRouter);
 
 export const apiApp = new Hono()
@@ -52,8 +55,9 @@ export const apiApp = new Hono()
 		console.error("Unhandled API error:", err);
 		return c.json({ error: "Internal server error" }, 500);
 	})
-	// Public: health, inngest, pub/sub webhook, gmail oauth callback
+	// Public: health, inngest, pub/sub webhook, gmail oauth callback, MCP server
 	.route("/api", publicInfraRouter)
+	.route("/api/mcp", mcpRouter)
 	// Protected domain API
 	.route("/api", api);
 

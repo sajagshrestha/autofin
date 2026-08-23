@@ -12,7 +12,7 @@ import type { ApiEnv } from "@/server/hono/middleware";
 import { requireUser } from "@/server/hono/middleware";
 import { getAdvisorModel } from "@/server/lib/ai";
 import { getContainer } from "@/server/lib/container";
-import { filterDateToUtc } from "@/server/lib/timezone";
+import { getAdvisorToolDefs } from "@/server/tools/advisor-tools";
 
 const bodySchema = z.object({
 	messages: z
@@ -26,20 +26,12 @@ const bodySchema = z.object({
 		.max(50),
 });
 
-function dayStart(date: string, timezone: string): Date {
-	return filterDateToUtc(`${date}T00:00:00`, timezone);
-}
-
-function dayEnd(date: string, timezone: string): Date {
-	return filterDateToUtc(`${date}T23:59:59.999`, timezone);
-}
-
 /**
  * Streaming financial-advisor chat.
  *
- * The model answers with the user's real data through read-only tools
- * (summary, category breakdown, monthly trend, transaction search) — it is
- * instructed never to invent numbers. Nothing is persisted.
+ * The model answers with the user's real data through the shared read-only
+ * advisor tools — it is instructed never to invent numbers. Nothing is
+ * persisted. The same tools are also exposed via the MCP server.
  */
 export const chatRouter = new Hono<ApiEnv>()
 	.use("*", requireUser)
@@ -51,6 +43,18 @@ export const chatRouter = new Hono<ApiEnv>()
 		const userRecord = await container.userRepo.findById(user.id);
 		const timezone = userRecord?.timezone ?? "Asia/Kathmandu";
 		const today = new Date().toISOString().slice(0, 10);
+
+		const toolContext = { userId: user.id, timezone };
+		const tools = Object.fromEntries(
+			getAdvisorToolDefs().map((def) => [
+				def.name,
+				tool({
+					description: def.description,
+					inputSchema: def.inputSchema,
+					execute: (args) => def.execute(args, toolContext),
+				}),
+			]),
+		);
 
 		const system = `You are AutoFin's personal financial advisor. The user tracks bank transactions (NPR, Nepal) automatically via Gmail and statement imports.
 
@@ -71,148 +75,7 @@ RULES:
 			messages: await convertToModelMessages(
 				messages as unknown as UIMessage[],
 			),
-			tools: {
-				getSpendingSummary: tool({
-					description:
-						"Totals for a period: expenses (debit), income (credit), net, and transaction count. Omit dates for all-time.",
-					inputSchema: z.object({
-						startDate: z
-							.string()
-							.regex(/^\d{4}-\d{2}-\d{2}$/)
-							.optional()
-							.describe("Range start, YYYY-MM-DD (inclusive)"),
-						endDate: z
-							.string()
-							.regex(/^\d{4}-\d{2}-\d{2}$/)
-							.optional()
-							.describe("Range end, YYYY-MM-DD (inclusive)"),
-					}),
-					execute: async ({ startDate, endDate }) => {
-						const summary = await container.transactionRepo.getSummaryForUser(
-							user.id,
-							startDate ? dayStart(startDate, timezone) : undefined,
-							endDate ? dayEnd(endDate, timezone) : undefined,
-						);
-						return {
-							...summary,
-							net: summary.totalCredit - summary.totalDebit,
-							currency: "NPR",
-						};
-					},
-				}),
-
-				getSpendingByCategory: tool({
-					description:
-						"Spending (debits) grouped by category, largest first, for a period. Omit dates for all-time.",
-					inputSchema: z.object({
-						startDate: z
-							.string()
-							.regex(/^\d{4}-\d{2}-\d{2}$/)
-							.optional(),
-						endDate: z
-							.string()
-							.regex(/^\d{4}-\d{2}-\d{2}$/)
-							.optional(),
-						limit: z.number().int().min(1).max(20).default(10),
-					}),
-					execute: async ({ startDate, endDate, limit }) => {
-						const rows = await container.transactionRepo.getSpendingByCategory(
-							user.id,
-							startDate ? dayStart(startDate, timezone) : undefined,
-							endDate ? dayEnd(endDate, timezone) : undefined,
-						);
-						const total = rows.reduce((sum, row) => sum + row.total, 0);
-						return {
-							currency: "NPR",
-							total,
-							categories: rows.slice(0, limit),
-						};
-					},
-				}),
-
-				getMonthlyTrend: tool({
-					description:
-						"Monthly income vs expenses for the trailing N months (default 6, max 12), oldest first. Use for trends and month-over-month comparisons.",
-					inputSchema: z.object({
-						months: z.number().int().min(1).max(12).default(6),
-					}),
-					execute: async ({ months }) => {
-						const trend = await container.transactionRepo.getMonthlyTrend(
-							user.id,
-							months,
-						);
-						return { currency: "NPR", months: trend };
-					},
-				}),
-
-				listTransactions: tool({
-					description:
-						"Search the user's transactions, newest first. Filter by category, type, dates, or a merchant/remarks text match.",
-					inputSchema: z.object({
-						limit: z.number().int().min(1).max(25).default(10),
-						categoryId: z.string().optional(),
-						type: z.enum(["debit", "credit"]).optional(),
-						startDate: z
-							.string()
-							.regex(/^\d{4}-\d{2}-\d{2}$/)
-							.optional(),
-						endDate: z
-							.string()
-							.regex(/^\d{4}-\d{2}-\d{2}$/)
-							.optional(),
-						merchantSearch: z
-							.string()
-							.optional()
-							.describe(
-								"Case-insensitive substring to match against merchant or remarks",
-							),
-					}),
-					execute: async ({
-						limit,
-						categoryId,
-						type,
-						startDate,
-						endDate,
-						merchantSearch,
-					}) => {
-						const rows = await container.transactionRepo.findAllForUser(
-							user.id,
-							{
-								categoryId,
-								type,
-								startDate: startDate
-									? dayStart(startDate, timezone)
-									: undefined,
-								endDate: endDate ? dayEnd(endDate, timezone) : undefined,
-							},
-							50,
-							0,
-						);
-
-						const needle = merchantSearch?.trim().toLowerCase();
-						const filtered = needle
-							? rows.filter(
-									(row) =>
-										row.merchant?.toLowerCase().includes(needle) ||
-										row.remarks?.toLowerCase().includes(needle),
-								)
-							: rows;
-
-						return {
-							currency: "NPR",
-							matched: filtered.length,
-							transactions: filtered.slice(0, limit).map((row) => ({
-								date: row.transactionDate?.toISOString() ?? null,
-								type: row.type,
-								amount: row.amount,
-								merchant: row.merchant,
-								category: row.category?.name ?? "Uncategorized",
-								remarks: row.remarks,
-							})),
-						};
-					},
-				}),
-			},
+			tools,
 			stopWhen: stepCountIs(8),
 		});
 
