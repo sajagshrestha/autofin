@@ -6,6 +6,7 @@ import {
 	LogOut,
 	Menu,
 	Settings,
+	Wallet,
 	X,
 } from "lucide-react";
 import { useState } from "react";
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
 		label: "Categories",
 		exact: false,
 	},
+	{ to: "/loans", icon: Wallet, label: "Loans", exact: true },
 	{ to: "/settings", icon: Settings, label: "Settings", exact: false },
 ];
 
