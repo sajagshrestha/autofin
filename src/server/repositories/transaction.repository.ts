@@ -20,6 +20,22 @@ export interface TransactionWithCategory extends Transaction {
 	category: { id: string; name: string; icon: string | null } | null;
 }
 
+export interface DuplicateCandidate {
+	type: "debit" | "credit";
+	/** Exact numeric amount */
+	amount: number;
+	/** Rows without a parsable date never match */
+	transactionDate: Date | null;
+}
+
+export interface DuplicateMatch {
+	id: string;
+	amount: string;
+	type: string;
+	transactionDate: Date | null;
+	merchant: string | null;
+}
+
 export class TransactionRepository extends BaseRepository {
 	/**
 	 * Find all transactions for a user with optional filters
@@ -344,5 +360,64 @@ export class TransactionRepository extends BaseRepository {
 			income: Number.parseFloat(row.income || "0"),
 			expenses: Number.parseFloat(row.expenses || "0"),
 		}));
+	}
+	/**
+	 * Detect likely duplicates for the given candidates: same user, same type,
+	 * amount within a cent, and transaction date within `windowHours`
+	 * (default 24h — covers timezone/day-boundary differences between
+	 * statement dates and bank alert timestamps).
+	 *
+	 * Returns one entry per candidate (null = no duplicate), index-aligned.
+	 */
+	async findPotentialDuplicates(
+		userId: string,
+		candidates: DuplicateCandidate[],
+		options?: { windowHours?: number },
+	): Promise<Array<DuplicateMatch | null>> {
+		const windowMs = (options?.windowHours ?? 24) * 60 * 60 * 1000;
+		const none = (): Array<DuplicateMatch | null> => candidates.map(() => null);
+
+		const dated = candidates.filter(
+			(c): c is DuplicateCandidate & { transactionDate: Date } =>
+				c.transactionDate !== null &&
+				Number.isFinite(c.transactionDate.getTime()),
+		);
+		if (dated.length === 0) return none();
+
+		const times = dated.map((c) => c.transactionDate.getTime());
+		const rangeStart = new Date(Math.min(...times) - windowMs);
+		const rangeEnd = new Date(Math.max(...times) + windowMs);
+
+		const rows = await this.db
+			.select({
+				id: transactions.id,
+				amount: transactions.amount,
+				type: transactions.type,
+				transactionDate: transactions.transactionDate,
+				merchant: transactions.merchant,
+			})
+			.from(transactions)
+			.where(
+				and(
+					eq(transactions.userId, userId),
+					gte(transactions.transactionDate, rangeStart),
+					lte(transactions.transactionDate, rangeEnd),
+				),
+			);
+
+		return candidates.map((candidate) => {
+			const candidateTime = candidate.transactionDate?.getTime();
+			if (candidateTime === undefined || !Number.isFinite(candidateTime)) {
+				return null;
+			}
+			const match = rows.find(
+				(row) =>
+					row.type === candidate.type &&
+					Math.abs(Number.parseFloat(row.amount) - candidate.amount) < 0.005 &&
+					row.transactionDate !== null &&
+					Math.abs(row.transactionDate.getTime() - candidateTime) <= windowMs,
+			);
+			return match ?? null;
+		});
 	}
 }

@@ -985,8 +985,13 @@ function TransactionsPage() {
 					onOpenChange={setSmsDialogOpen}
 					onSubmit={(body) => {
 						createFromSmsMutation.mutate(body, {
-							onSuccess: () => {
+							onSuccess: (data) => {
 								toast.success("Transaction created from SMS");
+								if (data?.duplicateOf) {
+									toast.warning("Possible duplicate", {
+										description: `Matches an existing ${data.duplicateOf.amount} NPR transaction from ${data.duplicateOf.transactionDate ? new Date(data.duplicateOf.transactionDate).toLocaleDateString() : "an unknown date"}.`,
+									});
+								}
 								setSmsDialogOpen(false);
 							},
 							onError: (error) => {
@@ -1008,8 +1013,13 @@ function TransactionsPage() {
 					categories={categories}
 					onSubmit={(body) => {
 						createMutation.mutate(body, {
-							onSuccess: () => {
+							onSuccess: (data) => {
 								toast.success("Transaction created");
+								if (data?.duplicateOf) {
+									toast.warning("Possible duplicate", {
+										description: `Matches an existing ${data.duplicateOf.amount} NPR transaction from ${data.duplicateOf.transactionDate ? new Date(data.duplicateOf.transactionDate).toLocaleDateString() : "an unknown date"}.`,
+									});
+								}
 								setManualDialogOpen(false);
 							},
 							onError: (error) => {

@@ -514,6 +514,33 @@ export class GmailService extends BaseService {
 								}
 							}
 
+							// Semantic duplicate guard: skip if the same amount was
+							// already recorded within 24h of this transaction's date
+							// (e.g. previously imported via a bank statement).
+							if (transactionDate) {
+								try {
+									const [dup] =
+										await this.transactionRepo.findPotentialDuplicates(userId, [
+											{
+												type: txn.type,
+												amount: txn.amount,
+												transactionDate,
+											},
+										]);
+									if (dup) {
+										console.log(
+											`Skipping duplicate transaction for message ${messageId}: matches existing ${dup.id}`,
+										);
+										continue;
+									}
+								} catch (dupError) {
+									console.warn(
+										"Duplicate check failed; proceeding with save:",
+										dupError,
+									);
+								}
+							}
+
 							try {
 								const created = await this.transactionRepo.create({
 									id: crypto.randomUUID(),

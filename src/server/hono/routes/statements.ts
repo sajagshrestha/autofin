@@ -3,6 +3,8 @@ import { HTTPException } from "hono/http-exception";
 import type { ApiEnv } from "@/server/hono/middleware";
 import { requireUser } from "@/server/hono/middleware";
 import { getContainer } from "@/server/lib/container";
+import { localToUtc } from "@/server/lib/timezone";
+import type { DuplicateMatch } from "@/server/repositories/transaction.repository";
 import type { StatementInput } from "@/server/services/statement-extractor.service";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -79,10 +81,45 @@ export const statementsRouter = new Hono<ApiEnv>()
 			mediaType,
 		};
 
-		return c.json(
-			await container.statementExtractor.extractFromStatement(
-				input,
-				categoryInfo,
-			),
+		const result = await container.statementExtractor.extractFromStatement(
+			input,
+			categoryInfo,
 		);
+
+		// Duplicate prevention: flag rows matching an existing transaction
+		// (same type + amount within a cent, date within 24h) so the UI can
+		// pre-mark them for exclusion before import.
+		const userRecord = await container.userRepo.findById(user.id);
+		const timezone = userRecord?.timezone ?? "Asia/Kathmandu";
+
+		const candidates = result.transactions.map((row) => ({
+			type: row.type,
+			amount: row.amount,
+			transactionDate: row.date
+				? localToUtc(row.date, row.time, timezone)
+				: null,
+		}));
+		const matches = await container.transactionRepo.findPotentialDuplicates(
+			user.id,
+			candidates,
+		);
+
+		const serialize = (match: DuplicateMatch | null) =>
+			match
+				? {
+						id: match.id,
+						amount: match.amount,
+						type: match.type,
+						transactionDate: match.transactionDate?.toISOString() ?? null,
+						merchant: match.merchant,
+					}
+				: null;
+
+		return c.json({
+			...result,
+			transactions: result.transactions.map((row, index) => ({
+				...row,
+				duplicateOf: serialize(matches[index]),
+			})),
+		});
 	});

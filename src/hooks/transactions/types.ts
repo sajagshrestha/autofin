@@ -30,6 +30,15 @@ export interface Transaction {
 
 export type TransactionType = "debit" | "credit";
 
+/** Reference to an existing transaction that looks like a duplicate. */
+export interface DuplicateRef {
+	id: string;
+	amount: string;
+	type: string;
+	transactionDate: string | null;
+	merchant: string | null;
+}
+
 /** Query filters accepted by GET /api/transactions. */
 export interface ListTransactionsFilters {
 	categoryId?: string;

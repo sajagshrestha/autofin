@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useGetAllCategories } from "@/hooks/categories/queries";
 import type { Category } from "@/hooks/categories/types";
 import {
+	type DuplicateRef,
 	type StatementExtractionDto,
 	useBulkCreateTransactions,
 	useExtractStatement,
@@ -53,6 +54,8 @@ const ACCEPTED_TYPES = [
 interface ImportRow {
 	id: string;
 	include: boolean;
+	/** Set when this row matches an existing transaction (same amount ±24h). */
+	duplicateOf?: DuplicateRef | null;
 	/** datetime-local input value: "YYYY-MM-DDTHH:mm" */
 	date: string;
 	type: "debit" | "credit";
@@ -86,7 +89,8 @@ function rowsFromExtraction(
 
 		return {
 			id: `row-${index}-${Date.now()}`,
-			include: true,
+			include: !txn.duplicateOf,
+			duplicateOf: txn.duplicateOf ?? null,
 			date: toLocalInputValue(txn.date, txn.time),
 			type: txn.type,
 			merchant: txn.merchant ?? "",
@@ -212,8 +216,10 @@ function ImportStatementPage() {
 			return;
 		}
 
+		const hasFlaggedIncluded = includedRows.some((row) => row.duplicateOf);
 		importMutation.mutate(
 			{
+				allowDuplicates: hasFlaggedIncluded || undefined,
 				transactions: includedRows.map((row) => ({
 					amount: Number.parseFloat(row.amount),
 					type: row.type,
@@ -388,6 +394,14 @@ function ImportStatementPage() {
 								<Badge className="bg-green-600 hover:bg-green-700">
 									Credits {formatCurrency(totals.credit)}
 								</Badge>
+								{includedRows.some((row) => row.duplicateOf) && (
+									<Badge
+										variant="outline"
+										className="border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+									>
+										Includes possible duplicates
+									</Badge>
+								)}
 							</div>
 							<div className="flex items-center gap-2">
 								<Button
@@ -511,6 +525,15 @@ function ImportStatementPage() {
 														}
 														className="h-8 w-[160px]"
 													/>
+													{row.duplicateOf && (
+														<Badge
+															variant="outline"
+															className="mt-1 border-amber-500/50 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400"
+															title={`Possible duplicate of an existing transaction (${row.duplicateOf.merchant ?? "unknown"}, ${row.duplicateOf.amount} NPR)`}
+														>
+															Duplicate?
+														</Badge>
+													)}
 												</td>
 												<td className="px-2 py-1.5">
 													<Select

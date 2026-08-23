@@ -7,6 +7,7 @@ import { requireUser } from "@/server/hono/middleware";
 import { getContainer } from "@/server/lib/container";
 import { toTransactionDto } from "@/server/lib/dto";
 import { filterDateToUtc, localToUtc } from "@/server/lib/timezone";
+import type { DuplicateMatch } from "@/server/repositories/transaction.repository";
 
 const transactionTypeSchema = z.enum(["debit", "credit"]);
 
@@ -68,10 +69,45 @@ const bulkImportSchema = z.object({
 		)
 		.min(1)
 		.max(200),
+	allowDuplicates: z.boolean().optional(),
 });
 
 function notFound(message: string): HTTPException {
 	return new HTTPException(404, { message });
+}
+
+function serializeDuplicate(match: DuplicateMatch) {
+	return {
+		id: match.id,
+		amount: match.amount,
+		type: match.type,
+		transactionDate: match.transactionDate?.toISOString() ?? null,
+		merchant: match.merchant,
+	};
+}
+
+/** Non-blocking duplicate check for a single candidate row. */
+async function checkDuplicate(
+	userId: string,
+	candidate: {
+		type: "debit" | "credit";
+		amount: number;
+		transactionDate: Date | null;
+	},
+): Promise<DuplicateMatch | null> {
+	if (!candidate.transactionDate) return null;
+	const container = getContainer();
+	const [match] = await container.transactionRepo.findPotentialDuplicates(
+		userId,
+		[
+			{
+				type: candidate.type,
+				amount: candidate.amount,
+				transactionDate: candidate.transactionDate,
+			},
+		],
+	);
+	return match;
 }
 
 /**
@@ -170,6 +206,12 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			? filterDateToUtc(body.transactionDate, userTimezone)
 			: new Date();
 
+		const duplicateMatch = await checkDuplicate(user.id, {
+			type: body.type,
+			amount: body.amount,
+			transactionDate,
+		});
+
 		const created = await container.transactionRepo.create({
 			id: crypto.randomUUID(),
 			userId: user.id,
@@ -202,7 +244,13 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			transactionDate: withCategory.transactionDate?.toISOString() ?? null,
 		});
 
-		return c.json({ transaction: toTransactionDto(withCategory) }, 201);
+		return c.json(
+			{
+				transaction: toTransactionDto(withCategory),
+				duplicateOf: duplicateMatch ? serializeDuplicate(duplicateMatch) : null,
+			},
+			201,
+		);
 	})
 
 	.post("/sms", zv("json", smsSchema), async (c) => {
@@ -277,6 +325,12 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			}
 		}
 
+		const duplicateMatch = await checkDuplicate(user.id, {
+			type: txn.type,
+			amount: txn.amount,
+			transactionDate,
+		});
+
 		const created = await container.transactionRepo.create({
 			id: crypto.randomUUID(),
 			userId: user.id,
@@ -313,7 +367,13 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			transactionDate: withCategory.transactionDate?.toISOString() ?? null,
 		});
 
-		return c.json({ transaction: toTransactionDto(withCategory) }, 201);
+		return c.json(
+			{
+				transaction: toTransactionDto(withCategory),
+				duplicateOf: duplicateMatch ? serializeDuplicate(duplicateMatch) : null,
+			},
+			201,
+		);
 	})
 
 	.patch("/:id", zv("json", updateSchema), async (c) => {
@@ -356,6 +416,30 @@ export const transactionsRouter = new Hono<ApiEnv>()
 		const user = c.get("user");
 		const body = c.req.valid("json");
 		const container = getContainer();
+
+		// Duplicate prevention: same type + amount (±cent) within 24h of an
+		// existing transaction is treated as a duplicate unless the caller
+		// explicitly overrides after review.
+		if (!body.allowDuplicates) {
+			const candidates = body.transactions
+				.filter((row) => row.transactionDate)
+				.map((row) => ({
+					type: row.type,
+					amount: row.amount,
+					transactionDate: new Date(row.transactionDate as string),
+				}));
+			const matches = await container.transactionRepo.findPotentialDuplicates(
+				user.id,
+				candidates,
+			);
+			const dupCount = matches.filter(Boolean).length;
+
+			if (dupCount > 0) {
+				throw new HTTPException(409, {
+					message: `${dupCount} duplicate transaction${dupCount !== 1 ? "s" : ""} detected (same amount within 24h of an existing one). Review them in the import preview or retry with allowDuplicates.`,
+				});
+			}
+		}
 
 		// Only allow assigning categories the user can see (predefined + own).
 		const visibleCategories = await container.categoryRepo.findAllForUser(

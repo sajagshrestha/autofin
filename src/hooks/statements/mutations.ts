@@ -1,11 +1,26 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TRANSACTIONS_QUERY_KEYS } from "@/hooks/transactions/queries";
-import type { Transaction } from "@/hooks/transactions/types";
+import type { DuplicateRef, Transaction } from "@/hooks/transactions/types";
 import { rpc, unwrap } from "@/lib/api-client";
 import type { StatementExtractionResult } from "@/server/services/statement-extractor.service";
 
-/** Result of extracting a statement — rows are plain/serializable. */
-export type StatementExtractionDto = StatementExtractionResult;
+/** Result of extracting a statement — rows are annotated with duplicate hits. */
+export type StatementExtractionDto = Omit<
+	StatementExtractionResult,
+	"transactions"
+> & {
+	transactions: Array<
+		StatementExtractionResult["transactions"][number] & {
+			duplicateOf?: DuplicateRef | null;
+		}
+	>;
+};
+
+export interface BulkImportInput {
+	transactions: BulkImportRowInput[];
+	/** Set when the user explicitly kept rows flagged as duplicates. */
+	allowDuplicates?: boolean;
+}
 
 export interface BulkImportRowInput {
 	amount: number;
@@ -43,7 +58,7 @@ export function useExtractStatement() {
 export function useBulkCreateTransactions() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async (input: { transactions: BulkImportRowInput[] }) => {
+		mutationFn: async (input: BulkImportInput) => {
 			const res = await rpc.api.transactions["bulk-import"].$post({
 				json: input,
 			});

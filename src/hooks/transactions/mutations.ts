@@ -3,6 +3,7 @@ import { rpc, unwrap } from "@/lib/api-client";
 import { TRANSACTIONS_QUERY_KEYS } from "./queries";
 import type {
 	CreateTransactionBody,
+	DuplicateRef,
 	Transaction,
 	UpdateTransactionBody,
 } from "./types";
@@ -17,7 +18,10 @@ export function useCreateTransaction() {
 			const res = await rpc.api.transactions.$post({
 				json: input,
 			});
-			return unwrap<{ transaction: Transaction }>(res);
+			return unwrap<{
+				transaction: Transaction;
+				duplicateOf?: DuplicateRef | null;
+			}>(res);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEYS.root });
@@ -34,7 +38,10 @@ export function useCreateTransactionFromSms() {
 	return useMutation({
 		mutationFn: async (input: { smsBody: string; sender?: string }) => {
 			const res = await rpc.api.transactions.sms.$post({ json: input });
-			return unwrap<{ transaction: Transaction }>(res);
+			return unwrap<{
+				transaction: Transaction;
+				duplicateOf?: DuplicateRef | null;
+			}>(res);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEYS.root });
