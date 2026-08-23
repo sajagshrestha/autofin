@@ -1,11 +1,22 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { createRootRoute, HeadContent, Outlet } from "@tanstack/react-router";
+import {
+	createRootRoute,
+	HeadContent,
+	Outlet,
+	Scripts,
+} from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { env } from "@/env";
 import { queryClient } from "@/lib/query-client";
 import appStyles from "./__root.css?url";
+
+/**
+ * Runs before first paint so the correct theme class is on <html> from the
+ * very first frame — no flash of the wrong theme during SSR hydration.
+ */
+const themeInitScript = `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var e=document.documentElement;e.classList.toggle("dark",d);e.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
 
 export const Route = createRootRoute({
 	head: () => ({
@@ -25,17 +36,20 @@ export const Route = createRootRoute({
 			},
 		],
 		links: [{ rel: "stylesheet", href: appStyles }],
+		scripts: [{ children: themeInitScript }],
 	}),
 	component: RootComponent,
 });
 
 function RootComponent() {
 	return (
-		<html lang="en">
+		// suppressHydrationWarning: the theme script mutates <html>'s class and
+		// style before React hydrates — that difference is intentional.
+		<html lang="en" suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>
-			<body>
+			<body className="antialiased">
 				<ThemeProvider>
 					<AuthProvider>
 						<QueryClientProvider client={queryClient}>
@@ -44,6 +58,7 @@ function RootComponent() {
 						<Toaster />
 					</AuthProvider>
 				</ThemeProvider>
+				<Scripts />
 			</body>
 		</html>
 	);

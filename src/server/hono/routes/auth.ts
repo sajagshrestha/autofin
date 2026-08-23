@@ -1,8 +1,20 @@
 import { zValidator as zv } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import { ensureAppUser } from "@/server/auth/session";
+import { ensureAppUser, type SessionUser } from "@/server/auth/session";
 import { getSupabaseServerClient } from "@/server/auth/supabase.server";
+
+/**
+ * Best-effort app-user sync. Auth must never fail because the primary
+ * database is unreachable (e.g. paused project / stale DATABASE_URL).
+ */
+async function syncAppUser(user: SessionUser): Promise<void> {
+	try {
+		await ensureAppUser(user);
+	} catch (error) {
+		console.warn("ensureAppUser failed (auth continues):", error);
+	}
+}
 
 const credentialsSchema = z.object({
 	email: z.string().email(),
@@ -26,7 +38,7 @@ export const authRouter = new Hono()
 		if (error) return c.json({ error: error.message });
 
 		if (result.user) {
-			await ensureAppUser({
+			await syncAppUser({
 				id: result.user.id,
 				email: result.user.email ?? "",
 			});
@@ -46,7 +58,7 @@ export const authRouter = new Hono()
 		if (error) return c.json({ error: error.message });
 
 		if (result.session?.user) {
-			await ensureAppUser({
+			await syncAppUser({
 				id: result.session.user.id,
 				email: result.session.user.email ?? "",
 			});
@@ -80,6 +92,6 @@ export const authRouter = new Hono()
 			return c.json({ error: "Not authenticated" }, 401);
 		}
 
-		await ensureAppUser({ id: user.id, email: user.email ?? "" });
+		await syncAppUser({ id: user.id, email: user.email ?? "" });
 		return c.json({ error: null });
 	});

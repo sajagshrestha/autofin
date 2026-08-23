@@ -22,8 +22,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 	const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("light");
 
 	useEffect(() => {
-		const root = window.document.documentElement;
-
 		const getSystemTheme = (): "dark" | "light" => {
 			return window.matchMedia("(prefers-color-scheme: dark)").matches
 				? "dark"
@@ -34,11 +32,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 			const effectiveTheme = theme === "system" ? getSystemTheme() : theme;
 			setResolvedTheme(effectiveTheme);
 
-			if (effectiveTheme === "dark") {
-				root.classList.add("dark");
-			} else {
-				root.classList.remove("dark");
-			}
+			const root = window.document.documentElement;
+			root.classList.toggle("dark", effectiveTheme === "dark");
+			// Keep native controls (inputs, scrollbars) in sync with the theme.
+			root.style.colorScheme = effectiveTheme;
 		};
 
 		applyTheme();

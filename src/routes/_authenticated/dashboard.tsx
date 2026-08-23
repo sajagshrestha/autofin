@@ -440,7 +440,9 @@ function AnalyticsDashboard() {
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Total Expenses
 									</CardTitle>
-									<ArrowDownRight className="h-4 w-4 text-red-500" />
+									<div className="rounded-full bg-red-500/10 p-1.5">
+										<ArrowDownRight className="h-4 w-4 text-red-500" />
+									</div>
 								</CardHeader>
 								<CardContent>
 									<div className="text-2xl font-bold text-red-600">
@@ -457,7 +459,9 @@ function AnalyticsDashboard() {
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Total Income
 									</CardTitle>
-									<ArrowUpRight className="h-4 w-4 text-green-500" />
+									<div className="rounded-full bg-green-500/10 p-1.5">
+										<ArrowUpRight className="h-4 w-4 text-green-500" />
+									</div>
 								</CardHeader>
 								<CardContent>
 									<div className="text-2xl font-bold text-green-500">
@@ -474,9 +478,11 @@ function AnalyticsDashboard() {
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Savings
 									</CardTitle>
-									<PiggyBank
-										className={`h-4 w-4 ${stats.savings >= 0 ? "text-emerald-500" : "text-red-600"}`}
-									/>
+									<div className="rounded-full bg-emerald-500/10 p-1.5">
+										<PiggyBank
+											className={`h-4 w-4 ${stats.savings >= 0 ? "text-emerald-500" : "text-red-600"}`}
+										/>
+									</div>
 								</CardHeader>
 								<CardContent>
 									<div
@@ -495,7 +501,9 @@ function AnalyticsDashboard() {
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Transactions
 									</CardTitle>
-									<CreditCard className="h-4 w-4 text-blue-500" />
+									<div className="rounded-full bg-blue-500/10 p-1.5">
+										<CreditCard className="h-4 w-4 text-blue-500" />
+									</div>
 								</CardHeader>
 								<CardContent>
 									<div className="text-2xl font-bold">

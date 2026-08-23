@@ -23,10 +23,10 @@ export const Route = createFileRoute("/_authenticated")({
 		</div>
 	),
 	component: () => (
-		<div className="flex min-h-screen">
+		<div className="flex min-h-screen bg-gradient-to-b from-muted/40 via-background to-background">
 			<Header />
 			<main className="flex-1 min-w-0 pt-16 sm:pt-0 md:ml-64 lg:ml-72 pb-16 md:pb-0 overflow-auto">
-				<div className="p-4 md:p-8">
+				<div className="p-4 md:p-8 max-w-[1600px] mx-auto">
 					<Outlet />
 				</div>
 			</main>

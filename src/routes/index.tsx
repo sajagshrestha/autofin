@@ -106,12 +106,15 @@ function LandingPage() {
 
 			{/* Hero */}
 			<section className="relative overflow-hidden">
-				<div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_-20%,var(--color-primary)/0.08,transparent)]" />
+				<div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_-20%,var(--color-primary)/0.12,transparent)]" />
+				<div className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 				<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 text-center">
 					<h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
 						Take Control of
 						<br />
-						<span className="text-primary">Your Finances</span>
+						<span className="bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
+							Your Finances
+						</span>
 					</h1>
 					<p className="mx-auto mt-6 max-w-2xl text-lg sm:text-xl text-muted-foreground leading-relaxed">
 						Connect your Gmail to automatically track transactions, manage
@@ -164,7 +167,7 @@ function LandingPage() {
 						{FEATURES.map((feature) => (
 							<Card
 								key={feature.title}
-								className="group relative overflow-hidden border border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+								className="group relative overflow-hidden border border-border/70 shadow-xs hover:shadow-lg hover:border-primary/30 transition-all duration-300"
 							>
 								<CardContent className="p-8">
 									<div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">

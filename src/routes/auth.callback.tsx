@@ -29,7 +29,7 @@ function AuthCallbackPage() {
 		if (user) {
 			rpc.api.auth["ensure-user"]
 				.$post()
-				.catch((error) => {
+				.catch((error: unknown) => {
 					console.error("Failed to sync user record:", error);
 				})
 				.finally(() => {

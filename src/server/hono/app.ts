@@ -1,6 +1,11 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
-import { requestLogger, sameOriginGuard } from "@/server/hono/middleware";
+import {
+	isTrustedOrigin,
+	requestLogger,
+	sameOriginGuard,
+} from "@/server/hono/middleware";
 import { authRouter } from "@/server/hono/routes/auth";
 import { categoriesRouter } from "@/server/hono/routes/categories";
 import { gmailRouter } from "@/server/hono/routes/gmail";
@@ -14,7 +19,7 @@ import { transactionsRouter } from "@/server/hono/routes/transactions";
  *
  * The chain order matters twice over:
  *  1. public infra routes are mounted before protected domain routers;
- *  2. `typeof api` is what the browser imports for the typed RPC client —
+ *  2. `typeof apiApp` is what the browser imports for the typed RPC client —
  *     every `.route()` link must stay in this chain or the client loses it.
  */
 const api = new Hono()
@@ -27,6 +32,18 @@ const api = new Hono()
 
 export const apiApp = new Hono()
 	.use("*", requestLogger)
+	// CORS: reflect trusted origins (own host, loopback dev servers, or
+	// EXTRA_ALLOWED_ORIGINS) so preflights and credentialed calls succeed.
+	.use(
+		"*",
+		cors({
+			origin: (origin, c) => (isTrustedOrigin(origin, c) ? origin : ""),
+			credentials: true,
+			allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+			allowHeaders: ["content-type", "authorization", "x-verification-token"],
+		}),
+	)
+	// CSRF defense-in-depth for mutating requests (trusted origins only).
 	.use("*", sameOriginGuard)
 	.onError((err, c) => {
 		if (err instanceof HTTPException) {
