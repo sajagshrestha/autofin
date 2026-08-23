@@ -81,9 +81,13 @@ export const statementsRouter = new Hono<ApiEnv>()
 			mediaType,
 		};
 
+		const preferences = await container.userPreferenceRepo.findByUserId(
+			user.id,
+		);
 		const result = await container.statementExtractor.extractFromStatement(
 			input,
 			categoryInfo,
+			{ customCategoryPrompt: preferences?.categoryMappingPrompt },
 		);
 
 		// Duplicate prevention: flag rows matching an existing transaction

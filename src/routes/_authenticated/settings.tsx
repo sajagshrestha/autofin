@@ -11,6 +11,7 @@ import {
 	Plug,
 	Radio,
 	RefreshCw,
+	Sparkles,
 	XCircle,
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -41,6 +43,8 @@ import {
 	useGetGmailWatchStatus,
 	useGetSenderFilters,
 } from "@/hooks/gmail/queries";
+import { useUpdatePreferences } from "@/hooks/preferences/mutations";
+import { useGetPreferences } from "@/hooks/preferences/queries";
 import { rpc, unwrap } from "@/lib/api-client";
 
 const searchParamsSchema = z.object({
@@ -229,384 +233,496 @@ function SettingsPage() {
 
 	return (
 		<div className="mx-auto max-w-2xl space-y-8">
-			{/* Welcome Section */}
-			<div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-					<p className="mt-1 text-muted-foreground">
-						Set up Gmail integration in 3 steps.
-					</p>
-				</div>
-				<Badge variant="outline" className="px-3 py-1">
-					{user?.email}
-				</Badge>
-			</div>
+			{/* AI Preferences state lives at page level so the tab keeps values */}
+			<Tabs defaultValue="gmail" className="w-full">
+				<TabsList className="grid w-full grid-cols-3">
+					<TabsTrigger value="gmail">Gmail</TabsTrigger>
+					<TabsTrigger value="ai">AI Preferences</TabsTrigger>
+					<TabsTrigger value="mcp">MCP</TabsTrigger>
+				</TabsList>
 
-			{/* Step Indicator */}
-			<div className="flex items-center gap-2">
-				<StepCircle
-					step={1}
-					complete={step1Complete}
-					current={!step1Complete}
-					label="Connect Gmail"
-				/>
-				<StepConnector active={step1Complete} />
-				<StepCircle
-					step={2}
-					complete={step2Complete}
-					current={step2Current}
-					label="Set Filters"
-				/>
-				<StepConnector active={step2Complete} />
-				<StepCircle
-					step={3}
-					complete={step3Complete}
-					current={step3Current}
-					label="Start Watch"
-				/>
-			</div>
-
-			{/* Step 1: Connect Gmail */}
-			<Card
-				className={`border-l-4 transition-shadow ${
-					step1Complete
-						? "border-l-green-500"
-						: "border-l-primary shadow-sm hover:shadow-md"
-				}`}
-			>
-				<CardHeader>
-					<div className="flex items-start justify-between">
-						<div className="flex items-center gap-2 space-y-1">
-							<Mail className="h-5 w-5 shrink-0" />
-							<div>
-								<CardTitle>Step 1: Connect Gmail</CardTitle>
-								<CardDescription>
-									Securely connect your account. We only read emails from
-									senders you specify.
-								</CardDescription>
-							</div>
+				<TabsContent value="gmail" className="mt-6 space-y-8">
+					{/* Welcome Section */}
+					<div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+						<div>
+							<h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+							<p className="mt-1 text-muted-foreground">
+								Set up Gmail integration in 3 steps.
+							</p>
 						</div>
-						{isConnected && (
-							<Badge className="bg-green-500 hover:bg-green-600">
-								<CheckCircle2 className="mr-1 h-3 w-3" />
-								Connected
-							</Badge>
-						)}
+						<Badge variant="outline" className="px-3 py-1">
+							{user?.email}
+						</Badge>
 					</div>
-				</CardHeader>
-				<CardContent>
-					{isLoading ? (
-						<div className="flex items-center justify-center py-8">
-							<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-						</div>
-					) : isConnected ? (
-						<div className="space-y-4">
-							<div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
-								<div className="rounded-full bg-background p-2">
-									<CheckCircle2 className="h-5 w-5 text-green-500" />
+
+					{/* Step Indicator */}
+					<div className="flex items-center gap-2">
+						<StepCircle
+							step={1}
+							complete={step1Complete}
+							current={!step1Complete}
+							label="Connect Gmail"
+						/>
+						<StepConnector active={step1Complete} />
+						<StepCircle
+							step={2}
+							complete={step2Complete}
+							current={step2Current}
+							label="Set Filters"
+						/>
+						<StepConnector active={step2Complete} />
+						<StepCircle
+							step={3}
+							complete={step3Complete}
+							current={step3Current}
+							label="Start Watch"
+						/>
+					</div>
+
+					{/* Step 1: Connect Gmail */}
+					<Card
+						className={`border-l-4 transition-shadow ${
+							step1Complete
+								? "border-l-green-500"
+								: "border-l-primary shadow-sm hover:shadow-md"
+						}`}
+					>
+						<CardHeader>
+							<div className="flex items-start justify-between">
+								<div className="flex items-center gap-2 space-y-1">
+									<Mail className="h-5 w-5 shrink-0" />
+									<div>
+										<CardTitle>Step 1: Connect Gmail</CardTitle>
+										<CardDescription>
+											Securely connect your account. We only read emails from
+											senders you specify.
+										</CardDescription>
+									</div>
 								</div>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-medium">
-										{connectionStatus?.emailAddress}
-									</p>
-									<p className="text-xs text-muted-foreground">
-										Active Connection
-									</p>
-								</div>
-							</div>
-							<Button
-								variant="destructive"
-								className="w-full"
-								onClick={handleDisconnectGoogle}
-								disabled={disconnectMutation.isPending}
-							>
-								{disconnectMutation.isPending ? (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								) : null}
-								Disconnect
-							</Button>
-						</div>
-					) : (
-						<div className="flex flex-col items-center justify-center space-y-4 py-6">
-							<div className="rounded-full bg-muted p-4">
-								<Mail className="h-8 w-8 text-muted-foreground" />
-							</div>
-							<div className="max-w-xs space-y-1 text-center">
-								<p className="font-medium">No Account Connected</p>
-								<p className="text-sm text-muted-foreground">
-									Connect your Gmail to automatically track expenses from bank
-									alerts and receipts.
-								</p>
-							</div>
-							<Button
-								onClick={handleConnectGoogle}
-								disabled={isLoading}
-								className="w-full"
-								size="lg"
-							>
-								{isLoading ? (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								) : (
-									<RefreshCw className="mr-2 h-4 w-4" />
+								{isConnected && (
+									<Badge className="bg-green-500 hover:bg-green-600">
+										<CheckCircle2 className="mr-1 h-3 w-3" />
+										Connected
+									</Badge>
 								)}
-								Connect Gmail
-							</Button>
-						</div>
-					)}
-				</CardContent>
-			</Card>
-
-			{/* Step 2: Set Filter List */}
-			<Card
-				className={`border-l-4 transition-shadow ${
-					step2Complete
-						? "border-l-green-500"
-						: isConnected
-							? "border-l-primary shadow-sm hover:shadow-md"
-							: "border-l-muted opacity-60"
-				}`}
-			>
-				<CardHeader>
-					<div className="flex items-start justify-between">
-						<div className="flex items-center gap-2 space-y-1">
-							<Filter className="h-5 w-5 shrink-0" />
-							<div>
-								<CardTitle>Step 2: Set Filter List</CardTitle>
-								<CardDescription>
-									Add sender email addresses to monitor (e.g. bank alerts,
-									noreply@yourbank.com). One per line.
-								</CardDescription>
 							</div>
-						</div>
-						{step2Complete && (
-							<Badge className="bg-green-500 hover:bg-green-600">
-								<CheckCircle2 className="mr-1 h-3 w-3" />
-								{emails.length} filter{emails.length !== 1 ? "s" : ""}
-							</Badge>
-						)}
-					</div>
-				</CardHeader>
-				<CardContent>
-					{!isConnected ? (
-						<p className="py-4 text-center text-sm text-muted-foreground">
-							Connect Gmail first to set up filters.
-						</p>
-					) : isFiltersLoading && !isFiltersFetched ? (
-						<div className="flex items-center justify-center py-8">
-							<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-						</div>
-					) : (
-						<div className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor={filterEmailsId}>
-									Sender emails (one per line)
-								</Label>
-								<Textarea
-									id={filterEmailsId}
-									placeholder={"alerts@bank.com\nnoreply@anotherbank.com"}
-									rows={5}
-									value={displayFilterValue}
-									onChange={(e) => setFilterInput(e.target.value)}
-									className="font-mono text-sm"
-								/>
-							</div>
-							<Button
-								onClick={handleSaveFilters}
-								disabled={setFiltersMutation.isPending}
-								className="w-full"
-							>
-								{setFiltersMutation.isPending ? (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								) : null}
-								Save Filters
-							</Button>
-						</div>
-					)}
-				</CardContent>
-			</Card>
-
-			{/* Step 3: Start Watch */}
-			<Card
-				className={`border-l-4 transition-shadow ${
-					step3Complete
-						? "border-l-green-500"
-						: hasFilters
-							? "border-l-primary shadow-sm hover:shadow-md"
-							: "border-l-muted opacity-60"
-				}`}
-			>
-				<CardHeader>
-					<div className="flex items-start justify-between">
-						<div className="flex items-center gap-2 space-y-1">
-							<Radio className="h-5 w-5 shrink-0" />
-							<div>
-								<CardTitle>Step 3: Start Watch</CardTitle>
-								<CardDescription>
-									Start watching for new emails. Watch expires every 7
-									days—check back to renew.
-								</CardDescription>
-							</div>
-						</div>
-						{step3Complete && (
-							<Badge className="bg-green-500 hover:bg-green-600">
-								<CheckCircle2 className="mr-1 h-3 w-3" />
-								Watching
-							</Badge>
-						)}
-					</div>
-				</CardHeader>
-				<CardContent>
-					{!hasFilters ? (
-						<p className="py-4 text-center text-sm text-muted-foreground">
-							Set your filter list first, then start the watch.
-						</p>
-					) : (
-						<div className="space-y-4">
-							{step3Complete && watchStatus?.expiration && (
-								<p className="text-sm text-muted-foreground">
-									Expires: {new Date(watchStatus.expiration).toLocaleString()}
-								</p>
+						</CardHeader>
+						<CardContent>
+							{isLoading ? (
+								<div className="flex items-center justify-center py-8">
+									<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+								</div>
+							) : isConnected ? (
+								<div className="space-y-4">
+									<div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
+										<div className="rounded-full bg-background p-2">
+											<CheckCircle2 className="h-5 w-5 text-green-500" />
+										</div>
+										<div className="min-w-0 flex-1">
+											<p className="truncate text-sm font-medium">
+												{connectionStatus?.emailAddress}
+											</p>
+											<p className="text-xs text-muted-foreground">
+												Active Connection
+											</p>
+										</div>
+									</div>
+									<Button
+										variant="destructive"
+										className="w-full"
+										onClick={handleDisconnectGoogle}
+										disabled={disconnectMutation.isPending}
+									>
+										{disconnectMutation.isPending ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : null}
+										Disconnect
+									</Button>
+								</div>
+							) : (
+								<div className="flex flex-col items-center justify-center space-y-4 py-6">
+									<div className="rounded-full bg-muted p-4">
+										<Mail className="h-8 w-8 text-muted-foreground" />
+									</div>
+									<div className="max-w-xs space-y-1 text-center">
+										<p className="font-medium">No Account Connected</p>
+										<p className="text-sm text-muted-foreground">
+											Connect your Gmail to automatically track expenses from
+											bank alerts and receipts.
+										</p>
+									</div>
+									<Button
+										onClick={handleConnectGoogle}
+										disabled={isLoading}
+										className="w-full"
+										size="lg"
+									>
+										{isLoading ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : (
+											<RefreshCw className="mr-2 h-4 w-4" />
+										)}
+										Connect Gmail
+									</Button>
+								</div>
 							)}
-							<div className="flex gap-3">
-								<Button
-									variant="outline"
-									onClick={handleStartWatching}
-									disabled={startWatchMutation.isPending}
-									className="flex-1"
-								>
-									{startWatchMutation.isPending ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : (
-										<Radio className="mr-2 h-4 w-4" />
-									)}
-									Start Watch
-								</Button>
-								<Button
-									variant="outline"
-									onClick={handleStopWatching}
-									disabled={stopWatchMutation.isPending}
-									className="flex-1"
-								>
-									{stopWatchMutation.isPending ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : (
-										<XCircle className="mr-2 h-4 w-4" />
-									)}
-									Stop Watch
-								</Button>
-							</div>
-						</div>
-					)}
-				</CardContent>
-			</Card>
+						</CardContent>
+					</Card>
 
-			{/* MCP Server */}
-			<Card className="border-dashed">
-				<CardHeader>
-					<div className="flex items-start justify-between">
-						<div className="flex items-center gap-2 space-y-1">
-							<Plug className="h-5 w-5 shrink-0" />
-							<div>
-								<CardTitle>Connect AI assistants (MCP)</CardTitle>
-								<CardDescription>
-									Let Claude Desktop, Cursor, or any MCP client read your
-									finances through the same tools the advisor uses.
-								</CardDescription>
-							</div>
-						</div>
-						<Badge variant="outline">Advanced</Badge>
-					</div>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					<div className="space-y-1.5">
-						<Label htmlFor="mcp-url">Server URL</Label>
-						<div className="flex gap-2">
-							<Input
-								id="mcp-url"
-								readOnly
-								value={`${typeof window !== "undefined" ? window.location.origin : ""}/api/mcp`}
-								className="font-mono text-xs"
-							/>
-							<Button
-								variant="outline"
-								size="icon"
-								className="h-9 w-9 shrink-0"
-								aria-label="Copy server URL"
-								onClick={() =>
-									copyValue("url", `${window.location.origin}/api/mcp`)
-								}
-							>
-								{copiedKey === "url" ? (
-									<Check className="h-4 w-4 text-green-600" />
-								) : (
-									<Copy className="h-4 w-4" />
+					{/* Step 2: Set Filter List */}
+					<Card
+						className={`border-l-4 transition-shadow ${
+							step2Complete
+								? "border-l-green-500"
+								: isConnected
+									? "border-l-primary shadow-sm hover:shadow-md"
+									: "border-l-muted opacity-60"
+						}`}
+					>
+						<CardHeader>
+							<div className="flex items-start justify-between">
+								<div className="flex items-center gap-2 space-y-1">
+									<Filter className="h-5 w-5 shrink-0" />
+									<div>
+										<CardTitle>Step 2: Set Filter List</CardTitle>
+										<CardDescription>
+											Add sender email addresses to monitor (e.g. bank alerts,
+											noreply@yourbank.com). One per line.
+										</CardDescription>
+									</div>
+								</div>
+								{step2Complete && (
+									<Badge className="bg-green-500 hover:bg-green-600">
+										<CheckCircle2 className="mr-1 h-3 w-3" />
+										{emails.length} filter{emails.length !== 1 ? "s" : ""}
+									</Badge>
 								)}
-							</Button>
-						</div>
-					</div>
+							</div>
+						</CardHeader>
+						<CardContent>
+							{!isConnected ? (
+								<p className="py-4 text-center text-sm text-muted-foreground">
+									Connect Gmail first to set up filters.
+								</p>
+							) : isFiltersLoading && !isFiltersFetched ? (
+								<div className="flex items-center justify-center py-8">
+									<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+								</div>
+							) : (
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor={filterEmailsId}>
+											Sender emails (one per line)
+										</Label>
+										<Textarea
+											id={filterEmailsId}
+											placeholder={"alerts@bank.com\nnoreply@anotherbank.com"}
+											rows={5}
+											value={displayFilterValue}
+											onChange={(e) => setFilterInput(e.target.value)}
+											className="font-mono text-sm"
+										/>
+									</div>
+									<Button
+										onClick={handleSaveFilters}
+										disabled={setFiltersMutation.isPending}
+										className="w-full"
+									>
+										{setFiltersMutation.isPending ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : null}
+										Save Filters
+									</Button>
+								</div>
+							)}
+						</CardContent>
+					</Card>
 
-					<div className="space-y-1.5">
-						<Label htmlFor="mcp-token">Personal access token</Label>
-						<div className="flex gap-2">
-							<Input
-								id="mcp-token"
-								readOnly
-								value={mcpTokenData?.token ?? ""}
-								placeholder={isLoading ? "Loading…" : ""}
-								className="font-mono text-xs"
-							/>
-							<Button
-								variant="outline"
-								size="icon"
-								className="h-9 w-9 shrink-0"
-								disabled={!mcpTokenData?.token}
-								aria-label="Copy access token"
-								onClick={() => copyValue("token", mcpTokenData?.token ?? "")}
-							>
-								{copiedKey === "token" ? (
-									<Check className="h-4 w-4 text-green-600" />
-								) : (
-									<Copy className="h-4 w-4" />
+					{/* Step 3: Start Watch */}
+					<Card
+						className={`border-l-4 transition-shadow ${
+							step3Complete
+								? "border-l-green-500"
+								: hasFilters
+									? "border-l-primary shadow-sm hover:shadow-md"
+									: "border-l-muted opacity-60"
+						}`}
+					>
+						<CardHeader>
+							<div className="flex items-start justify-between">
+								<div className="flex items-center gap-2 space-y-1">
+									<Radio className="h-5 w-5 shrink-0" />
+									<div>
+										<CardTitle>Step 3: Start Watch</CardTitle>
+										<CardDescription>
+											Start watching for new emails. Watch expires every 7
+											days—check back to renew.
+										</CardDescription>
+									</div>
+								</div>
+								{step3Complete && (
+									<Badge className="bg-green-500 hover:bg-green-600">
+										<CheckCircle2 className="mr-1 h-3 w-3" />
+										Watching
+									</Badge>
 								)}
-							</Button>
-						</div>
-						<p className="text-xs text-muted-foreground">
-							Treat it like a password — it grants read access to your
-							transactions. Rotating MCP_TOKEN_SECRET revokes all tokens.
-						</p>
-					</div>
+							</div>
+						</CardHeader>
+						<CardContent>
+							{!hasFilters ? (
+								<p className="py-4 text-center text-sm text-muted-foreground">
+									Set your filter list first, then start the watch.
+								</p>
+							) : (
+								<div className="space-y-4">
+									{step3Complete && watchStatus?.expiration && (
+										<p className="text-sm text-muted-foreground">
+											Expires:{" "}
+											{new Date(watchStatus.expiration).toLocaleString()}
+										</p>
+									)}
+									<div className="flex gap-3">
+										<Button
+											variant="outline"
+											onClick={handleStartWatching}
+											disabled={startWatchMutation.isPending}
+											className="flex-1"
+										>
+											{startWatchMutation.isPending ? (
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											) : (
+												<Radio className="mr-2 h-4 w-4" />
+											)}
+											Start Watch
+										</Button>
+										<Button
+											variant="outline"
+											onClick={handleStopWatching}
+											disabled={stopWatchMutation.isPending}
+											className="flex-1"
+										>
+											{stopWatchMutation.isPending ? (
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											) : (
+												<XCircle className="mr-2 h-4 w-4" />
+											)}
+											Stop Watch
+										</Button>
+									</div>
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				</TabsContent>
 
-					<div className="space-y-1.5">
-						<Label>Example client configuration</Label>
-						<pre className="overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs leading-relaxed">
-							{JSON.stringify(
-								{
-									mcpServers: {
-										autofin: {
-											type: "http",
-											url: `${typeof window !== "undefined" ? window.location.origin : ""}/api/mcp`,
-											headers: {
-												Authorization: `Bearer ${mcpTokenData?.token ?? "<your-token>"}`,
+				<TabsContent value="ai" className="mt-6">
+					<AiPreferencesCard />
+				</TabsContent>
+
+				<TabsContent value="mcp" className="mt-6">
+					{/* MCP Server */}
+					<Card className="border-dashed">
+						<CardHeader>
+							<div className="flex items-start justify-between">
+								<div className="flex items-center gap-2 space-y-1">
+									<Plug className="h-5 w-5 shrink-0" />
+									<div>
+										<CardTitle>Connect AI assistants (MCP)</CardTitle>
+										<CardDescription>
+											Let Claude Desktop, Cursor, or any MCP client read your
+											finances through the same tools the advisor uses.
+										</CardDescription>
+									</div>
+								</div>
+								<Badge variant="outline">Advanced</Badge>
+							</div>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="space-y-1.5">
+								<Label htmlFor="mcp-url">Server URL</Label>
+								<div className="flex gap-2">
+									<Input
+										id="mcp-url"
+										readOnly
+										value={`${typeof window !== "undefined" ? window.location.origin : ""}/api/mcp`}
+										className="font-mono text-xs"
+									/>
+									<Button
+										variant="outline"
+										size="icon"
+										className="h-9 w-9 shrink-0"
+										aria-label="Copy server URL"
+										onClick={() =>
+											copyValue("url", `${window.location.origin}/api/mcp`)
+										}
+									>
+										{copiedKey === "url" ? (
+											<Check className="h-4 w-4 text-green-600" />
+										) : (
+											<Copy className="h-4 w-4" />
+										)}
+									</Button>
+								</div>
+							</div>
+
+							<div className="space-y-1.5">
+								<Label htmlFor="mcp-token">Personal access token</Label>
+								<div className="flex gap-2">
+									<Input
+										id="mcp-token"
+										readOnly
+										value={mcpTokenData?.token ?? ""}
+										placeholder={isLoading ? "Loading…" : ""}
+										className="font-mono text-xs"
+									/>
+									<Button
+										variant="outline"
+										size="icon"
+										className="h-9 w-9 shrink-0"
+										disabled={!mcpTokenData?.token}
+										aria-label="Copy access token"
+										onClick={() =>
+											copyValue("token", mcpTokenData?.token ?? "")
+										}
+									>
+										{copiedKey === "token" ? (
+											<Check className="h-4 w-4 text-green-600" />
+										) : (
+											<Copy className="h-4 w-4" />
+										)}
+									</Button>
+								</div>
+								<p className="text-xs text-muted-foreground">
+									Treat it like a password — it grants read access to your
+									transactions. Rotating MCP_TOKEN_SECRET revokes all tokens.
+								</p>
+							</div>
+
+							<div className="space-y-1.5">
+								<Label>Example client configuration</Label>
+								<pre className="overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs leading-relaxed">
+									{JSON.stringify(
+										{
+											mcpServers: {
+												autofin: {
+													type: "http",
+													url: `${typeof window !== "undefined" ? window.location.origin : ""}/api/mcp`,
+													headers: {
+														Authorization: `Bearer ${mcpTokenData?.token ?? "<your-token>"}`,
+													},
+												},
 											},
 										},
-									},
-								},
-								null,
-								2,
-							)}
-						</pre>
-						<a
-							href="https://modelcontextprotocol.io/clients"
-							target="_blank"
-							rel="noreferrer"
-							className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-						>
-							Compatible MCP clients <ExternalLink className="h-3 w-3" />
-						</a>
-					</div>
-				</CardContent>
-			</Card>
+										null,
+										2,
+									)}
+								</pre>
+								<a
+									href="https://modelcontextprotocol.io/clients"
+									target="_blank"
+									rel="noreferrer"
+									className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+								>
+									Compatible MCP clients <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
+						</CardContent>
+					</Card>
+				</TabsContent>
+			</Tabs>
 		</div>
+	);
+}
+
+function AiPreferencesCard() {
+	const { data: preferences, isLoading } = useGetPreferences();
+	const updateMutation = useUpdatePreferences();
+	const [prompt, setPrompt] = useState<string | null>(null);
+
+	const value = prompt ?? preferences?.categoryMappingPrompt ?? "";
+	const dirty =
+		prompt !== null && prompt !== (preferences?.categoryMappingPrompt ?? "");
+
+	const handleSave = () => {
+		updateMutation.mutate(
+			{ categoryMappingPrompt: value.trim() || null },
+			{
+				onSuccess: () => {
+					toast.success("AI preferences saved");
+					setPrompt(null);
+				},
+				onError: (err: Error) => {
+					toast.error("Failed to save preferences", {
+						description: err.message,
+					});
+				},
+			},
+		);
+	};
+
+	return (
+		<Card>
+			<CardHeader>
+				<div className="flex items-start justify-between">
+					<div className="flex items-center gap-2 space-y-1">
+						<Sparkles className="h-5 w-5 shrink-0" />
+						<div>
+							<CardTitle>Custom category mapping</CardTitle>
+							<CardDescription>
+								Personal rules the AI follows when categorizing your
+								transactions — across SMS/email extraction, statement imports,
+								and the advisor chat.
+							</CardDescription>
+						</div>
+					</div>
+				</div>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				{isLoading ? (
+					<div className="flex items-center justify-center py-8">
+						<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+					</div>
+				) : (
+					<>
+						<div className="space-y-2">
+							<Label htmlFor="category-mapping-prompt">
+								Category mapping instructions
+							</Label>
+							<Textarea
+								id="category-mapping-prompt"
+								placeholder={
+									"Examples:\n- Treat every SWIGGY or PATHAO charge as Food & Delivery\n- AWS and Google Cloud charges are always Business Expenses\n- Ignore anything from my landlord (track manually)"
+								}
+								rows={7}
+								maxLength={4000}
+								value={value}
+								onChange={(e) => setPrompt(e.target.value)}
+								className="font-mono text-sm"
+							/>
+							<p className="text-right text-xs text-muted-foreground">
+								{value.length}/4000 characters
+							</p>
+						</div>
+						<div className="flex justify-end gap-2">
+							{dirty && (
+								<Button variant="ghost" onClick={() => setPrompt(null)}>
+									Discard
+								</Button>
+							)}
+							<Button
+								onClick={handleSave}
+								disabled={updateMutation.isPending || !dirty}
+							>
+								{updateMutation.isPending ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : null}
+								Save preferences
+							</Button>
+						</div>
+					</>
+				)}
+			</CardContent>
+		</Card>
 	);
 }
 

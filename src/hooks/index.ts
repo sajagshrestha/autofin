@@ -10,5 +10,6 @@
 
 export * from "./categories";
 export * from "./gmail";
+export * from "./preferences";
 export * from "./statements";
 export * from "./transactions";

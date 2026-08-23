@@ -12,6 +12,7 @@ import { chatRouter } from "@/server/hono/routes/chat";
 import { gmailRouter } from "@/server/hono/routes/gmail";
 import { integrationsRouter } from "@/server/hono/routes/integrations";
 import { mcpRouter } from "@/server/hono/routes/mcp";
+import { preferencesRouter } from "@/server/hono/routes/preferences";
 import { publicInfraRouter } from "@/server/hono/routes/public-infra";
 import { statementsRouter } from "@/server/hono/routes/statements";
 import { transactionsRouter } from "@/server/hono/routes/transactions";
@@ -31,6 +32,7 @@ const api = new Hono()
 	.route("/chat", chatRouter)
 	.route("/statements", statementsRouter)
 	.route("/integrations", integrationsRouter)
+	.route("/preferences", preferencesRouter)
 	.route("/gmail", gmailRouter);
 
 export const apiApp = new Hono()

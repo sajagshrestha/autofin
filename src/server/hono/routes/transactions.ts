@@ -265,10 +265,12 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			icon: cat.icon,
 		}));
 
+		const prefs = await container.userPreferenceRepo.findByUserId(user.id);
 		const extractionResult =
 			await container.transactionExtractor.extractFromSms(
 				{ body: body.smsBody, sender: body.sender },
 				categoryInfoForAI,
+				{ customCategoryPrompt: prefs?.categoryMappingPrompt },
 			);
 
 		if (

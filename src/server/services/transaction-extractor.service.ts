@@ -52,6 +52,19 @@ function resolveCategoryId(
  * returning category name or malformed ID and resolve it in code.
  */
 /**
+ * Per-user custom category-mapping rules — highest-priority guidance that is
+ * appended after the base instructions when the user has saved any.
+ */
+export function buildCustomCategoryPrompt(custom?: string | null): string {
+	const trimmed = custom?.trim();
+	if (!trimmed) return "";
+	return `
+
+USER'S CUSTOM CATEGORY MAPPING RULES (highest priority for category selection):
+${trimmed.slice(0, 4000)}`;
+}
+
+/**
  * Tool-calling models frequently omit the discriminant or pass a bare
  * category id/name. Accept all of those shapes and normalize centrally.
  */
@@ -253,6 +266,11 @@ export interface SmsInput {
 	sender: string | undefined;
 }
 
+export interface ExtractorOptions {
+	/** Free-form per-user rules appended to the categorization instructions */
+	customCategoryPrompt?: string | null;
+}
+
 /**
  * Build system prompt with available categories
  */
@@ -345,11 +363,13 @@ export class TransactionExtractorService {
 	async extractFromEmail(
 		email: EmailInput,
 		availableCategories: CategoryInfo[],
+		options?: ExtractorOptions,
 	): Promise<TransactionExtractionResult> {
 		return this.runExtraction(
 			this.formatEmailForPrompt(email),
 			availableCategories,
 			"email",
+			options,
 		);
 	}
 
@@ -359,11 +379,13 @@ export class TransactionExtractorService {
 	async extractFromSms(
 		sms: SmsInput,
 		availableCategories: CategoryInfo[],
+		options?: ExtractorOptions,
 	): Promise<TransactionExtractionResult> {
 		return this.runExtraction(
 			this.formatSmsForPrompt(sms),
 			availableCategories,
 			"sms",
+			options,
 		);
 	}
 
@@ -381,6 +403,7 @@ export class TransactionExtractorService {
 		content: string,
 		availableCategories: CategoryInfo[],
 		source: "email" | "sms",
+		options?: ExtractorOptions,
 	): Promise<TransactionExtractionResult> {
 		const categoryMap = new Map(availableCategories.map((c) => [c.id, c]));
 		const uncategorized = availableCategories.find(
@@ -401,7 +424,9 @@ export class TransactionExtractorService {
 		try {
 			const result = await generateText({
 				model: getAIModel(),
-				system: buildSystemPrompt(availableCategories),
+				system:
+					buildSystemPrompt(availableCategories) +
+					buildCustomCategoryPrompt(options?.customCategoryPrompt),
 				prompt: content,
 				tools: {
 					[SEARCH_CATEGORIES_TOOL_NAME]:

@@ -152,6 +152,23 @@ export const transactions = pgTable("transactions", {
 		.notNull(),
 });
 
+export const userPreferences = pgTable("user_preferences", {
+	userId: text("user_id")
+		.primaryKey()
+		.references(() => users.id, { onDelete: "cascade" }),
+	/** Free-form instructions the AI applies when mapping transactions to categories */
+	categoryMappingPrompt: text("category_mapping_prompt"),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
+
+export type UserPreference = typeof userPreferences.$inferSelect;
+export type NewUserPreference = typeof userPreferences.$inferInsert;
+
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
 

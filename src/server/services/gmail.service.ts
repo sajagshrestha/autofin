@@ -4,6 +4,7 @@ import type { CategoryRepository } from "@/server/repositories/category.reposito
 import type { GmailOAuthRepository } from "@/server/repositories/gmail-oauth.repository";
 import type { TransactionRepository } from "@/server/repositories/transaction.repository";
 import type { UserRepository } from "@/server/repositories/user.repository";
+import type { UserPreferenceRepository } from "@/server/repositories/user-preference.repository";
 import { BaseService } from "./base.service";
 import type { DiscordService } from "./discord.service";
 import type { TransactionExtractorService } from "./transaction-extractor.service";
@@ -122,6 +123,7 @@ export class GmailService extends BaseService {
 		private readonly transactionRepo: TransactionRepository,
 		private readonly categoryRepo: CategoryRepository,
 		private readonly userRepo: UserRepository,
+		private readonly userPreferenceRepo: UserPreferenceRepository,
 		private readonly transactionExtractor: TransactionExtractorService,
 		private readonly discordService: DiscordService,
 	) {
@@ -363,9 +365,11 @@ export class GmailService extends BaseService {
 		// Track processed message IDs to avoid duplicates
 		const processedMessageIds = new Set<string>();
 
-		// Fetch user timezone for date conversion
+		// Fetch user timezone + AI category preferences once per batch
 		const user = await this.userRepo.findById(userId);
 		const userTimezone = user?.timezone ?? "Asia/Kathmandu";
+		const userPreferences =
+			await this.userPreferenceRepo.findByUserIdOrCreate(userId);
 
 		// Fetch available categories once for all messages in this batch
 		const availableCategories = await this.categoryRepo.findAllForUser(userId);
@@ -440,6 +444,9 @@ export class GmailService extends BaseService {
 									from: headers.from,
 								},
 								categoryInfoForAI,
+								{
+									customCategoryPrompt: userPreferences.categoryMappingPrompt,
+								},
 							);
 
 						// STEP 3: Save transaction if it's a bank email

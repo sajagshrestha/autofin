@@ -7,3 +7,4 @@ export type {
 } from "./transaction.repository";
 export { TransactionRepository } from "./transaction.repository";
 export { UserRepository } from "./user.repository";
+export { UserPreferenceRepository } from "./user-preference.repository";

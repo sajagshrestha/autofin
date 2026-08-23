@@ -4,10 +4,18 @@ import { z } from "zod";
 import { getAIModel } from "@/server/lib/ai";
 import type { DiscordService } from "@/server/services/discord.service";
 import type { LoggerService } from "@/server/services/logger.service";
-import type { CategoryInfo } from "./transaction-extractor.service";
+import {
+	buildCustomCategoryPrompt,
+	type CategoryInfo,
+} from "./transaction-extractor.service";
 
 /** Hard cap on extracted rows so a runaway model can't explode the response. */
 export const MAX_STATEMENT_TRANSACTIONS = 200;
+
+export interface StatementExtractorOptions {
+	/** Free-form per-user rules appended to the categorization instructions */
+	customCategoryPrompt?: string | null;
+}
 
 export interface StatementInput {
 	/** Raw file bytes */
@@ -184,6 +192,7 @@ export class StatementExtractorService {
 	async extractFromStatement(
 		input: StatementInput,
 		availableCategories: CategoryInfo[],
+		options?: StatementExtractorOptions,
 	): Promise<StatementExtractionResult> {
 		try {
 			let messages: ModelMessage[];
@@ -225,7 +234,9 @@ export class StatementExtractorService {
 			const result = await generateText({
 				model: getAIModel(),
 				output: Output.object({ schema }),
-				system: buildSystemPrompt(availableCategories),
+				system:
+					buildSystemPrompt(availableCategories) +
+					buildCustomCategoryPrompt(options?.customCategoryPrompt),
 				messages,
 			});
 
