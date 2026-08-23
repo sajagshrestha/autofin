@@ -1,3 +1,7 @@
+// Side-effect import: Vercel's file tracer copies Nitro-style "_libs" chunks
+// (e.g. supabase__auth-js.mjs) WITHOUT following their internal imports, so
+// transitive deps like tslib are missing at runtime unless something in the
+// server graph imports them directly.
 import type { Database } from "@/server/db/connection";
 import { db as appDb } from "@/server/db/connection";
 import type { CategoryRepository } from "@/server/repositories/category.repository";
