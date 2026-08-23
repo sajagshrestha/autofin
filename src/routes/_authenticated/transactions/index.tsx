@@ -23,12 +23,15 @@ import {
 	ChevronsUpDown,
 	Eye,
 	FileText,
+	HandCoins,
+	Loader2,
 	MessageSquarePlus,
 	MoreVertical,
 	Pencil,
 	Plus,
 	SlidersHorizontal,
 	Trash2,
+	Wallet,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -61,6 +64,8 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { NoData } from "@/components/ui/no-data";
 import { Search } from "@/components/ui/search";
 import {
@@ -81,6 +86,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Transaction } from "@/hooks";
 import { useGetAllCategories } from "@/hooks/categories/queries";
+import {
+	type Loan,
+	useCreateLoan,
+	useGetLoans,
+	useSettleLoan,
+} from "@/hooks/loans";
 import {
 	useCreateTransaction,
 	useCreateTransactionFromSms,
@@ -146,6 +157,11 @@ function TransactionsPage() {
 		useState<Transaction | null>(null);
 	const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
 	const [createOptionsOpen, setCreateOptionsOpen] = useState(false);
+	const [loanTrackingTarget, setLoanTrackingTarget] =
+		useState<Transaction | null>(null);
+	const [settlementTarget, setSettlementTarget] = useState<Transaction | null>(
+		null,
+	);
 	const [manualDialogOpen, setManualDialogOpen] = useState(false);
 	const [smsDialogOpen, setSmsDialogOpen] = useState(false);
 
@@ -186,6 +202,12 @@ function TransactionsPage() {
 
 	const updateMutation = useUpdateTransaction();
 	const deleteMutation = useDeleteTransaction();
+	const createLoanMutation = useCreateLoan();
+	const settleByTxnMutation = useSettleLoan();
+	const { data: loansData } = useGetLoans();
+	const outstandingLoans = (loansData?.loans ?? []).filter(
+		(loan) => loan.status === "outstanding",
+	);
 	const createMutation = useCreateTransaction();
 	const createFromSmsMutation = useCreateTransactionFromSms();
 
@@ -468,6 +490,21 @@ function TransactionsPage() {
 					<Pencil className="mr-2 h-4 w-4" />
 					Edit
 				</DropdownMenuItem>
+				{!transaction.loanId && (
+					<>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							onClick={() => setLoanTrackingTarget(transaction)}
+						>
+							<HandCoins className="mr-2 h-4 w-4" />
+							Track as loan
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => setSettlementTarget(transaction)}>
+							<Wallet className="mr-2 h-4 w-4" />
+							Track as settlement
+						</DropdownMenuItem>
+					</>
+				)}
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
 					onClick={() => setDeletingTransaction(transaction)}
@@ -495,8 +532,16 @@ function TransactionsPage() {
 			accessorKey: "merchant",
 			header: "Merchant",
 			cell: ({ row }) => (
-				<div className="font-medium">
-					{row.getValue("merchant") || "Unknown"}
+				<div className="flex items-center gap-1.5 font-medium">
+					{row.original.loanId && (
+						<Wallet
+							className="h-3.5 w-3.5 shrink-0 text-primary"
+							aria-label="Part of a tracked loan"
+						/>
+					)}
+					<span className="truncate">
+						{row.getValue("merchant") || "Unknown"}
+					</span>
 				</div>
 			),
 		},
@@ -752,7 +797,13 @@ function TransactionsPage() {
 									<CardContent className="space-y-3 p-4">
 										<div className="flex items-start justify-between gap-2">
 											<div className="min-w-0">
-												<p className="truncate font-medium">
+												<p className="flex items-center gap-1 truncate font-medium">
+													{transaction.loanId && (
+														<Wallet
+															className="h-3 w-3 shrink-0 text-primary"
+															aria-label="Part of a tracked loan"
+														/>
+													)}
 													{transaction.merchant || "Unknown"}
 												</p>
 												<p className="text-xs text-muted-foreground">
@@ -1033,6 +1084,106 @@ function TransactionsPage() {
 					onCancel={() => setManualDialogOpen(false)}
 				/>
 
+				{/* Track as Loan */}
+				<Dialog
+					open={!!loanTrackingTarget}
+					onOpenChange={(o) => !o && setLoanTrackingTarget(null)}
+				>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>Track as loan</DialogTitle>
+							<DialogDescription>
+								{loanTrackingTarget?.type === "debit"
+									? "This debit becomes money you GAVE."
+									: "This credit becomes money you TOOK."}{" "}
+								Amount:{" "}
+								<b>
+									{formatCurrency(Number(loanTrackingTarget?.amount ?? "0"))}
+								</b>
+							</DialogDescription>
+						</DialogHeader>
+						<LoanTrackingFields
+							defaultCounterparty={loanTrackingTarget?.merchant || undefined}
+							onSubmit={(fields) => {
+								if (!loanTrackingTarget) return;
+								createLoanMutation.mutate(
+									{
+										counterpartyName: fields.counterpartyName,
+										direction:
+											loanTrackingTarget.type === "debit" ? "given" : "taken",
+										principalAmount: Number(loanTrackingTarget.amount),
+										originTransactionId: loanTrackingTarget.id,
+										dueDate: fields.dueDate || undefined,
+									},
+									{
+										onSuccess: () => {
+											toast.success("Tracked as a loan");
+											setLoanTrackingTarget(null);
+										},
+										onError: (err) => {
+											toast.error("Failed to track loan", {
+												description: err.message,
+											});
+										},
+									},
+								);
+							}}
+							isPending={createLoanMutation.isPending}
+						/>
+					</DialogContent>
+				</Dialog>
+
+				{/* Track as Settlement */}
+				<Dialog
+					open={!!settlementTarget}
+					onOpenChange={(o) => !o && setSettlementTarget(null)}
+				>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>Track as settlement</DialogTitle>
+							<DialogDescription>
+								Link this{" "}
+								<b>
+									{formatCurrency(Number(settlementTarget?.amount ?? "0"))}{" "}
+									{settlementTarget?.type}
+								</b>{" "}
+								transaction to an outstanding loan as a repayment.
+							</DialogDescription>
+						</DialogHeader>
+						{outstandingLoans.length === 0 ? (
+							<p className="py-2 text-sm text-muted-foreground">
+								No outstanding loans to settle. Track one first from the Loans
+								page or via “Track as loan”.
+							</p>
+						) : (
+							<LoanSelectFields
+								loans={outstandingLoans}
+								onSubmit={(loanId) => {
+									if (!settlementTarget) return;
+									settleByTxnMutation.mutate(
+										{
+											id: loanId,
+											transactionId: settlementTarget.id,
+										},
+										{
+											onSuccess: () => {
+												toast.success("Tracked as settlement");
+												setSettlementTarget(null);
+											},
+											onError: (err) => {
+												toast.error("Failed to link settlement", {
+													description: err.message,
+												});
+											},
+										},
+									);
+								}}
+								isPending={settleByTxnMutation.isPending}
+							/>
+						)}
+					</DialogContent>
+				</Dialog>
+
 				{/* Delete Confirmation */}
 				<Dialog
 					open={!!deletingTransaction}
@@ -1070,5 +1221,100 @@ function TransactionsPage() {
 			</div>
 			<Outlet />
 		</>
+	);
+}
+
+/* ── Loan tracking dialogs' fields ─────────────────────────────────────── */
+
+function LoanTrackingFields({
+	defaultCounterparty,
+	onSubmit,
+	isPending,
+}: {
+	defaultCounterparty?: string;
+	onSubmit: (fields: { counterpartyName: string; dueDate: string }) => void;
+	isPending: boolean;
+}) {
+	const [counterpartyName, setCounterpartyName] = useState(
+		defaultCounterparty ?? "",
+	);
+	const [dueDate, setDueDate] = useState("");
+
+	return (
+		<div className="space-y-4 py-1">
+			<div className="space-y-2">
+				<Label htmlFor="track-loan-counterparty">Counterparty</Label>
+				<Input
+					id="track-loan-counterparty"
+					placeholder="Who is this with?"
+					value={counterpartyName}
+					onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+						setCounterpartyName(e.target.value)
+					}
+				/>
+			</div>
+			<div className="space-y-2">
+				<Label htmlFor="track-loan-due">Due date (optional)</Label>
+				<Input
+					id="track-loan-due"
+					type="date"
+					value={dueDate}
+					onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+						setDueDate(e.target.value)
+					}
+				/>
+			</div>
+			<DialogFooter>
+				<Button
+					onClick={() => onSubmit({ counterpartyName, dueDate })}
+					disabled={isPending}
+				>
+					{isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+					Track loan
+				</Button>
+			</DialogFooter>
+		</div>
+	);
+}
+
+function LoanSelectFields({
+	loans,
+	onSubmit,
+	isPending,
+}: {
+	loans: Loan[];
+	onSubmit: (loanId: string) => void;
+	isPending: boolean;
+}) {
+	const [loanId, setLoanId] = useState(loans[0]?.id ?? "");
+
+	return (
+		<div className="space-y-4 py-1">
+			<div className="space-y-2">
+				<Label htmlFor="settle-loan-select">Outstanding loan</Label>
+				<select
+					id="settle-loan-select"
+					value={loanId}
+					onChange={(e) => setLoanId(e.target.value)}
+					className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+				>
+					{loans.map((loan) => (
+						<option key={loan.id} value={loan.id}>
+							{loan.counterpartyName} — {formatCurrency(loan.remainingAmount)}{" "}
+							remaining ({loan.direction})
+						</option>
+					))}
+				</select>
+			</div>
+			<DialogFooter>
+				<Button
+					onClick={() => onSubmit(loanId)}
+					disabled={isPending || !loanId}
+				>
+					{isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+					Link as repayment
+				</Button>
+			</DialogFooter>
+		</div>
 	);
 }

@@ -165,7 +165,8 @@ export class LoanRepository extends BaseRepository {
 		return rows.length;
 	}
 	/** Attach the origin transaction to a freshly created loan. */
-	async linkOriginTransaction(
+	/** Point a transaction at a loan (sets transactions.loanId). */
+	async linkTransactionToLoan(
 		userId: string,
 		loanId: string,
 		transactionId: string,
@@ -179,6 +180,14 @@ export class LoanRepository extends BaseRepository {
 					eq(transactions.id, transactionId),
 				),
 			);
+	}
+
+	async linkOriginTransaction(
+		userId: string,
+		loanId: string,
+		transactionId: string,
+	): Promise<void> {
+		await this.linkTransactionToLoan(userId, loanId, transactionId);
 		await this.db
 			.update(loans)
 			.set({ transactionId, updatedAt: new Date() })

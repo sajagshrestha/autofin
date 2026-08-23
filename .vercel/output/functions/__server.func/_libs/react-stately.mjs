@@ -1,0 +1,7 @@
+let $6a20a7989e6c817a$var$_shadowDOM = false;
+function $6a20a7989e6c817a$export$98658e8c59125e6a() {
+  return $6a20a7989e6c817a$var$_shadowDOM;
+}
+export {
+  $6a20a7989e6c817a$export$98658e8c59125e6a as $
+};

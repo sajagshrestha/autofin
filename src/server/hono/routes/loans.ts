@@ -148,6 +148,8 @@ const settleSchema = z.object({
 	transactionDate: isoDate.optional(),
 	categoryId: z.string().optional(),
 	remarks: z.string().max(500).optional(),
+	/** Link an EXISTING transaction as the repayment instead of creating one. */
+	transactionId: z.string().optional(),
 });
 
 /** Protected loan-tracking API. */
@@ -317,6 +319,38 @@ export const loansRouter = new Hono<ApiEnv>()
 		const container = getContainer();
 		const loan = await container.loanRepo.findById(user.id, id);
 		if (!loan) throw notFound("Loan not found");
+
+		// Link an existing transaction as the repayment.
+		if (input.transactionId) {
+			const txn = await container.transactionRepo.findByIdWithCategory(
+				input.transactionId,
+			);
+			if (!txn || txn.userId !== user.id) {
+				throw notFound("Transaction not found");
+			}
+			if (txn.loanId === loan.id) {
+				// Already linked to this exact loan — treat as success.
+				const refreshed =
+					(await container.loanRepo.findById(user.id, id)) ?? loan;
+				const [stats] = await loadStats(user.id, [refreshed]);
+				return c.json({
+					loan: stats,
+					settlementTransactionId: txn.id,
+				});
+			}
+			if (txn.loanId) {
+				throw new HTTPException(409, {
+					message: "That transaction is already linked to a loan",
+				});
+			}
+
+			await container.loanRepo.linkTransactionToLoan(user.id, loan.id, txn.id);
+
+			const refreshed =
+				(await container.loanRepo.findById(user.id, id)) ?? loan;
+			const [stats] = await loadStats(user.id, [refreshed]);
+			return c.json({ loan: stats, settlementTransactionId: txn.id }, 201);
+		}
 
 		const [current] = await loadStats(user.id, [loan]);
 		const amount = input.amount ?? Math.max(current.remainingAmount, 0);

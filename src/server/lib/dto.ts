@@ -41,6 +41,7 @@ export function toTransactionDto(txn: TransactionRow): TransactionDto {
 		bankName: txn.bankName,
 		transactionDate: txn.transactionDate?.toISOString() ?? null,
 		remarks: txn.remarks,
+		loanId: txn.loanId ?? null,
 		aiConfidence: txn.aiConfidence ?? null,
 		isAiCreated: txn.isAiCreated,
 		createdAt: txn.createdAt.toISOString(),

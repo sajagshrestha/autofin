@@ -76,6 +76,8 @@ export function useDeleteLoan() {
 
 export interface SettleLoanInput {
 	id: string;
+	/** Link an existing transaction as the repayment instead of creating one */
+	transactionId?: string;
 	amount?: number;
 	transactionDate?: string;
 	categoryId?: string;
