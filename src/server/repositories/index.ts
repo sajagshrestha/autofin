@@ -1,6 +1,7 @@
 export { BaseRepository } from "./base.repository";
 export { CategoryRepository } from "./category.repository";
 export { GmailOAuthRepository } from "./gmail-oauth.repository";
+export { LoanRepository } from "./loan.repository";
 export type {
 	TransactionFilters,
 	TransactionWithCategory,

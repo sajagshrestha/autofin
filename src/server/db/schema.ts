@@ -1,8 +1,10 @@
 import { relations } from "drizzle-orm";
 import {
+	type AnyPgColumn,
 	boolean,
 	jsonb,
 	numeric,
+	pgEnum,
 	pgTable,
 	text,
 	timestamp,
@@ -136,6 +138,9 @@ export const transactions = pgTable("transactions", {
 	remarks: text("remarks"),
 
 	// Source tracking - emailId is UNIQUE to prevent duplicate processing
+	loanId: text("loan_id").references((): AnyPgColumn => loans.id, {
+		onDelete: "set null",
+	}),
 	emailId: text("email_id").unique(), // Gmail message ID (unique constraint)
 	rawEmailContent: text("raw_email_content"), // for debugging/re-extraction
 
@@ -165,6 +170,44 @@ export const userPreferences = pgTable("user_preferences", {
 		.defaultNow()
 		.notNull(),
 });
+
+export const loanDirectionEnum = pgEnum("loan_direction", ["given", "taken"]);
+
+/**
+ * Money lent to / borrowed from a counterparty. The optional origin
+ * `transactionId` records the movement that created the loan; repayments are
+ * ordinary transactions referencing the loan via `transactions.loanId`.
+ */
+export const loans = pgTable("loans", {
+	id: text("id").primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" }),
+	direction: loanDirectionEnum("direction").notNull(), // given | taken
+	counterpartyName: text("counterparty_name").notNull(),
+	principalAmount: numeric("principal_amount", {
+		precision: 12,
+		scale: 2,
+	}).notNull(),
+	currency: text("currency").default("NPR"),
+	issuedDate: timestamp("issued_date", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	dueDate: timestamp("due_date", { withTimezone: true }),
+	notes: text("notes"),
+	transactionId: text("transaction_id").references(() => transactions.id, {
+		onDelete: "set null",
+	}),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
+
+export type Loan = typeof loans.$inferSelect;
+export type NewLoan = typeof loans.$inferInsert;
 
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;

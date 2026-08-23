@@ -21,6 +21,7 @@ import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedCategoriesIndexRouteImport } from './routes/_authenticated/categories/index'
 import { Route as AuthenticatedCategoriesCategoryIdRouteImport } from './routes/_authenticated/categories/$categoryId'
+import { Route as AuthenticatedLoansIndexRouteImport } from './routes/_authenticated/loans/index'
 import { Route as AuthenticatedTransactionsIndexRouteImport } from './routes/_authenticated/transactions/index'
 import { Route as AuthenticatedTransactionsTransactionIdRouteImport } from './routes/_authenticated/transactions/$transactionId'
 import { Route as AuthenticatedTransactionsImportRouteImport } from './routes/_authenticated/transactions/import'
@@ -86,6 +87,11 @@ const AuthenticatedCategoriesCategoryIdRoute =
     path: '/categories/$categoryId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedLoansIndexRoute = AuthenticatedLoansIndexRouteImport.update({
+  id: '/loans/',
+  path: '/loans/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedTransactionsIndexRoute =
   AuthenticatedTransactionsIndexRouteImport.update({
     id: '/transactions/',
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/categories/': typeof AuthenticatedCategoriesIndexRoute
+  '/loans/': typeof AuthenticatedLoansIndexRoute
   '/transactions/': typeof AuthenticatedTransactionsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/categories': typeof AuthenticatedCategoriesIndexRoute
+  '/loans': typeof AuthenticatedLoansIndexRoute
   '/transactions': typeof AuthenticatedTransactionsIndexRoute
 }
 export interface FileRoutesById {
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/_authenticated/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/_authenticated/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/_authenticated/categories/': typeof AuthenticatedCategoriesIndexRoute
+  '/_authenticated/loans/': typeof AuthenticatedLoansIndexRoute
   '/_authenticated/transactions/': typeof AuthenticatedTransactionsIndexRoute
 }
 export interface FileRouteTypes {
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/transactions/$transactionId'
     | '/transactions/import'
     | '/categories/'
+    | '/loans/'
     | '/transactions/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/transactions/$transactionId'
     | '/transactions/import'
     | '/categories'
+    | '/loans'
     | '/transactions'
   id:
     | '__root__'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/_authenticated/transactions/$transactionId'
     | '/_authenticated/transactions/import'
     | '/_authenticated/categories/'
+    | '/_authenticated/loans/'
     | '/_authenticated/transactions/'
   fileRoutesById: FileRoutesById
 }
@@ -304,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCategoriesCategoryIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/loans/': {
+      id: '/_authenticated/loans/'
+      path: '/loans'
+      fullPath: '/loans/'
+      preLoaderRoute: typeof AuthenticatedLoansIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/transactions/': {
       id: '/_authenticated/transactions/'
       path: '/transactions'
@@ -335,6 +354,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTransactionsTransactionIdRoute: typeof AuthenticatedTransactionsTransactionIdRoute
   AuthenticatedTransactionsImportRoute: typeof AuthenticatedTransactionsImportRoute
   AuthenticatedCategoriesIndexRoute: typeof AuthenticatedCategoriesIndexRoute
+  AuthenticatedLoansIndexRoute: typeof AuthenticatedLoansIndexRoute
   AuthenticatedTransactionsIndexRoute: typeof AuthenticatedTransactionsIndexRoute
 }
 
@@ -347,6 +367,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedTransactionsTransactionIdRoute,
   AuthenticatedTransactionsImportRoute: AuthenticatedTransactionsImportRoute,
   AuthenticatedCategoriesIndexRoute: AuthenticatedCategoriesIndexRoute,
+  AuthenticatedLoansIndexRoute: AuthenticatedLoansIndexRoute,
   AuthenticatedTransactionsIndexRoute: AuthenticatedTransactionsIndexRoute,
 }
 

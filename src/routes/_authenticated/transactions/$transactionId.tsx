@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { Pencil, Trash2 } from "lucide-react";
+import { HandCoins, Loader2, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BackButton } from "@/components/BackButton";
@@ -22,9 +22,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import type { Category, Transaction } from "@/hooks";
 import { useGetAllCategories } from "@/hooks/categories/queries";
+import type { LoanDirection } from "@/hooks/loans";
+import { useCreateLoan } from "@/hooks/loans";
 import {
 	useDeleteTransaction,
 	useUpdateTransaction,
@@ -50,6 +54,10 @@ function TransactionDetailPage() {
 	const { transactionId } = Route.useParams();
 	const navigate = useNavigate();
 	const [editOpen, setEditOpen] = useState(false);
+	const [loanOpen, setLoanOpen] = useState(false);
+	const [loanCounterparty, setLoanCounterparty] = useState("");
+	const [loanDueDate, setLoanDueDate] = useState("");
+	const createLoanMutation = useCreateLoan();
 	const { data, isLoading, error, refetch } =
 		useGetTransactionById(transactionId);
 	const { data: categoriesData } = useGetAllCategories();
@@ -140,6 +148,29 @@ function TransactionDetailPage() {
 						<Pencil className="h-4 w-4" />
 						Edit
 					</Button>
+					{!transaction.loanId && (
+						<Button
+							variant="outline"
+							size="sm"
+							className="gap-2"
+							onClick={() => {
+								setLoanCounterparty("");
+								setLoanDueDate("");
+								setLoanOpen(true);
+							}}
+						>
+							<HandCoins className="h-4 w-4" />
+							Track as loan
+						</Button>
+					)}
+					{transaction.loanId && (
+						<Badge
+							variant="secondary"
+							title="This transaction is part of a tracked loan"
+						>
+							Loan-linked
+						</Badge>
+					)}
 					{transaction && (
 						<EditTransactionForm
 							transaction={transaction}
@@ -314,6 +345,84 @@ function TransactionDetailPage() {
 					</div>
 				</CardContent>
 			</Card>
+
+			<Dialog open={loanOpen} onOpenChange={setLoanOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Track as loan</DialogTitle>
+						<DialogDescription>
+							This transaction becomes the origin of a tracked loan (
+							{formatCurrency(amountNum, transaction.currency ?? "NPR")},{" "}
+							{transaction.type === "debit"
+								? "money you gave"
+								: "money you took"}
+							).
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-4 py-1">
+						<div className="space-y-2">
+							<Label htmlFor="loan-counterparty">Counterparty</Label>
+							<Input
+								id="loan-counterparty"
+								placeholder={transaction.merchant ?? "Who is this with?"}
+								value={loanCounterparty}
+								onChange={(e) => setLoanCounterparty(e.target.value)}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="loan-due">Due date (optional)</Label>
+							<Input
+								id="loan-due"
+								type="date"
+								value={loanDueDate}
+								onChange={(e) => setLoanDueDate(e.target.value)}
+							/>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setLoanOpen(false)}>
+							Cancel
+						</Button>
+						<Button
+							disabled={createLoanMutation.isPending}
+							onClick={() => {
+								if (!loanCounterparty.trim()) {
+									toast.error("Counterparty is required");
+									return;
+								}
+								const direction: LoanDirection =
+									transaction.type === "debit" ? "given" : "taken";
+								createLoanMutation.mutate(
+									{
+										counterpartyName: loanCounterparty.trim(),
+										direction,
+										principalAmount: amountNum,
+										originTransactionId: transaction.id,
+										dueDate: loanDueDate || undefined,
+									},
+									{
+										onSuccess: () => {
+											toast.success("Loan tracked");
+											setLoanOpen(false);
+											refetch();
+										},
+										onError: (err) => {
+											toast.error("Failed to track loan", {
+												description: err.message,
+											});
+										},
+									},
+								);
+							}}
+						>
+							{createLoanMutation.isPending ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : null}
+							Track loan
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

@@ -16,6 +16,7 @@ export interface TransactionDto {
 	bankName: string | null;
 	transactionDate: string | null;
 	remarks: string | null;
+	loanId?: string | null;
 	aiConfidence: string | null;
 	isAiCreated: boolean;
 	createdAt: string;

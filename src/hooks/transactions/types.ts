@@ -19,6 +19,8 @@ export interface Transaction {
 	bankName: string | null;
 	transactionDate: string | null;
 	remarks: string | null;
+	/** Set when this transaction is the origin of / a repayment on a tracked loan */
+	loanId?: string | null;
 	emailId?: string | null;
 	rawEmailContent?: string | null;
 	aiConfidence?: string | null;

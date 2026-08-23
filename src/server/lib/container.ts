@@ -4,6 +4,8 @@ import type { CategoryRepository } from "@/server/repositories/category.reposito
 import { CategoryRepository as CategoryRepositoryImpl } from "@/server/repositories/category.repository";
 import type { GmailOAuthRepository } from "@/server/repositories/gmail-oauth.repository";
 import { GmailOAuthRepository as GmailOAuthRepositoryImpl } from "@/server/repositories/gmail-oauth.repository";
+import type { LoanRepository } from "@/server/repositories/loan.repository";
+import { LoanRepository as LoanRepositoryImpl } from "@/server/repositories/loan.repository";
 import type { TransactionRepository } from "@/server/repositories/transaction.repository";
 import { TransactionRepository as TransactionRepositoryImpl } from "@/server/repositories/transaction.repository";
 import type { UserRepository } from "@/server/repositories/user.repository";
@@ -32,6 +34,7 @@ export interface Container {
 	readonly userPreferenceRepo: UserPreferenceRepository;
 	readonly gmailOAuthRepo: GmailOAuthRepository;
 	readonly categoryRepo: CategoryRepository;
+	readonly loanRepo: LoanRepository;
 	readonly transactionRepo: TransactionRepository;
 	// Services
 	readonly loggerService: LoggerService;
@@ -54,6 +57,7 @@ export function createContainer(db: Database): Container {
 		new UserPreferenceRepositoryImpl(db);
 	const gmailOAuthRepo: GmailOAuthRepository = new GmailOAuthRepositoryImpl(db);
 	const categoryRepo: CategoryRepository = new CategoryRepositoryImpl(db);
+	const loanRepo: LoanRepository = new LoanRepositoryImpl(db);
 	const transactionRepo: TransactionRepository = new TransactionRepositoryImpl(
 		db,
 	);
@@ -81,6 +85,7 @@ export function createContainer(db: Database): Container {
 		userPreferenceRepo,
 		gmailOAuthRepo,
 		categoryRepo,
+		loanRepo,
 		transactionRepo,
 		loggerService,
 		discordService,

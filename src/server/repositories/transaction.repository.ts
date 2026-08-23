@@ -74,6 +74,7 @@ export class TransactionRepository extends BaseRepository {
 
 		const result = await this.db
 			.select({
+				loanId: transactions.loanId,
 				id: transactions.id,
 				userId: transactions.userId,
 				categoryId: transactions.categoryId,
@@ -128,6 +129,7 @@ export class TransactionRepository extends BaseRepository {
 	): Promise<TransactionWithCategory | null> {
 		const result = await this.db
 			.select({
+				loanId: transactions.loanId,
 				id: transactions.id,
 				userId: transactions.userId,
 				categoryId: transactions.categoryId,
