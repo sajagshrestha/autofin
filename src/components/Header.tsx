@@ -3,10 +3,10 @@ import {
 	CreditCard,
 	FolderTree,
 	Home,
-	Lightbulb,
 	LogOut,
 	Menu,
 	Settings,
+	Sparkles,
 	X,
 } from "lucide-react";
 import { useState } from "react";
@@ -29,7 +29,7 @@ const NAV_ITEMS = [
 		label: "Categories",
 		exact: false,
 	},
-	{ to: "/insights", icon: Lightbulb, label: "Insights", exact: false },
+	{ to: "/chat", icon: Sparkles, label: "AI Advisor", exact: true },
 	{ to: "/settings", icon: Settings, label: "Settings", exact: false },
 ];
 

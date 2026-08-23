@@ -15,13 +15,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedCategoriesIndexRouteImport } from './routes/_authenticated/categories/index'
 import { Route as AuthenticatedCategoriesCategoryIdRouteImport } from './routes/_authenticated/categories/$categoryId'
-import { Route as AuthenticatedInsightsIndexRouteImport } from './routes/_authenticated/insights/index'
 import { Route as AuthenticatedTransactionsIndexRouteImport } from './routes/_authenticated/transactions/index'
 import { Route as AuthenticatedTransactionsTransactionIdRouteImport } from './routes/_authenticated/transactions/$transactionId'
 import { Route as AuthenticatedTransactionsImportRouteImport } from './routes/_authenticated/transactions/import'
@@ -55,6 +55,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -87,12 +92,6 @@ const AuthenticatedCategoriesCategoryIdRoute =
     path: '/categories/$categoryId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedInsightsIndexRoute =
-  AuthenticatedInsightsIndexRouteImport.update({
-    id: '/insights/',
-    path: '/insights/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedTransactionsIndexRoute =
   AuthenticatedTransactionsIndexRouteImport.update({
     id: '/transactions/',
@@ -118,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/$': typeof ApiSplatRoute
@@ -126,7 +126,6 @@ export interface FileRoutesByFullPath {
   '/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/categories/': typeof AuthenticatedCategoriesIndexRoute
-  '/insights/': typeof AuthenticatedInsightsIndexRoute
   '/transactions/': typeof AuthenticatedTransactionsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -135,6 +134,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/$': typeof ApiSplatRoute
@@ -143,7 +143,6 @@ export interface FileRoutesByTo {
   '/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/categories': typeof AuthenticatedCategoriesIndexRoute
-  '/insights': typeof AuthenticatedInsightsIndexRoute
   '/transactions': typeof AuthenticatedTransactionsIndexRoute
 }
 export interface FileRoutesById {
@@ -154,6 +153,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/$': typeof ApiSplatRoute
@@ -162,7 +162,6 @@ export interface FileRoutesById {
   '/_authenticated/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/_authenticated/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/_authenticated/categories/': typeof AuthenticatedCategoriesIndexRoute
-  '/_authenticated/insights/': typeof AuthenticatedInsightsIndexRoute
   '/_authenticated/transactions/': typeof AuthenticatedTransactionsIndexRoute
 }
 export interface FileRouteTypes {
@@ -173,6 +172,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/signup'
     | '/terms'
+    | '/chat'
     | '/dashboard'
     | '/settings'
     | '/api/$'
@@ -181,7 +181,6 @@ export interface FileRouteTypes {
     | '/transactions/$transactionId'
     | '/transactions/import'
     | '/categories/'
-    | '/insights/'
     | '/transactions/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -190,6 +189,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/signup'
     | '/terms'
+    | '/chat'
     | '/dashboard'
     | '/settings'
     | '/api/$'
@@ -198,7 +198,6 @@ export interface FileRouteTypes {
     | '/transactions/$transactionId'
     | '/transactions/import'
     | '/categories'
-    | '/insights'
     | '/transactions'
   id:
     | '__root__'
@@ -208,6 +207,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/signup'
     | '/terms'
+    | '/_authenticated/chat'
     | '/_authenticated/dashboard'
     | '/_authenticated/settings'
     | '/api/$'
@@ -216,7 +216,6 @@ export interface FileRouteTypes {
     | '/_authenticated/transactions/$transactionId'
     | '/_authenticated/transactions/import'
     | '/_authenticated/categories/'
-    | '/_authenticated/insights/'
     | '/_authenticated/transactions/'
   fileRoutesById: FileRoutesById
 }
@@ -275,6 +274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/chat': {
+      id: '/_authenticated/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AuthenticatedChatRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -317,13 +323,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCategoriesCategoryIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/insights/': {
-      id: '/_authenticated/insights/'
-      path: '/insights'
-      fullPath: '/insights/'
-      preLoaderRoute: typeof AuthenticatedInsightsIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/transactions/': {
       id: '/_authenticated/transactions/'
       path: '/transactions'
@@ -349,17 +348,18 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedCategoriesCategoryIdRoute: typeof AuthenticatedCategoriesCategoryIdRoute
   AuthenticatedTransactionsTransactionIdRoute: typeof AuthenticatedTransactionsTransactionIdRoute
   AuthenticatedTransactionsImportRoute: typeof AuthenticatedTransactionsImportRoute
   AuthenticatedCategoriesIndexRoute: typeof AuthenticatedCategoriesIndexRoute
-  AuthenticatedInsightsIndexRoute: typeof AuthenticatedInsightsIndexRoute
   AuthenticatedTransactionsIndexRoute: typeof AuthenticatedTransactionsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedCategoriesCategoryIdRoute:
@@ -368,7 +368,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedTransactionsTransactionIdRoute,
   AuthenticatedTransactionsImportRoute: AuthenticatedTransactionsImportRoute,
   AuthenticatedCategoriesIndexRoute: AuthenticatedCategoriesIndexRoute,
-  AuthenticatedInsightsIndexRoute: AuthenticatedInsightsIndexRoute,
   AuthenticatedTransactionsIndexRoute: AuthenticatedTransactionsIndexRoute,
 }
 

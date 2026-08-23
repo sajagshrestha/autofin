@@ -265,4 +265,83 @@ export class TransactionRepository extends BaseRepository {
 			transactionCount: Number(result[0]?.transactionCount || 0),
 		};
 	}
+
+	/**
+	 * Total spending (debit) grouped by category, largest first.
+	 * Includes uncategorized rows under a null category.
+	 */
+	async getSpendingByCategory(
+		userId: string,
+		startDate?: Date,
+		endDate?: Date,
+	): Promise<
+		Array<{
+			categoryId: string | null;
+			name: string;
+			icon: string | null;
+			total: number;
+		}>
+	> {
+		const conditions = [
+			eq(transactions.userId, userId),
+			eq(transactions.type, "debit"),
+		];
+		if (startDate)
+			conditions.push(gte(transactions.transactionDate, startDate));
+		if (endDate) conditions.push(lte(transactions.transactionDate, endDate));
+
+		const rows = await this.db
+			.select({
+				categoryId: categories.id,
+				name: categories.name,
+				icon: categories.icon,
+				total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
+			})
+			.from(transactions)
+			.leftJoin(categories, eq(transactions.categoryId, categories.id))
+			.where(and(...conditions))
+			.groupBy(categories.id, categories.name, categories.icon)
+			.orderBy(sql`SUM(${transactions.amount}) DESC`);
+
+		return rows.map((row) => ({
+			categoryId: row.categoryId,
+			name: row.name ?? "Uncategorized",
+			icon: row.icon,
+			total: Number.parseFloat(row.total || "0"),
+		}));
+	}
+
+	/**
+	 * Per-month income vs expenses for the trailing `months` months
+	 * (including the current one), oldest first. Months are calendar months in UTC.
+	 */
+	async getMonthlyTrend(
+		userId: string,
+		months = 6,
+	): Promise<Array<{ month: string; income: number; expenses: number }>> {
+		const rows = await this.db
+			.select({
+				month: sql<string>`to_char(date_trunc('month', ${transactions.transactionDate}), 'YYYY-MM')`,
+				income: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' THEN ${transactions.amount} ELSE 0 END), 0)`,
+				expenses: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' THEN ${transactions.amount} ELSE 0 END), 0)`,
+			})
+			.from(transactions)
+			.where(
+				and(
+					eq(transactions.userId, userId),
+					gte(
+						transactions.transactionDate,
+						sql`date_trunc('month', now()) - make_interval(months => ${months - 1})`,
+					),
+				),
+			)
+			.groupBy(sql`date_trunc('month', ${transactions.transactionDate})`)
+			.orderBy(sql`date_trunc('month', ${transactions.transactionDate}) ASC`);
+
+		return rows.map((row) => ({
+			month: row.month,
+			income: Number.parseFloat(row.income || "0"),
+			expenses: Number.parseFloat(row.expenses || "0"),
+		}));
+	}
 }

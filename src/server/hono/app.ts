@@ -8,8 +8,8 @@ import {
 } from "@/server/hono/middleware";
 import { authRouter } from "@/server/hono/routes/auth";
 import { categoriesRouter } from "@/server/hono/routes/categories";
+import { chatRouter } from "@/server/hono/routes/chat";
 import { gmailRouter } from "@/server/hono/routes/gmail";
-import { insightsRouter } from "@/server/hono/routes/insights";
 import { publicInfraRouter } from "@/server/hono/routes/public-infra";
 import { statementsRouter } from "@/server/hono/routes/statements";
 import { transactionsRouter } from "@/server/hono/routes/transactions";
@@ -26,7 +26,7 @@ const api = new Hono()
 	.route("/auth", authRouter)
 	.route("/transactions", transactionsRouter)
 	.route("/categories", categoriesRouter)
-	.route("/insights", insightsRouter)
+	.route("/chat", chatRouter)
 	.route("/statements", statementsRouter)
 	.route("/gmail", gmailRouter);
 

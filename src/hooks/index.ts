@@ -10,6 +10,5 @@
 
 export * from "./categories";
 export * from "./gmail";
-export * from "./insights";
 export * from "./statements";
 export * from "./transactions";

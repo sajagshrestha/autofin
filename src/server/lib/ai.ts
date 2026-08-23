@@ -56,14 +56,19 @@ export function getAIModel() {
 	return provider(modelId);
 }
 
-/** Model ID for Gemini 2.5 Flash (full model, not lite) - used for insights generation */
-const GEMINI_2_5_FLASH_MODEL_ID = "gemini-2.5-flash";
+/** Model ID for the full (non-lite) model — used for the advisor chat. */
+const ADIVISOR_MODEL_IDS: Record<AIProviderName, string> = {
+	google: "gemini-2.5-flash",
+	openai: "gpt-4o",
+	anthropic: "claude-sonnet-4-20250514",
+};
 
 /**
- * Get the Gemini 2.5 Flash model for insights generation.
- * Uses the full Flash model for better reasoning on financial advice.
+ * Model for the financial-advisor chat: full-size variant of the configured
+ * provider for better multi-step tool reasoning.
  */
-export function getInsightsModel() {
-	const provider = getAIProvider();
-	return provider(GEMINI_2_5_FLASH_MODEL_ID);
+export function getAdvisorModel() {
+	const providerName = (process.env.AI_PROVIDER ||
+		DEFAULT_PROVIDER) as AIProviderName;
+	return getAIProvider()(ADIVISOR_MODEL_IDS[providerName]);
 }
