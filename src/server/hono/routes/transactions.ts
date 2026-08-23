@@ -31,16 +31,26 @@ const updateSchema = z.object({
 	transactionDate: z.iso.datetime().optional(),
 });
 
+/**
+ * Query-string-friendly number: accepts "10" or 10, validates the result,
+ * and keeps the RPC client's input type honest (string | number).
+ */
+const queryNumber = (min: number, max = Number.MAX_SAFE_INTEGER) =>
+	z
+		.union([z.string(), z.number()])
+		.transform((v) => Number(v))
+		.pipe(z.number().min(min).max(max));
+
 const filtersSchema = z.object({
 	categoryId: z.string().optional(),
 	type: transactionTypeSchema.optional(),
 	startDate: z.iso.datetime().optional(),
 	endDate: z.iso.datetime().optional(),
 	timezone: z.string().optional(),
-	minAmount: z.number().optional(),
-	maxAmount: z.number().optional(),
-	limit: z.number().min(1).max(500).default(100),
-	offset: z.number().min(0).default(0),
+	minAmount: queryNumber(0).optional(),
+	maxAmount: queryNumber(0).optional(),
+	limit: queryNumber(1, 500).default(100),
+	offset: queryNumber(0).default(0),
 });
 
 const bulkImportSchema = z.object({
