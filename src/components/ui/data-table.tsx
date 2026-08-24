@@ -216,7 +216,7 @@ export function DataTable<TData, TValue>({
 									key={cell.id}
 									className={cn(
 										isPinned &&
-											"backdrop-blur-xs sticky z-10 bg-background/90 shadow-lg",
+											"sticky z-10 bg-background shadow-lg border-b border-border",
 										isPinned === "left" && "left-0",
 										isPinned === "right" && "right-0",
 										isChildRow && isPinned && "bg-muted/80",
@@ -327,9 +327,9 @@ export function DataTable<TData, TValue>({
 			<div className="relative">
 				<div className="max-h-[calc(100vh-264px)] min-h-[calc(100vh-264px)] overflow-auto">
 					<Table>
-						<TableHeader className="sticky top-0 z-20 bg-muted/50">
+						<TableHeader className="sticky top-0 z-20 bg-muted">
 							{table.getHeaderGroups().map((headerGroup) => (
-								<TableRow key={headerGroup.id} className="bg-muted/50">
+								<TableRow key={headerGroup.id} className="bg-muted">
 									{headerGroup.headers.map((header) => {
 										const isPinned = header.column.getIsPinned();
 
@@ -337,8 +337,8 @@ export function DataTable<TData, TValue>({
 											<TableHead
 												key={header.id}
 												className={cn(
-													"space-x-2",
-													isPinned && "sticky z-6 bg-muted/80 shadow-sm",
+													"space-x-2 sticky top-0 z-30 bg-muted border-b border-border",
+													isPinned && "shadow-sm",
 													isPinned === "left" && "left-0",
 													isPinned === "right" && "right-0",
 												)}

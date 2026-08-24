@@ -471,7 +471,7 @@ function TransactionsPage() {
 	) => (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" className="h-8 w-8 p-0">
+				<Button variant="ghost" className="h-9 w-9 p-0 md:h-8 md:w-8">
 					<span className="sr-only">Open menu</span>
 					<MoreVertical className="h-4 w-4" />
 				</Button>
@@ -518,6 +518,27 @@ function TransactionsPage() {
 	);
 
 	const columns: ColumnDef<Transaction>[] = [
+		{
+			accessorKey: "amount",
+			header: () => <div className="text-right">Amount</div>,
+			sortingFn: (rowA, rowB, columnId) =>
+				Number(rowA.getValue(columnId)) - Number(rowB.getValue(columnId)),
+			cell: ({ row }) => {
+				const amount = parseFloat(row.getValue("amount") || "0");
+				const formatted = formatCurrency(
+					amount,
+					row.original.currency || "NPR",
+				);
+				const isDebit = row.original.type === "debit";
+				return (
+					<div
+						className={`text-right font-medium ${isDebit ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}
+					>
+						{formatted}
+					</div>
+				);
+			},
+		},
 		{
 			id: "transactionDate",
 			accessorFn: (row) =>
@@ -568,17 +589,6 @@ function TransactionsPage() {
 			},
 		},
 		{
-			accessorKey: "bankName",
-			header: "Bank",
-			cell: ({ row }) => (
-				<div>
-					{row.getValue("bankName") || (
-						<span className="text-muted-foreground">-</span>
-					)}
-				</div>
-			),
-		},
-		{
 			accessorKey: "remarks",
 			header: "Remarks",
 			cell: ({ row }) => {
@@ -588,20 +598,6 @@ function TransactionsPage() {
 						{remarks || <span className="text-muted-foreground">-</span>}
 					</div>
 				);
-			},
-		},
-		{
-			accessorKey: "amount",
-			header: () => <div className="text-right">Amount</div>,
-			sortingFn: (rowA, rowB, columnId) =>
-				Number(rowA.getValue(columnId)) - Number(rowB.getValue(columnId)),
-			cell: ({ row }) => {
-				const amount = parseFloat(row.getValue("amount") || "0");
-				const formatted = formatCurrency(
-					amount,
-					row.original.currency || "NPR",
-				);
-				return <div className="text-right font-medium">{formatted}</div>;
 			},
 		},
 		{
@@ -669,6 +665,9 @@ function TransactionsPage() {
 						columns={columns}
 						data={filteredTransactions}
 						isLoading={isLoading}
+						columnPinning={{
+							state: { left: ["amount"], right: ["actions"] },
+						}}
 						sorting={{
 							state: sorting,
 							onSortingChange: handleSortingChange,
@@ -737,7 +736,7 @@ function TransactionsPage() {
 								placeholder="Search..."
 								className="h-9 w-full"
 							/>
-							<div className="grid grid-cols-3 gap-2">
+							<div className="grid grid-cols-2 gap-2">
 								<Button
 									variant="outline"
 									size="sm"
@@ -757,6 +756,7 @@ function TransactionsPage() {
 								<Button
 									variant="outline"
 									size="sm"
+									className="col-span-2"
 									onClick={() => setCreateOptionsOpen(true)}
 								>
 									<Plus className="mr-2 h-4 w-4" />
@@ -816,7 +816,13 @@ function TransactionsPage() {
 												</p>
 											</div>
 											<div className="flex items-start gap-1">
-												<p className="text-sm font-semibold">
+												<p
+													className={`text-sm font-semibold ${
+														transaction.type === "debit"
+															? "text-red-600 dark:text-red-400"
+															: "text-green-600 dark:text-green-400"
+													}`}
+												>
 													{formattedAmount}
 												</p>
 												<div

@@ -1,0 +1,1 @@
+import{W as i,z as u}from"./index-CHIC_AuW.js";function h(r,s){const[t,n]=i(r,s.start,s.end);return{start:t,end:n}}function m(r,s){const{start:t,end:n}=h(s?.in,r);let o=+t>+n;const c=o?+t:+n,e=o?n:t;e.setHours(0,0,0,0),e.setDate(1);let d=1;const a=[];for(;+e<=c;)a.push(u(t,e)),e.setMonth(e.getMonth()+d);return o?a.reverse():a}export{m as e,h as n};

@@ -257,6 +257,8 @@ export class TransactionRepository extends BaseRepository {
 	): Promise<{
 		totalDebit: number;
 		totalCredit: number;
+		loanOutflow: number;
+		loanInflow: number;
 		transactionCount: number;
 	}> {
 		const conditions = [eq(transactions.userId, userId)];
@@ -271,16 +273,21 @@ export class TransactionRepository extends BaseRepository {
 
 		const result = await this.db
 			.select({
-				totalDebit: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' THEN ${transactions.amount} ELSE 0 END), 0)`,
-				totalCredit: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' THEN ${transactions.amount} ELSE 0 END), 0)`,
-				transactionCount: sql<number>`count(*)`,
+				totalDebit: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' AND ${transactions.loanId} IS NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
+				totalCredit: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' AND ${transactions.loanId} IS NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
+				loanOutflow: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' AND ${transactions.loanId} IS NOT NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
+				loanInflow: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' AND ${transactions.loanId} IS NOT NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
+				transactionCount: sql<number>`COUNT(*)::int`,
 			})
 			.from(transactions)
 			.where(and(...conditions));
 
 		return {
+			// Loan-linked transfers excluded — they are balance movements, not income/expenses.
 			totalDebit: Number.parseFloat(result[0]?.totalDebit || "0"),
 			totalCredit: Number.parseFloat(result[0]?.totalCredit || "0"),
+			loanOutflow: Number.parseFloat(result[0]?.loanOutflow || "0"),
+			loanInflow: Number.parseFloat(result[0]?.loanInflow || "0"),
 			transactionCount: Number(result[0]?.transactionCount || 0),
 		};
 	}

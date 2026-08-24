@@ -1,1 +1,0 @@
-import{x as c,j as o,B as l}from"./index-DilGzAiH.js";import{A as u}from"./arrow-left-BXyVYZuj.js";function d({fallback:s,children:e="Back",onClick:n,...r}){const a=c(),i=t=>{n?.(t),!t.defaultPrevented&&(window.history.length>1?window.history.back():a({to:s}))};return o.jsxs(l,{onClick:i,...r,children:[o.jsx(u,{className:"mr-2 h-4 w-4"}),e]})}export{d as B};

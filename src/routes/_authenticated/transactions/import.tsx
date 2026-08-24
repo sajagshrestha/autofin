@@ -298,7 +298,7 @@ function ImportStatementPage() {
 							</div>
 						) : (
 							<label
-								className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-12 text-center transition-colors ${
+								className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-colors sm:p-12 ${
 									dragActive
 										? "border-primary bg-primary/5"
 										: "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/40 cursor-pointer"
@@ -355,7 +355,7 @@ function ImportStatementPage() {
 									</span>
 								</CardDescription>
 							</div>
-							<div className="flex items-center gap-2">
+							<div className="flex flex-wrap items-center gap-2">
 								<Button variant="outline" size="sm" onClick={reset}>
 									Start over
 								</Button>
@@ -430,7 +430,180 @@ function ImportStatementPage() {
 						</div>
 					</CardHeader>
 					<CardContent className="px-0">
-						<div className="overflow-x-auto pb-2">
+						{/* Mobile: stacked cards */}
+						<div className="space-y-3 px-4 pb-2 md:hidden">
+							{rows.map((row) => {
+								const amountNum = Number.parseFloat(row.amount);
+								const invalid = !Number.isFinite(amountNum) || amountNum <= 0;
+								const lowConfidence =
+									row.confidence !== undefined && row.confidence < 0.6;
+
+								return (
+									<div
+										key={row.id}
+										className={`rounded-xl border p-3 space-y-3 ${
+											row.include ? "" : "opacity-45"
+										}`}
+									>
+										<div className="flex items-center justify-between gap-2">
+											<label className="flex items-center gap-2 text-sm font-medium">
+												<input
+													type="checkbox"
+													aria-label={`Include ${row.merchant || "transaction"}`}
+													checked={row.include}
+													onChange={(e) =>
+														updateRow(row.id, {
+															include: e.target.checked,
+														})
+													}
+												/>
+												{row.merchant || "Transaction"}
+											</label>
+											<div className="flex items-center gap-1">
+												{row.confidence !== undefined && (
+													<Badge
+														variant={lowConfidence ? "outline" : "secondary"}
+														title="AI confidence"
+													>
+														{Math.round(row.confidence * 100)}%
+													</Badge>
+												)}
+												<Button
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 text-muted-foreground hover:text-red-600"
+													onClick={() => removeRow(row.id)}
+													aria-label="Remove row"
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											</div>
+										</div>
+										{row.duplicateOf && (
+											<Badge
+												variant="outline"
+												className="border-amber-500/50 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400"
+												title={`Possible duplicate of an existing transaction (${row.duplicateOf.merchant ?? "unknown"}, ${row.duplicateOf.amount} NPR)`}
+											>
+												Duplicate?
+											</Badge>
+										)}
+										<div className="grid grid-cols-2 gap-2">
+											<div className="space-y-1">
+												<span className="text-xs text-muted-foreground">
+													Date &amp; time
+												</span>
+												<Input
+													type="datetime-local"
+													value={row.date}
+													onChange={(e) =>
+														updateRow(row.id, { date: e.target.value })
+													}
+													className="h-8 w-full"
+												/>
+											</div>
+											<div className="space-y-1">
+												<span className="text-xs text-muted-foreground">
+													Amount
+												</span>
+												<Input
+													type="number"
+													min="0"
+													step="0.01"
+													aria-invalid={invalid}
+													value={row.amount}
+													onChange={(e) =>
+														updateRow(row.id, { amount: e.target.value })
+													}
+													className={`h-8 w-full text-right ${
+														row.type === "debit"
+															? "text-red-600 dark:text-red-400"
+															: "text-green-600 dark:text-green-400"
+													}`}
+												/>
+											</div>
+											<div className="space-y-1">
+												<span className="text-xs text-muted-foreground">
+													Type
+												</span>
+												<Select
+													value={row.type}
+													onValueChange={(value) =>
+														updateRow(row.id, {
+															type: value as "debit" | "credit",
+														})
+													}
+												>
+													<SelectTrigger className="h-8 w-full capitalize">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="debit">debit</SelectItem>
+														<SelectItem value="credit">credit</SelectItem>
+													</SelectContent>
+												</Select>
+											</div>
+											<div className="space-y-1">
+												<span className="text-xs text-muted-foreground">
+													Category
+												</span>
+												<Select
+													value={row.categoryId || "none"}
+													onValueChange={(value) =>
+														updateRow(row.id, {
+															categoryId: value === "none" ? "" : value,
+														})
+													}
+												>
+													<SelectTrigger className="h-8 w-full">
+														<SelectValue placeholder="Category" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="none">Uncategorized</SelectItem>
+														{categories.map((category) => (
+															<SelectItem key={category.id} value={category.id}>
+																{category.icon ? `${category.icon} ` : ""}
+																{category.name}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</div>
+										</div>
+										<div className="space-y-1">
+											<span className="text-xs text-muted-foreground">
+												Merchant
+											</span>
+											<Input
+												value={row.merchant}
+												placeholder="Merchant"
+												onChange={(e) =>
+													updateRow(row.id, { merchant: e.target.value })
+												}
+												className="h-8 w-full"
+											/>
+										</div>
+										<div className="space-y-1">
+											<span className="text-xs text-muted-foreground">
+												Remarks
+											</span>
+											<Textarea
+												value={row.remarks}
+												placeholder="—"
+												rows={1}
+												onChange={(e) =>
+													updateRow(row.id, { remarks: e.target.value })
+												}
+												className="min-h-8 w-full resize-y text-sm"
+											/>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+
+						{/* Desktop: table */}
+						<div className="hidden md:block overflow-x-auto pb-2">
 							<table className="w-full min-w-[980px] text-sm">
 								<thead>
 									<tr className="border-b text-left text-muted-foreground">

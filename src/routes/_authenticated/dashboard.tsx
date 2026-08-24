@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	eachDayOfInterval,
 	eachMonthOfInterval,
@@ -8,9 +8,11 @@ import {
 } from "date-fns";
 import {
 	ArrowDownRight,
+	ArrowRight,
 	ArrowUpRight,
 	CreditCard,
 	PiggyBank,
+	Wallet,
 } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { z } from "zod";
@@ -96,21 +98,36 @@ function AnalyticsDashboard() {
 		[transactionsData],
 	);
 
-	// Calculate summary stats
-	const stats = useMemo(() => {
-		if (!transactions.length) {
-			return {
-				totalExpenses: 0,
-				totalIncome: 0,
-				savings: 0,
-				transactionCount: 0,
-			};
+	// Loan-linked entries are tracked separately — they are transfers, not
+	// income/expenses.
+	const { regularTransactions, loanFlows } = useMemo(() => {
+		const regularTransactions: typeof transactions = [];
+		const loanTransactions: Array<{ amount: string; type: string }> = [];
+		let lent = 0;
+		let received = 0;
+
+		for (const t of transactions) {
+			if (t.loanId) {
+				loanTransactions.push(t);
+				if (t.type === "debit") lent += parseFloat(t.amount || "0");
+				else received += parseFloat(t.amount || "0");
+			} else {
+				regularTransactions.push(t);
+			}
 		}
 
+		return {
+			regularTransactions,
+			loanFlows: { lent, received, count: loanTransactions.length },
+		};
+	}, [transactions]);
+
+	// Calculate summary stats (loan transfers excluded)
+	const stats = useMemo(() => {
 		let totalExpenses = 0;
 		let totalIncome = 0;
 
-		transactions.forEach((t) => {
+		regularTransactions.forEach((t) => {
 			const amount = parseFloat(t.amount || "0");
 			if (t.type === "credit") {
 				totalIncome += amount;
@@ -123,17 +140,17 @@ function AnalyticsDashboard() {
 			totalExpenses,
 			totalIncome,
 			savings: totalIncome - totalExpenses,
-			transactionCount: transactions.length,
+			transactionCount: regularTransactions.length,
 		};
-	}, [transactions]);
+	}, [regularTransactions]);
 
 	// Monthly spending data for area chart
 	const monthlyData = useMemo(() => {
-		if (!transactions.length) return [];
+		if (!regularTransactions.length) return [];
 
 		const monthMap = new Map<string, { expenses: number; income: number }>();
 
-		transactions.forEach((t) => {
+		regularTransactions.forEach((t) => {
 			const date = t.transactionDate ? new Date(t.transactionDate) : new Date();
 			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 
@@ -159,17 +176,17 @@ function AnalyticsDashboard() {
 				expenses: data.expenses,
 				income: data.income,
 			}));
-	}, [transactions]);
+	}, [regularTransactions]);
 
 	const categoryData = useMemo(() => {
-		if (!transactions.length) return [];
+		if (!regularTransactions.length) return [];
 
 		const categoryMap = new Map<
 			string,
 			{ amount: number; icon?: string | null }
 		>();
 
-		transactions.forEach((t) => {
+		regularTransactions.forEach((t) => {
 			if (t.type === "credit") return;
 			const categoryName = t.category?.name || "Uncategorized";
 			const categoryIcon = t.category?.icon || null;
@@ -192,7 +209,7 @@ function AnalyticsDashboard() {
 				icon: data.icon,
 				fill: pickChartColor(index),
 			}));
-	}, [transactions]);
+	}, [regularTransactions]);
 
 	// Spending data for line chart: buckets based on date filter (period + start/end)
 	const spendingData = useMemo(() => {
@@ -250,8 +267,8 @@ function AnalyticsDashboard() {
 			}
 		} else {
 			// All time: derive range from transaction dates
-			if (!transactions.length) return [];
-			const dates = transactions
+			if (!regularTransactions.length) return [];
+			const dates = regularTransactions
 				.map((t) => (t.transactionDate ? new Date(t.transactionDate) : null))
 				.filter((d): d is Date => d !== null);
 			if (!dates.length) return [];
@@ -269,7 +286,7 @@ function AnalyticsDashboard() {
 		for (const b of buckets) {
 			keyToSpending.set(b.key, 0);
 		}
-		transactions.forEach((t) => {
+		regularTransactions.forEach((t) => {
 			if (t.type === "credit") return;
 			const date = t.transactionDate ? new Date(t.transactionDate) : new Date();
 			let key: string;
@@ -287,7 +304,7 @@ function AnalyticsDashboard() {
 			label: b.label,
 			spending: keyToSpending.get(b.key) ?? 0,
 		}));
-	}, [transactions, period, startDate, endDate]);
+	}, [regularTransactions, period, startDate, endDate]);
 
 	// Chart subtitle and granularity from date filter
 	const { chartPeriodLabel, chartGranularity } = useMemo(() => {
@@ -315,11 +332,11 @@ function AnalyticsDashboard() {
 
 	// Bank breakdown for bar chart
 	const bankData = useMemo(() => {
-		if (!transactions.length) return [];
+		if (!regularTransactions.length) return [];
 
 		const bankMap = new Map<string, number>();
 
-		transactions.forEach((t) => {
+		regularTransactions.forEach((t) => {
 			if (t.type === "credit") return;
 			const bankName = t.bankName || "Unknown Bank";
 			const amount = parseFloat(t.amount || "0");
@@ -334,7 +351,7 @@ function AnalyticsDashboard() {
 				name: name.length > 12 ? `${name.slice(0, 12)}...` : name,
 				amount,
 			}));
-	}, [transactions]);
+	}, [regularTransactions]);
 
 	return (
 		<div className="space-y-8 min-w-0 overflow-hidden">
@@ -449,7 +466,7 @@ function AnalyticsDashboard() {
 										{formatCurrency(stats.totalExpenses)}
 									</div>
 									<p className="text-xs text-muted-foreground">
-										All time expenses
+										Excludes loan transfers
 									</p>
 								</CardContent>
 							</Card>
@@ -468,7 +485,7 @@ function AnalyticsDashboard() {
 										{formatCurrency(stats.totalIncome)}
 									</div>
 									<p className="text-xs text-muted-foreground">
-										All time income
+										Excludes loan transfers
 									</p>
 								</CardContent>
 							</Card>
@@ -509,10 +526,39 @@ function AnalyticsDashboard() {
 									<div className="text-2xl font-bold">
 										{stats.transactionCount}
 									</div>
-									<p className="text-xs text-muted-foreground">Total tracked</p>
+									<p className="text-xs text-muted-foreground">
+										{loanFlows.count > 0
+											? `+ ${loanFlows.count} loan transfer${loanFlows.count !== 1 ? "s" : ""} tracked separately`
+											: "Total tracked"}
+									</p>
 								</CardContent>
 							</Card>
 						</div>
+
+						{loanFlows.count > 0 && (
+							<Card className="border-primary/20 bg-primary/[0.03]">
+								<CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+									<div className="flex items-center gap-2 text-sm font-medium">
+										<Wallet className="h-4 w-4 text-primary" />
+										Loan activity
+									</div>
+									<span className="inline-flex items-center gap-1 text-sm">
+										<ArrowUpRight className="h-3.5 w-3.5 text-red-500" />
+										Lent {formatCurrency(loanFlows.lent)}
+									</span>
+									<span className="inline-flex items-center gap-1 text-sm">
+										<ArrowDownRight className="h-3.5 w-3.5 text-green-600" />
+										Received {formatCurrency(loanFlows.received)}
+									</span>
+									<Link
+										to="/loans"
+										className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+									>
+										View loans <ArrowRight className="h-3 w-3" />
+									</Link>
+								</CardContent>
+							</Card>
+						)}
 
 						{/* Daily spending line chart - full width */}
 						<SpendingLineChart

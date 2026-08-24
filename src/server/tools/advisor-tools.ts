@@ -43,7 +43,7 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 			name: "getSpendingSummary",
 			title: "Get spending summary",
 			description:
-				"Totals for a period: expenses (debit), income (credit), net, and transaction count. Omit dates for all-time.",
+				"Totals for a period: expenses and income EXCLUDING loan transfers (loanOutflow/loanInflow reported separately), plus net and transaction count. Omit dates for all-time.",
 			inputSchema: z.object({
 				startDate: dateSchema.optional().describe("Range start (inclusive)"),
 				endDate: dateSchema.optional().describe("Range end (inclusive)"),
