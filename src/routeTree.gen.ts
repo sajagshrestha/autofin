@@ -16,12 +16,16 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedCategoriesIndexRouteImport } from './routes/_authenticated/categories/index'
 import { Route as AuthenticatedCategoriesCategoryIdRouteImport } from './routes/_authenticated/categories/$categoryId'
 import { Route as AuthenticatedLoansIndexRouteImport } from './routes/_authenticated/loans/index'
+import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedSettingsAiRouteImport } from './routes/_authenticated/settings/ai'
+import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
+import { Route as AuthenticatedSettingsGmailRouteImport } from './routes/_authenticated/settings/gmail'
+import { Route as AuthenticatedSettingsMcpRouteImport } from './routes/_authenticated/settings/mcp'
 import { Route as AuthenticatedTransactionsIndexRouteImport } from './routes/_authenticated/transactions/index'
 import { Route as AuthenticatedTransactionsTransactionIdRouteImport } from './routes/_authenticated/transactions/$transactionId'
 import { Route as AuthenticatedTransactionsImportRouteImport } from './routes/_authenticated/transactions/import'
@@ -60,11 +64,6 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
   path: '/api/$',
@@ -92,6 +91,35 @@ const AuthenticatedLoansIndexRoute = AuthenticatedLoansIndexRouteImport.update({
   path: '/loans/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSettingsIndexRoute =
+  AuthenticatedSettingsIndexRouteImport.update({
+    id: '/settings/',
+    path: '/settings/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsAiRoute = AuthenticatedSettingsAiRouteImport.update({
+  id: '/settings/ai',
+  path: '/settings/ai',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSettingsAppearanceRoute =
+  AuthenticatedSettingsAppearanceRouteImport.update({
+    id: '/settings/appearance',
+    path: '/settings/appearance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsGmailRoute =
+  AuthenticatedSettingsGmailRouteImport.update({
+    id: '/settings/gmail',
+    path: '/settings/gmail',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsMcpRoute =
+  AuthenticatedSettingsMcpRouteImport.update({
+    id: '/settings/mcp',
+    path: '/settings/mcp',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedTransactionsIndexRoute =
   AuthenticatedTransactionsIndexRouteImport.update({
     id: '/transactions/',
@@ -118,14 +146,18 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/settings': typeof AuthenticatedSettingsRoute
   '/api/$': typeof ApiSplatRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/categories/$categoryId': typeof AuthenticatedCategoriesCategoryIdRoute
+  '/settings/ai': typeof AuthenticatedSettingsAiRoute
+  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/settings/gmail': typeof AuthenticatedSettingsGmailRoute
+  '/settings/mcp': typeof AuthenticatedSettingsMcpRoute
   '/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/loans/': typeof AuthenticatedLoansIndexRoute
+  '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/transactions/': typeof AuthenticatedTransactionsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -135,14 +167,18 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/settings': typeof AuthenticatedSettingsRoute
   '/api/$': typeof ApiSplatRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/categories/$categoryId': typeof AuthenticatedCategoriesCategoryIdRoute
+  '/settings/ai': typeof AuthenticatedSettingsAiRoute
+  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/settings/gmail': typeof AuthenticatedSettingsGmailRoute
+  '/settings/mcp': typeof AuthenticatedSettingsMcpRoute
   '/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/categories': typeof AuthenticatedCategoriesIndexRoute
   '/loans': typeof AuthenticatedLoansIndexRoute
+  '/settings': typeof AuthenticatedSettingsIndexRoute
   '/transactions': typeof AuthenticatedTransactionsIndexRoute
 }
 export interface FileRoutesById {
@@ -154,14 +190,18 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/$': typeof ApiSplatRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/categories/$categoryId': typeof AuthenticatedCategoriesCategoryIdRoute
+  '/_authenticated/settings/ai': typeof AuthenticatedSettingsAiRoute
+  '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/_authenticated/settings/gmail': typeof AuthenticatedSettingsGmailRoute
+  '/_authenticated/settings/mcp': typeof AuthenticatedSettingsMcpRoute
   '/_authenticated/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/_authenticated/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/_authenticated/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/_authenticated/loans/': typeof AuthenticatedLoansIndexRoute
+  '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/transactions/': typeof AuthenticatedTransactionsIndexRoute
 }
 export interface FileRouteTypes {
@@ -173,14 +213,18 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/dashboard'
-    | '/settings'
     | '/api/$'
     | '/auth/callback'
     | '/categories/$categoryId'
+    | '/settings/ai'
+    | '/settings/appearance'
+    | '/settings/gmail'
+    | '/settings/mcp'
     | '/transactions/$transactionId'
     | '/transactions/import'
     | '/categories/'
     | '/loans/'
+    | '/settings/'
     | '/transactions/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -190,14 +234,18 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/dashboard'
-    | '/settings'
     | '/api/$'
     | '/auth/callback'
     | '/categories/$categoryId'
+    | '/settings/ai'
+    | '/settings/appearance'
+    | '/settings/gmail'
+    | '/settings/mcp'
     | '/transactions/$transactionId'
     | '/transactions/import'
     | '/categories'
     | '/loans'
+    | '/settings'
     | '/transactions'
   id:
     | '__root__'
@@ -208,14 +256,18 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/_authenticated/dashboard'
-    | '/_authenticated/settings'
     | '/api/$'
     | '/auth/callback'
     | '/_authenticated/categories/$categoryId'
+    | '/_authenticated/settings/ai'
+    | '/_authenticated/settings/appearance'
+    | '/_authenticated/settings/gmail'
+    | '/_authenticated/settings/mcp'
     | '/_authenticated/transactions/$transactionId'
     | '/_authenticated/transactions/import'
     | '/_authenticated/categories/'
     | '/_authenticated/loans/'
+    | '/_authenticated/settings/'
     | '/_authenticated/transactions/'
   fileRoutesById: FileRoutesById
 }
@@ -281,13 +333,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/settings': {
-      id: '/_authenticated/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/api/$': {
       id: '/api/$'
       path: '/api/$'
@@ -323,6 +368,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLoansIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings/': {
+      id: '/_authenticated/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/ai': {
+      id: '/_authenticated/settings/ai'
+      path: '/settings/ai'
+      fullPath: '/settings/ai'
+      preLoaderRoute: typeof AuthenticatedSettingsAiRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/appearance': {
+      id: '/_authenticated/settings/appearance'
+      path: '/settings/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/gmail': {
+      id: '/_authenticated/settings/gmail'
+      path: '/settings/gmail'
+      fullPath: '/settings/gmail'
+      preLoaderRoute: typeof AuthenticatedSettingsGmailRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/mcp': {
+      id: '/_authenticated/settings/mcp'
+      path: '/settings/mcp'
+      fullPath: '/settings/mcp'
+      preLoaderRoute: typeof AuthenticatedSettingsMcpRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/transactions/': {
       id: '/_authenticated/transactions/'
       path: '/transactions'
@@ -349,25 +429,33 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedCategoriesCategoryIdRoute: typeof AuthenticatedCategoriesCategoryIdRoute
+  AuthenticatedSettingsAiRoute: typeof AuthenticatedSettingsAiRoute
+  AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
+  AuthenticatedSettingsGmailRoute: typeof AuthenticatedSettingsGmailRoute
+  AuthenticatedSettingsMcpRoute: typeof AuthenticatedSettingsMcpRoute
   AuthenticatedTransactionsTransactionIdRoute: typeof AuthenticatedTransactionsTransactionIdRoute
   AuthenticatedTransactionsImportRoute: typeof AuthenticatedTransactionsImportRoute
   AuthenticatedCategoriesIndexRoute: typeof AuthenticatedCategoriesIndexRoute
   AuthenticatedLoansIndexRoute: typeof AuthenticatedLoansIndexRoute
+  AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
   AuthenticatedTransactionsIndexRoute: typeof AuthenticatedTransactionsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedCategoriesCategoryIdRoute:
     AuthenticatedCategoriesCategoryIdRoute,
+  AuthenticatedSettingsAiRoute: AuthenticatedSettingsAiRoute,
+  AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
+  AuthenticatedSettingsGmailRoute: AuthenticatedSettingsGmailRoute,
+  AuthenticatedSettingsMcpRoute: AuthenticatedSettingsMcpRoute,
   AuthenticatedTransactionsTransactionIdRoute:
     AuthenticatedTransactionsTransactionIdRoute,
   AuthenticatedTransactionsImportRoute: AuthenticatedTransactionsImportRoute,
   AuthenticatedCategoriesIndexRoute: AuthenticatedCategoriesIndexRoute,
   AuthenticatedLoansIndexRoute: AuthenticatedLoansIndexRoute,
+  AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedTransactionsIndexRoute: AuthenticatedTransactionsIndexRoute,
 }
 
