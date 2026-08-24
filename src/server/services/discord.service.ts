@@ -17,8 +17,22 @@ export interface NewTransactionPayload {
 	transactionDate?: string | null;
 }
 
+export interface BulkImportSummary {
+	count: number;
+	totalDebit: number;
+	totalCredit: number;
+	transactions: Array<{
+		id: string;
+		amount: string;
+		type: "debit" | "credit";
+		merchant: string | null;
+		transactionDate?: string | null;
+	}>;
+}
+
 export interface DiscordService {
 	notifyNewTransaction(payload: NewTransactionPayload): Promise<void>;
+	notifyBulkImport(summary: BulkImportSummary): Promise<void>;
 	notifyExtractorFailed(
 		context: "email" | "sms" | "statement",
 		error: unknown,
@@ -73,6 +87,33 @@ export class DiscordServiceImpl implements DiscordService {
 			`**📅 Date:** ${date}`,
 			``,
 			`🔗 [View in AutoFin](${link})`,
+		].join("\n");
+
+		await this.post({ content });
+	}
+
+	async notifyBulkImport(summary: BulkImportSummary): Promise<void> {
+		console.info(
+			`hello from discord service (bulk): ${JSON.stringify(summary)}`,
+		);
+		if (!this.webhookUrl) return;
+
+		const lines = summary.transactions.slice(0, 15).map((t) => {
+			const emoji = t.type === "credit" ? "💰" : "💸";
+			return `- ${emoji} **${t.amount}** ${t.merchant ?? "Unknown"} (${t.type})`;
+		});
+		if (summary.transactions.length > 15) {
+			lines.push(`…and ${summary.transactions.length - 15} more`);
+		}
+
+		const content = [
+			`## 📄 Bulk import complete`,
+			``,
+			`**📦 Transactions:** ${summary.count}`,
+			`**💸 Total debits:** ${summary.totalDebit}`,
+			`**💰 Total credits:** ${summary.totalCredit}`,
+			``,
+			...lines,
 		].join("\n");
 
 		await this.post({ content });

@@ -1,11 +1,4 @@
 import {
-	Combobox,
-	ComboboxButton,
-	ComboboxInput,
-	ComboboxOption,
-	ComboboxOptions,
-} from "@headlessui/react";
-import {
 	createFileRoute,
 	Link,
 	Outlet,
@@ -19,8 +12,6 @@ import type {
 } from "@tanstack/react-table";
 import { format } from "date-fns";
 import {
-	Check,
-	ChevronsUpDown,
 	Eye,
 	FileText,
 	HandCoins,
@@ -42,6 +33,10 @@ import { EditTransactionForm } from "@/components/EditTransactionForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+	CategoryCombobox,
+	type CategoryComboboxOption,
+} from "@/components/ui/category-combobox";
 import { DataTable } from "@/components/ui/data-table";
 import {
 	DateFilter,
@@ -104,11 +99,7 @@ import { formatCurrency } from "@/lib/formatCurrency";
 const defaultRange = getDateRangeForPeriod("daily");
 const ALL_CATEGORIES_FILTER = "all";
 const UNCATEGORIZED_FILTER = "uncategorized";
-type CategoryFilterOption = {
-	id: string;
-	label: string;
-	searchLabel: string;
-};
+type CategoryFilterOption = CategoryComboboxOption;
 const sortOptions = [
 	{ value: "none", label: "No sorting" },
 	{ value: "transactionDate", label: "Date & time" },
@@ -150,7 +141,6 @@ function TransactionsPage() {
 	const [categoryFilter, setCategoryFilter] = useState<string>(
 		ALL_CATEGORIES_FILTER,
 	);
-	const [categoryQuery, setCategoryQuery] = useState("");
 	const [editingTransaction, setEditingTransaction] =
 		useState<Transaction | null>(null);
 	const [deletingTransaction, setDeletingTransaction] =
@@ -179,8 +169,8 @@ function TransactionsPage() {
 			searchNavigate({
 				search: {
 					period: newPeriod,
-					startDate: range.startDate,
-					endDate: range.endDate,
+					startDate: range.startDate ?? "",
+					endDate: range.endDate ?? "",
 				},
 			});
 		},
@@ -192,8 +182,8 @@ function TransactionsPage() {
 			searchNavigate({
 				search: (prev) => ({
 					...prev,
-					startDate: range.startDate,
-					endDate: range.endDate,
+					startDate: range.startDate ?? "",
+					endDate: range.endDate ?? "",
 				}),
 			});
 		},
@@ -237,20 +227,6 @@ function TransactionsPage() {
 		],
 		[sortedCategories],
 	);
-	const visibleCategoryOptions = useMemo(() => {
-		const normalizedQuery = categoryQuery.trim().toLowerCase();
-		if (!normalizedQuery) return categoryFilterOptions;
-
-		return categoryFilterOptions.filter((option) =>
-			option.searchLabel.includes(normalizedQuery),
-		);
-	}, [categoryFilterOptions, categoryQuery]);
-	const selectedCategoryOption = useMemo(
-		() =>
-			categoryFilterOptions.find((option) => option.id === categoryFilter) ??
-			categoryFilterOptions[0],
-		[categoryFilter, categoryFilterOptions],
-	);
 	const filteredTransactions = useMemo(() => {
 		if (categoryFilter === ALL_CATEGORIES_FILTER) {
 			return transactions;
@@ -275,7 +251,6 @@ function TransactionsPage() {
 	const handleCategoryFilterChange = useCallback((value: string | null) => {
 		if (!value) return;
 		setCategoryFilter(value);
-		setCategoryQuery("");
 		setPagination((prev) => ({
 			...prev,
 			pageIndex: 0,
@@ -302,9 +277,6 @@ function TransactionsPage() {
 	);
 	const handleFiltersSheetOpenChange = useCallback((open: boolean) => {
 		setFiltersSheetOpen(open);
-		if (!open) {
-			setCategoryQuery("");
-		}
 	}, []);
 	const clearFilters = useCallback(() => {
 		handleCategoryFilterChange(ALL_CATEGORIES_FILTER);
@@ -429,41 +401,13 @@ function TransactionsPage() {
 	}, [mobilePageIndex, mobileSortedTransactions, pagination.pageSize]);
 
 	const renderCategoryFilterCombobox = (widthClassName: string) => (
-		<Combobox
+		<CategoryCombobox
 			value={categoryFilter}
 			onChange={handleCategoryFilterChange}
-			immediate
-		>
-			<div className={`relative ${widthClassName}`}>
-				<ComboboxInput
-					className="h-8 w-full rounded-md border border-input bg-background px-3 pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-					placeholder="Filter by category"
-					displayValue={() => selectedCategoryOption?.label ?? ""}
-					onChange={(event) => setCategoryQuery(event.target.value)}
-				/>
-				<ComboboxButton className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted-foreground">
-					<ChevronsUpDown className="h-4 w-4" />
-				</ComboboxButton>
-				<ComboboxOptions className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md empty:invisible">
-					{visibleCategoryOptions.length === 0 ? (
-						<div className="px-2 py-1.5 text-sm text-muted-foreground">
-							No categories found
-						</div>
-					) : (
-						visibleCategoryOptions.map((option) => (
-							<ComboboxOption
-								key={option.id}
-								value={option.id}
-								className="group flex cursor-pointer items-center justify-between rounded-sm px-2 py-1.5 text-sm data-[focus]:bg-accent data-[focus]:text-accent-foreground"
-							>
-								<span className="truncate">{option.label}</span>
-								<Check className="h-4 w-4 opacity-0 group-data-[selected]:opacity-100" />
-							</ComboboxOption>
-						))
-					)}
-				</ComboboxOptions>
-			</div>
-		</Combobox>
+			options={categoryFilterOptions}
+			placeholder="Filter by category"
+			className={widthClassName}
+		/>
 	);
 	const renderTransactionActions = (
 		transaction: Transaction,

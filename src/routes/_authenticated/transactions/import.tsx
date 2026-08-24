@@ -19,6 +19,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { CategoryCombobox } from "@/components/ui/category-combobox";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -119,6 +120,18 @@ function ImportStatementPage() {
 				a.name.localeCompare(b.name),
 			),
 		[categoriesData],
+	);
+
+	const categoryOptions = useMemo(
+		() => [
+			{ id: "", label: "Uncategorized", searchLabel: "uncategorized" },
+			...categories.map((c) => ({
+				id: c.id,
+				label: `${c.icon ? `${c.icon} ` : ""}${c.name}`,
+				searchLabel: `${c.name} ${c.icon ?? ""}`.toLowerCase(),
+			})),
+		],
+		[categories],
 	);
 
 	const extractMutation = useExtractStatement();
@@ -547,27 +560,14 @@ function ImportStatementPage() {
 												<span className="text-xs text-muted-foreground">
 													Category
 												</span>
-												<Select
-													value={row.categoryId || "none"}
-													onValueChange={(value) =>
-														updateRow(row.id, {
-															categoryId: value === "none" ? "" : value,
-														})
+												<CategoryCombobox
+													value={row.categoryId}
+													onChange={(value) =>
+														updateRow(row.id, { categoryId: value })
 													}
-												>
-													<SelectTrigger className="h-8 w-full">
-														<SelectValue placeholder="Category" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="none">Uncategorized</SelectItem>
-														{categories.map((category) => (
-															<SelectItem key={category.id} value={category.id}>
-																{category.icon ? `${category.icon} ` : ""}
-																{category.name}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
+													options={categoryOptions}
+													className="w-full"
+												/>
 											</div>
 										</div>
 										<div className="space-y-1">
@@ -709,32 +709,14 @@ function ImportStatementPage() {
 													)}
 												</td>
 												<td className="px-2 py-1.5">
-													<Select
-														value={row.categoryId || "none"}
-														onValueChange={(value) =>
-															updateRow(row.id, {
-																categoryId: value === "none" ? "" : value,
-															})
+													<CategoryCombobox
+														value={row.categoryId}
+														onChange={(value) =>
+															updateRow(row.id, { categoryId: value })
 														}
-													>
-														<SelectTrigger className="h-8 w-[170px]">
-															<SelectValue placeholder="Category" />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="none">
-																Uncategorized
-															</SelectItem>
-															{categories.map((category) => (
-																<SelectItem
-																	key={category.id}
-																	value={category.id}
-																>
-																	{category.icon ? `${category.icon} ` : ""}
-																	{category.name}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
+														options={categoryOptions}
+														className="w-[170px]"
+													/>
 												</td>
 												<td className="px-2 py-1.5 text-right">
 													<Input

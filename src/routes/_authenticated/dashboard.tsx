@@ -72,8 +72,8 @@ function AnalyticsDashboard() {
 			navigate({
 				search: {
 					period: newPeriod,
-					startDate: range.startDate,
-					endDate: range.endDate,
+					startDate: range.startDate ?? "",
+					endDate: range.endDate ?? "",
 				},
 			});
 		},
@@ -85,8 +85,8 @@ function AnalyticsDashboard() {
 			navigate({
 				search: (prev) => ({
 					...prev,
-					startDate: range.startDate,
-					endDate: range.endDate,
+					startDate: range.startDate ?? "",
+					endDate: range.endDate ?? "",
 				}),
 			});
 		},

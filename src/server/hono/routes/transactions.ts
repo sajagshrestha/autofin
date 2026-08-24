@@ -450,6 +450,13 @@ export const transactionsRouter = new Hono<ApiEnv>()
 		const validCategoryIds = new Set(visibleCategories.map((cat) => cat.id));
 
 		const createdIds: string[] = [];
+		const importedRows: Array<{
+			id: string;
+			amount: string;
+			type: "debit" | "credit";
+			merchant: string | null;
+			transactionDate?: string | null;
+		}> = [];
 		for (const row of body.transactions) {
 			const categoryId =
 				row.categoryId && validCategoryIds.has(row.categoryId)
@@ -473,14 +480,27 @@ export const transactionsRouter = new Hono<ApiEnv>()
 				isAiCreated: true,
 			});
 			createdIds.push(transaction.id);
-
-			void container.discordService.notifyNewTransaction({
+			importedRows.push({
 				id: transaction.id,
 				amount: row.amount.toString(),
 				type: row.type,
 				merchant: row.merchant ?? null,
-				source: "import",
 				transactionDate: row.transactionDate ?? null,
+			});
+		}
+
+		if (importedRows.length > 0) {
+			const totalDebit = importedRows
+				.filter((t) => t.type === "debit")
+				.reduce((sum, t) => sum + Number(t.amount), 0);
+			const totalCredit = importedRows
+				.filter((t) => t.type === "credit")
+				.reduce((sum, t) => sum + Number(t.amount), 0);
+			void container.discordService.notifyBulkImport({
+				count: importedRows.length,
+				totalDebit,
+				totalCredit,
+				transactions: importedRows,
 			});
 		}
 
