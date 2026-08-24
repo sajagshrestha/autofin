@@ -1,1 +1,0 @@
-const n=new Intl.NumberFormat("en",{style:"currency",currency:"NPR"});function o(r,t="NPR"){return t!=="NPR"?new Intl.NumberFormat("en",{style:"currency",currency:t}).format(r):n.format(r)}function c(r){const t=r/1e3;return`${t>=1?`${t}k`:r.toString()}`}export{c as a,o as f};
