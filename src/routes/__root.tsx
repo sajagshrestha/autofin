@@ -5,6 +5,7 @@ import {
 	Outlet,
 	Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { PageLoadingBar } from "@/components/PageLoadingBar";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -35,14 +36,39 @@ export const Route = createRootRoute({
 				content:
 					"Connect your Gmail to automatically track transactions, manage categories, and understand your spending patterns.",
 			},
+			{ name: "theme-color", content: "#0a0a0a" },
+			{ name: "mobile-web-app-capable", content: "yes" },
+			{ name: "apple-mobile-web-app-capable", content: "yes" },
+			{
+				name: "apple-mobile-web-app-status-bar-style",
+				content: "black-translucent",
+			},
+			{ name: "apple-mobile-web-app-title", content: "AutoFin" },
 		],
-		links: [{ rel: "stylesheet", href: appStyles }],
+		links: [
+			{ rel: "stylesheet", href: appStyles },
+			{ rel: "manifest", href: "/manifest.json" },
+			{ rel: "icon", href: "/favicon.ico", sizes: "any" },
+			{
+				rel: "icon",
+				href: "/logo192.png",
+				type: "image/png",
+				sizes: "192x192",
+			},
+			{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+		],
 		scripts: [{ children: themeInitScript }],
 	}),
 	component: RootComponent,
 });
 
 function RootComponent() {
+	useEffect(() => {
+		if (import.meta.env.PROD && "serviceWorker" in navigator) {
+			navigator.serviceWorker.register("/sw.js").catch(() => {});
+		}
+	}, []);
+
 	return (
 		// suppressHydrationWarning: the theme script mutates <html>'s class and
 		// style before React hydrates — that difference is intentional.
