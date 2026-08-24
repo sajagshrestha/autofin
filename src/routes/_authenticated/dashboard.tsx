@@ -50,6 +50,7 @@ const searchParamsSchema = z.object({
 		.string()
 		.optional()
 		.default(defaultRange.endDate ?? ""),
+	category: z.string().optional().default(""),
 });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -58,7 +59,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function AnalyticsDashboard() {
-	const { period, startDate, endDate } = Route.useSearch();
+	const { period, startDate, endDate, category } = Route.useSearch();
 	const navigate = Route.useNavigate();
 
 	const { data: transactionsData, isLoading } = useGetAllTransactions({
@@ -70,11 +71,12 @@ function AnalyticsDashboard() {
 		(newPeriod: DatePeriod) => {
 			const range = getDateRangeForPeriod(newPeriod);
 			navigate({
-				search: {
+				search: (prev) => ({
+					...prev,
 					period: newPeriod,
 					startDate: range.startDate ?? "",
 					endDate: range.endDate ?? "",
-				},
+				}),
 			});
 		},
 		[navigate],
@@ -88,6 +90,15 @@ function AnalyticsDashboard() {
 					startDate: range.startDate ?? "",
 					endDate: range.endDate ?? "",
 				}),
+			});
+		},
+		[navigate],
+	);
+
+	const handleCategoryChange = useCallback(
+		(newCategory: string) => {
+			navigate({
+				search: (prev) => ({ ...prev, category: newCategory }),
 			});
 		},
 		[navigate],
@@ -211,6 +222,24 @@ function AnalyticsDashboard() {
 			}));
 	}, [regularTransactions]);
 
+	// Available categories for the spending line chart filter
+	const spendingCategories = useMemo(
+		() =>
+			categoryData.map((c) => ({
+				name: c.name,
+				icon: c.icon,
+			})),
+		[categoryData],
+	);
+
+	// Transactions restricted to the selected category (line chart filter)
+	const spendingSource = useMemo(() => {
+		if (!category) return regularTransactions;
+		return regularTransactions.filter(
+			(t) => (t.category?.name || "Uncategorized") === category,
+		);
+	}, [regularTransactions, category]);
+
 	// Spending data for line chart: buckets based on date filter (period + start/end)
 	const spendingData = useMemo(() => {
 		const rangeStart =
@@ -262,8 +291,8 @@ function AnalyticsDashboard() {
 			}
 		} else {
 			// All time: derive range from transaction dates
-			if (!regularTransactions.length) return [];
-			const dates = regularTransactions
+			if (!spendingSource.length) return [];
+			const dates = spendingSource
 				.map((t) => (t.transactionDate ? new Date(t.transactionDate) : null))
 				.filter((d): d is Date => d !== null);
 			if (!dates.length) return [];
@@ -281,7 +310,7 @@ function AnalyticsDashboard() {
 		for (const b of buckets) {
 			keyToSpending.set(b.key, 0);
 		}
-		regularTransactions.forEach((t) => {
+		spendingSource.forEach((t) => {
 			if (t.type === "credit") return;
 			const date = t.transactionDate ? new Date(t.transactionDate) : new Date();
 			let key: string;
@@ -299,7 +328,7 @@ function AnalyticsDashboard() {
 			label: b.label,
 			spending: keyToSpending.get(b.key) ?? 0,
 		}));
-	}, [regularTransactions, period, startDate, endDate]);
+	}, [spendingSource, period, startDate, endDate]);
 
 	// Chart subtitle and granularity from date filter
 	const { chartPeriodLabel, chartGranularity } = useMemo(() => {
@@ -561,6 +590,9 @@ function AnalyticsDashboard() {
 							data={spendingData}
 							periodLabel={chartPeriodLabel}
 							granularity={chartGranularity}
+							categories={spendingCategories}
+							selectedCategory={category}
+							onCategoryChange={handleCategoryChange}
 						/>
 
 						{/* Charts Row */}

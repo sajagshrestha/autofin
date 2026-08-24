@@ -6,6 +6,10 @@ import { tooltip } from "@tanstack/charts/tooltip";
 import { TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	CategoryCombobox,
+	type CategoryComboboxOption,
+} from "@/components/ui/category-combobox";
 import { formatCurrency, formatCurrencyShort } from "@/lib/formatCurrency";
 import { LINE_COLOR } from "./chart-theme";
 
@@ -15,18 +19,33 @@ export type SpendingDataPoint = {
 	spending: number;
 };
 
+export type SpendingCategoryOption = {
+	name: string;
+	icon?: string | null;
+};
+
+const ALL_CATEGORIES = "__all__";
+
 type SpendingLineChartProps = {
 	data: SpendingDataPoint[];
 	/** Optional subtitle, e.g. period label from the date filter */
 	periodLabel?: string;
 	/** "month" for All time view; default "day" */
 	granularity?: "day" | "month";
+	/** Available categories for the filter dropdown */
+	categories?: SpendingCategoryOption[];
+	/** Selected category name; empty string means all categories */
+	selectedCategory?: string;
+	onCategoryChange?: (category: string) => void;
 };
 
 export function SpendingLineChart({
 	data,
 	periodLabel,
 	granularity = "day",
+	categories,
+	selectedCategory = "",
+	onCategoryChange,
 }: SpendingLineChartProps) {
 	const definition = useMemo(() => {
 		return defineChart({
@@ -63,18 +82,50 @@ export function SpendingLineChart({
 	}, [data]);
 
 	const perLabel = granularity === "month" ? "per month" : "per day";
-	const subtitle = periodLabel
-		? `Spending ${perLabel} · ${periodLabel}`
-		: `Spending ${perLabel}`;
+	const categoryName = categories?.find(
+		(c) => c.name === selectedCategory,
+	)?.name;
+	const subtitle = [`Spending ${perLabel}`, categoryName, periodLabel]
+		.filter(Boolean)
+		.join(" · ");
+
+	const categoryOptions = useMemo<CategoryComboboxOption[]>(
+		() => [
+			{
+				id: ALL_CATEGORIES,
+				label: "All categories",
+				searchLabel: "all categories",
+			},
+			...(categories ?? []).map((cat) => ({
+				id: cat.name,
+				label: cat.icon ? `${cat.icon} ${cat.name}` : cat.name,
+				searchLabel: cat.name.toLowerCase(),
+			})),
+		],
+		[categories],
+	);
 
 	return (
 		<Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
-					<TrendingUp className="h-5 w-5" />
-					Spending
-				</CardTitle>
-				<p className="text-sm text-muted-foreground">{subtitle}</p>
+			<CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4">
+				<div className="min-w-0">
+					<CardTitle className="flex items-center gap-2">
+						<TrendingUp className="h-5 w-5" />
+						Spending
+					</CardTitle>
+					<p className="text-sm text-muted-foreground">{subtitle}</p>
+				</div>
+				{categories && categories.length > 0 && (
+					<CategoryCombobox
+						value={selectedCategory || ALL_CATEGORIES}
+						onChange={(value) =>
+							onCategoryChange?.(value === ALL_CATEGORIES ? "" : value)
+						}
+						options={categoryOptions}
+						placeholder="Filter by category"
+						className="w-52"
+					/>
+				)}
 			</CardHeader>
 			<CardContent className="px-4">
 				{data.length > 0 ? (
