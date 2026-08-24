@@ -5,6 +5,7 @@ import {
 	Outlet,
 	Scripts,
 } from "@tanstack/react-router";
+import { PageLoadingBar } from "@/components/PageLoadingBar";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -50,6 +51,7 @@ function RootComponent() {
 				<HeadContent />
 			</head>
 			<body className="antialiased">
+				<PageLoadingBar />
 				<ThemeProvider>
 					<AuthProvider>
 						<QueryClientProvider client={queryClient}>

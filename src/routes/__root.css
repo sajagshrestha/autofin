@@ -477,3 +477,22 @@ kbd {
 		background-color: var(--ds-blue-500);
 	}
 }
+
+/* Top page-transition loading bar */
+.page-loading-bar-inner {
+	height: 100%;
+	width: 40%;
+	border-radius: 9999px;
+	background: var(--primary);
+	box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 50%, transparent);
+	animation: page-loading-bar 0.9s ease-in-out infinite;
+}
+
+@keyframes page-loading-bar {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(250%);
+	}
+}
