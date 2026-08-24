@@ -39,7 +39,7 @@ const defaultRange = getDateRangeForPeriod("monthly");
 
 const searchParamsSchema = z.object({
 	period: z
-		.enum(["daily", "weekly", "monthly", "yearly", "all"])
+		.enum(["daily", "last7d", "weekly", "monthly", "yearly", "all"])
 		.optional()
 		.default("monthly"),
 	startDate: z
@@ -229,6 +229,8 @@ function AnalyticsDashboard() {
 			const interval = { start: rangeStart, end: rangeEnd };
 			switch (period) {
 				case "daily":
+				case "last7d":
+				case "monthly":
 					buckets = eachDayOfInterval(interval).map((d) => ({
 						key: format(d, "yyyy-MM-dd"),
 						date: d,
@@ -240,13 +242,6 @@ function AnalyticsDashboard() {
 						weekStartsOn: 1,
 					}).map((d) => ({
 						key: format(d, "yyyy-'W'ww"),
-						date: d,
-						label: format(d, "MMM d"),
-					}));
-					break;
-				case "monthly":
-					buckets = eachDayOfInterval(interval).map((d) => ({
-						key: format(d, "yyyy-MM-dd"),
 						date: d,
 						label: format(d, "MMM d"),
 					}));
@@ -290,7 +285,7 @@ function AnalyticsDashboard() {
 			if (t.type === "credit") return;
 			const date = t.transactionDate ? new Date(t.transactionDate) : new Date();
 			let key: string;
-			if (period === "daily" || period === "monthly")
+			if (period === "daily" || period === "last7d" || period === "monthly")
 				key = format(date, "yyyy-MM-dd");
 			else if (period === "weekly")
 				key = format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-'W'ww");
@@ -317,14 +312,15 @@ function AnalyticsDashboard() {
 		const start = new Date(startDate);
 		const end = new Date(endDate);
 		const formatRange = () => {
-			if (period === "daily") return format(start, "MMM d, yyyy");
+			if (period === "daily" || period === "last7d")
+				return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
 			if (period === "monthly") return format(start, "MMMM yyyy");
 			if (period === "yearly") return format(start, "yyyy");
 			return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
 		};
 		const label = formatRange();
 		const granularity =
-			period === "daily" || period === "monthly"
+			period === "daily" || period === "last7d" || period === "monthly"
 				? ("day" as const)
 				: ("month" as const);
 		return { chartPeriodLabel: label, chartGranularity: granularity };

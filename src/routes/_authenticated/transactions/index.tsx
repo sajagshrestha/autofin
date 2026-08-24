@@ -22,6 +22,8 @@ import {
 	Plus,
 	SlidersHorizontal,
 	Trash2,
+	TrendingDown,
+	TrendingUp,
 	Wallet,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -96,7 +98,7 @@ import {
 import { useGetAllTransactions } from "@/hooks/transactions/queries";
 import { formatCurrency } from "@/lib/formatCurrency";
 
-const defaultRange = getDateRangeForPeriod("daily");
+const defaultRange = getDateRangeForPeriod("last7d");
 const ALL_CATEGORIES_FILTER = "all";
 const UNCATEGORIZED_FILTER = "uncategorized";
 type CategoryFilterOption = CategoryComboboxOption;
@@ -112,9 +114,9 @@ const sortOptions = [
 
 const searchParamsSchema = z.object({
 	period: z
-		.enum(["daily", "weekly", "monthly", "yearly", "all"])
+		.enum(["daily", "last7d", "weekly", "monthly", "yearly", "all"])
 		.optional()
-		.default("daily"),
+		.default("last7d"),
 	startDate: z
 		.string()
 		.optional()
@@ -464,7 +466,7 @@ function TransactionsPage() {
 	const columns: ColumnDef<Transaction>[] = [
 		{
 			accessorKey: "amount",
-			header: () => <div className="text-right">Amount</div>,
+			header: () => <div className="text-left">Amount</div>,
 			sortingFn: (rowA, rowB, columnId) =>
 				Number(rowA.getValue(columnId)) - Number(rowB.getValue(columnId)),
 			cell: ({ row }) => {
@@ -476,8 +478,13 @@ function TransactionsPage() {
 				const isDebit = row.original.type === "debit";
 				return (
 					<div
-						className={`text-right font-medium ${isDebit ? "text-ds-red-700 dark:text-ds-red-900" : "text-ds-green-700 dark:text-ds-green-900"}`}
+						className={`flex items-center gap-1.5 font-medium ${isDebit ? "text-ds-red-700 dark:text-ds-red-900" : "text-ds-green-700 dark:text-ds-green-900"}`}
 					>
+						{isDebit ? (
+							<TrendingDown className="h-4 w-4 shrink-0" />
+						) : (
+							<TrendingUp className="h-4 w-4 shrink-0" />
+						)}
 						{formatted}
 					</div>
 				);

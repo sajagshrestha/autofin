@@ -28,7 +28,13 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-export type DatePeriod = "daily" | "weekly" | "monthly" | "yearly" | "all";
+export type DatePeriod =
+	| "daily"
+	| "last7d"
+	| "weekly"
+	| "monthly"
+	| "yearly"
+	| "all";
 
 export interface DateRange {
 	startDate?: string;
@@ -44,6 +50,7 @@ interface DateFilterProps {
 }
 
 const PERIOD_OPTIONS: { value: DatePeriod; label: string }[] = [
+	{ value: "last7d", label: "Last 7 days" },
 	{ value: "daily", label: "Daily" },
 	{ value: "weekly", label: "Weekly" },
 	{ value: "monthly", label: "Monthly" },
@@ -59,6 +66,11 @@ function getDateRangeForPeriod(
 		case "daily":
 			return {
 				startDate: startOfDay(referenceDate).toISOString(),
+				endDate: endOfDay(referenceDate).toISOString(),
+			};
+		case "last7d":
+			return {
+				startDate: startOfDay(subDays(referenceDate, 6)).toISOString(),
 				endDate: endOfDay(referenceDate).toISOString(),
 			};
 		case "weekly":
@@ -94,6 +106,8 @@ function navigateDate(
 	switch (period) {
 		case "daily":
 			return isNext ? addDays(date, 1) : subDays(date, 1);
+		case "last7d":
+			return isNext ? addDays(date, 7) : subDays(date, 7);
 		case "weekly":
 			return isNext ? addWeeks(date, 1) : subWeeks(date, 1);
 		case "monthly":
@@ -117,6 +131,10 @@ function formatDateLabel(
 	switch (period) {
 		case "daily":
 			return format(start, "MMM d, yyyy");
+		case "last7d": {
+			const end = endDate ? new Date(endDate) : endOfDay(start);
+			return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+		}
 		case "weekly": {
 			const end = endDate
 				? new Date(endDate)
