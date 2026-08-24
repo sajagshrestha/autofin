@@ -17,7 +17,7 @@ import appStyles from "./__root.css?url";
  * Runs before first paint so the correct theme class is on <html> from the
  * very first frame — no flash of the wrong theme during SSR hydration.
  */
-const themeInitScript = `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var e=document.documentElement;e.classList.toggle("dark",d);e.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
+const themeInitScript = `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var e=document.documentElement;e.classList.toggle("dark",d);e.style.colorScheme=d?"dark":"light";var n=localStorage.getItem("theme-name");if(n)e.setAttribute("data-theme",n);}catch(e){}})();`;
 
 export const Route = createRootRoute({
 	head: () => ({
