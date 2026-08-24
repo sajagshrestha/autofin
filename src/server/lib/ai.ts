@@ -42,7 +42,7 @@ export function getDefaultModelId(): string {
 		case "google":
 			return "gemini-2.5-flash-lite";
 		default:
-			return "gpt-5.6-luna";
+			return "gpt-5.4-mini";
 	}
 }
 
@@ -59,7 +59,7 @@ export function getAIModel() {
 /** Model ID for the full (non-lite) model — used for the advisor chat. */
 const ADIVISOR_MODEL_IDS: Record<AIProviderName, string> = {
 	google: "gemini-2.5-flash",
-	openai: "gpt-5.6-luna",
+	openai: "gpt-5.4-mini",
 	anthropic: "claude-sonnet-4-20250514",
 };
 
