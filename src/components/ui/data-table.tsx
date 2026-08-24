@@ -222,10 +222,10 @@ export function DataTable<TData, TValue>({
 										isChildRow && isPinned && "bg-muted/80",
 										isExpanded &&
 											cell.column.getIndex() === 0 &&
-											"shadow-[inset_4px_0_0_0_hsl(var(--primary))]",
+											"shadow-[inset_4px_0_0_0_var(--primary)]",
 										isChildRow &&
 											cell.column.getIndex() === 0 &&
-											"shadow-[inset_4px_0_0_0_hsl(var(--primary))]",
+											"shadow-[inset_4px_0_0_0_var(--primary)]",
 									)}
 									style={{
 										width: `${cell.column.getSize()}px`,

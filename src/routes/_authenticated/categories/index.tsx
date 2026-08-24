@@ -116,43 +116,45 @@ function CategoriesPage() {
 				const canEdit = userId != null || !isDefault;
 
 				return (
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" className="h-8 w-8 p-0">
-								<span className="sr-only">Open menu</span>
-								<MoreVertical className="h-4 w-4" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem asChild>
-								<Link
-									to="/categories/$categoryId"
-									params={{ categoryId: category.id }}
-								>
-									<Eye className="mr-2 h-4 w-4" />
-									View details
-								</Link>
-							</DropdownMenuItem>
-							{canEdit && (
-								<>
-									<DropdownMenuItem
-										onClick={() => setEditingCategory(category)}
+					<div className="flex justify-end">
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" className="h-8 w-8 p-0">
+									<span className="sr-only">Open menu</span>
+									<MoreVertical className="h-4 w-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem asChild>
+									<Link
+										to="/categories/$categoryId"
+										params={{ categoryId: category.id }}
 									>
-										<Pencil className="mr-2 h-4 w-4" />
-										Edit
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem
-										onClick={() => setDeletingCategory(category)}
-										className="text-red-600 focus:text-red-600"
-									>
-										<Trash2 className="mr-2 h-4 w-4" />
-										Delete
-									</DropdownMenuItem>
-								</>
-							)}
-						</DropdownMenuContent>
-					</DropdownMenu>
+										<Eye className="mr-2 h-4 w-4" />
+										View details
+									</Link>
+								</DropdownMenuItem>
+								{canEdit && (
+									<>
+										<DropdownMenuItem
+											onClick={() => setEditingCategory(category)}
+										>
+											<Pencil className="mr-2 h-4 w-4" />
+											Edit
+										</DropdownMenuItem>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem
+											onClick={() => setDeletingCategory(category)}
+											className="text-ds-red-700 focus:text-ds-red-700"
+										>
+											<Trash2 className="mr-2 h-4 w-4" />
+											Delete
+										</DropdownMenuItem>
+									</>
+								)}
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
 				);
 			},
 		},

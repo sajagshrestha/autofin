@@ -247,7 +247,7 @@ export function AdvisorChatWidget() {
 				}`}
 			>
 				<Sparkles className="h-5 w-5" />
-				<span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
+				<span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-background bg-ds-green-700" />
 			</button>
 
 			{/* Backdrop */}

@@ -226,7 +226,7 @@ function TransactionDetailPage() {
 							className={`text-xl font-semibold ${
 								isDebit
 									? "text-destructive"
-									: "text-green-600 dark:text-green-400"
+									: "text-ds-green-700 dark:text-ds-green-900"
 							}`}
 						>
 							{isDebit ? "-" : "+"}
@@ -261,7 +261,7 @@ function TransactionDetailPage() {
 									className={
 										isDebit
 											? "text-destructive font-medium"
-											: "text-green-600 dark:text-green-400 font-medium"
+											: "text-ds-green-700 dark:text-ds-green-900 font-medium"
 									}
 								>
 									{isDebit ? "-" : "+"}

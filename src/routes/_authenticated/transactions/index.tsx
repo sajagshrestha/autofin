@@ -508,7 +508,7 @@ function TransactionsPage() {
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
 					onClick={() => setDeletingTransaction(transaction)}
-					className="text-red-600 focus:text-red-600"
+					className="text-ds-red-700 focus:text-ds-red-700"
 				>
 					<Trash2 className="mr-2 h-4 w-4" />
 					Delete
@@ -532,7 +532,7 @@ function TransactionsPage() {
 				const isDebit = row.original.type === "debit";
 				return (
 					<div
-						className={`text-right font-medium ${isDebit ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}
+						className={`text-right font-medium ${isDebit ? "text-ds-red-700 dark:text-ds-red-900" : "text-ds-green-700 dark:text-ds-green-900"}`}
 					>
 						{formatted}
 					</div>
@@ -819,8 +819,8 @@ function TransactionsPage() {
 												<p
 													className={`text-sm font-semibold ${
 														transaction.type === "debit"
-															? "text-red-600 dark:text-red-400"
-															: "text-green-600 dark:text-green-400"
+															? "text-ds-red-700 dark:text-ds-red-900"
+															: "text-ds-green-700 dark:text-ds-green-900"
 													}`}
 												>
 													{formattedAmount}

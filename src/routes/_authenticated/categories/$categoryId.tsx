@@ -161,7 +161,7 @@ function CategoryDetailPage() {
 						<Button
 							variant="outline"
 							size="sm"
-							className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+							className="gap-2 text-ds-red-700 hover:text-ds-red-800 hover:bg-ds-red-100"
 							onClick={() => setDeleteOpen(true)}
 						>
 							<Trash2 className="h-4 w-4" />

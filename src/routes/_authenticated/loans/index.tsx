@@ -56,13 +56,13 @@ function todayIso(): string {
 
 function directionBadge(direction: LoanDirection) {
 	return direction === "given" ? (
-		<Badge variant="secondary">
-			<ArrowUpRight className="mr-1 h-3 w-3" />
+		<Badge variant="blue">
+			<ArrowUpRight className="h-3 w-3" />
 			Given
 		</Badge>
 	) : (
-		<Badge variant="outline">
-			<ArrowDownLeft className="mr-1 h-3 w-3" />
+		<Badge variant="gray">
+			<ArrowDownLeft className="h-3 w-3" />
 			Taken
 		</Badge>
 	);
@@ -70,12 +70,12 @@ function directionBadge(direction: LoanDirection) {
 
 function statusBadge(loan: Loan) {
 	if (loan.status === "settled" || loan.status === "overpaid") {
-		return <Badge className="bg-green-600 hover:bg-green-700">Settled</Badge>;
+		return <Badge variant="green">Settled</Badge>;
 	}
 	if (loan.isOverdue) {
-		return <Badge variant="destructive">Overdue</Badge>;
+		return <Badge variant="red">Overdue</Badge>;
 	}
-	return <Badge variant="outline">Outstanding</Badge>;
+	return <Badge variant="amber">Outstanding</Badge>;
 }
 
 function LoansPage() {
@@ -123,10 +123,10 @@ function LoansPage() {
 						<CardTitle className="text-sm font-medium text-muted-foreground">
 							Outstanding — lent by you
 						</CardTitle>
-						<ArrowUpRight className="h-4 w-4 text-red-500" />
+						<ArrowUpRight className="h-4 w-4 text-ds-red-700" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold text-red-600 dark:text-red-400">
+						<div className="text-2xl font-bold text-ds-red-700 dark:text-ds-red-900">
 							{formatCurrency(totals.givenOutstanding)}
 						</div>
 						<p className="text-xs text-muted-foreground">
@@ -139,10 +139,10 @@ function LoansPage() {
 						<CardTitle className="text-sm font-medium text-muted-foreground">
 							Outstanding — borrowed by you
 						</CardTitle>
-						<ArrowDownLeft className="h-4 w-4 text-green-500" />
+						<ArrowDownLeft className="h-4 w-4 text-ds-green-700" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold text-green-600 dark:text-green-400">
+						<div className="text-2xl font-bold text-ds-green-700 dark:text-ds-green-900">
 							{formatCurrency(totals.takenOutstanding)}
 						</div>
 						<p className="text-xs text-muted-foreground">You still owe</p>
@@ -220,7 +220,7 @@ function LoansPage() {
 										<div className="flex items-center gap-2 shrink-0">
 											<div className="text-right">
 												<p
-													className={`font-semibold ${loan.remainingAmount <= 0 ? "text-green-600 dark:text-green-400" : ""}`}
+													className={`font-semibold ${loan.remainingAmount <= 0 ? "text-ds-green-700 dark:text-ds-green-900" : ""}`}
 												>
 													{formatCurrency(Math.max(loan.remainingAmount, 0))}
 												</p>
@@ -243,7 +243,7 @@ function LoansPage() {
 														View details
 													</DropdownMenuItem>
 													<DropdownMenuItem
-														className="text-red-600 focus:text-red-600"
+														className="text-ds-red-700 focus:text-ds-red-700"
 														onClick={() => setDeleteTarget(loan)}
 													>
 														<Trash2 className="mr-2 h-4 w-4" />
@@ -256,7 +256,7 @@ function LoansPage() {
 
 									<div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
 										<div
-											className={`h-full rounded-full ${loan.status === "outstanding" ? "bg-primary" : "bg-green-500"}`}
+											className={`h-full rounded-full ${loan.status === "outstanding" ? "bg-primary" : "bg-ds-green-700"}`}
 											style={{ width: `${progress}%` }}
 										/>
 									</div>
@@ -663,7 +663,7 @@ function LoanDetailDialog({
 												: ""}
 										</p>
 									</div>
-									<Badge variant="secondary">
+									<Badge variant="gray" contrast="low" size="sm">
 										{current.direction === "given" ? "received" : "paid"}
 									</Badge>
 								</li>
@@ -677,7 +677,7 @@ function LoanDetailDialog({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="text-red-600 hover:text-red-700"
+						className="text-ds-red-700 hover:text-ds-red-800"
 						onClick={handleDelete}
 						disabled={deleteMutation.isPending}
 					>

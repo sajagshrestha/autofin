@@ -391,13 +391,13 @@ function ImportStatementPage() {
 								<Badge variant="destructive">
 									Debits {formatCurrency(totals.debit)}
 								</Badge>
-								<Badge className="bg-green-600 hover:bg-green-700">
+								<Badge className="bg-ds-green-700 hover:bg-ds-green-800">
 									Credits {formatCurrency(totals.credit)}
 								</Badge>
 								{includedRows.some((row) => row.duplicateOf) && (
 									<Badge
 										variant="outline"
-										className="border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+										className="border-ds-amber-500/50 bg-ds-amber-500/10 text-ds-amber-900 dark:text-ds-amber-700"
 									>
 										Includes possible duplicates
 									</Badge>
@@ -471,7 +471,7 @@ function ImportStatementPage() {
 												<Button
 													variant="ghost"
 													size="icon"
-													className="h-8 w-8 text-muted-foreground hover:text-red-600"
+													className="h-8 w-8 text-muted-foreground hover:text-ds-red-700"
 													onClick={() => removeRow(row.id)}
 													aria-label="Remove row"
 												>
@@ -482,7 +482,7 @@ function ImportStatementPage() {
 										{row.duplicateOf && (
 											<Badge
 												variant="outline"
-												className="border-amber-500/50 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400"
+												className="border-ds-amber-500/50 bg-ds-amber-500/10 text-[10px] text-ds-amber-900 dark:text-ds-amber-700"
 												title={`Possible duplicate of an existing transaction (${row.duplicateOf.merchant ?? "unknown"}, ${row.duplicateOf.amount} NPR)`}
 											>
 												Duplicate?
@@ -517,8 +517,8 @@ function ImportStatementPage() {
 													}
 													className={`h-8 w-full text-right ${
 														row.type === "debit"
-															? "text-red-600 dark:text-red-400"
-															: "text-green-600 dark:text-green-400"
+															? "text-ds-red-700 dark:text-ds-red-900"
+															: "text-ds-green-700 dark:text-ds-green-900"
 													}`}
 												/>
 											</div>
@@ -701,7 +701,7 @@ function ImportStatementPage() {
 													{row.duplicateOf && (
 														<Badge
 															variant="outline"
-															className="mt-1 border-amber-500/50 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400"
+															className="mt-1 border-ds-amber-500/50 bg-ds-amber-500/10 text-[10px] text-ds-amber-900 dark:text-ds-amber-700"
 															title={`Possible duplicate of an existing transaction (${row.duplicateOf.merchant ?? "unknown"}, ${row.duplicateOf.amount} NPR)`}
 														>
 															Duplicate?
@@ -774,7 +774,7 @@ function ImportStatementPage() {
 													<Button
 														variant="ghost"
 														size="icon"
-														className="h-8 w-8 text-muted-foreground hover:text-red-600"
+														className="h-8 w-8 text-muted-foreground hover:text-ds-red-700"
 														onClick={() => removeRow(row.id)}
 														aria-label="Remove row"
 													>

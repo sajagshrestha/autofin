@@ -283,7 +283,7 @@ function SettingsPage() {
 					<Card
 						className={`border-l-4 transition-shadow ${
 							step1Complete
-								? "border-l-green-500"
+								? "border-l-ds-green-700"
 								: "border-l-primary shadow-sm hover:shadow-md"
 						}`}
 					>
@@ -300,7 +300,7 @@ function SettingsPage() {
 									</div>
 								</div>
 								{isConnected && (
-									<Badge className="bg-green-500 hover:bg-green-600">
+									<Badge className="bg-ds-green-700 hover:bg-ds-green-800">
 										<CheckCircle2 className="mr-1 h-3 w-3" />
 										Connected
 									</Badge>
@@ -316,7 +316,7 @@ function SettingsPage() {
 								<div className="space-y-4">
 									<div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
 										<div className="rounded-full bg-background p-2">
-											<CheckCircle2 className="h-5 w-5 text-green-500" />
+											<CheckCircle2 className="h-5 w-5 text-ds-green-700" />
 										</div>
 										<div className="min-w-0 flex-1">
 											<p className="truncate text-sm font-medium">
@@ -373,7 +373,7 @@ function SettingsPage() {
 					<Card
 						className={`border-l-4 transition-shadow ${
 							step2Complete
-								? "border-l-green-500"
+								? "border-l-ds-green-700"
 								: isConnected
 									? "border-l-primary shadow-sm hover:shadow-md"
 									: "border-l-muted opacity-60"
@@ -392,7 +392,7 @@ function SettingsPage() {
 									</div>
 								</div>
 								{step2Complete && (
-									<Badge className="bg-green-500 hover:bg-green-600">
+									<Badge className="bg-ds-green-700 hover:bg-ds-green-800">
 										<CheckCircle2 className="mr-1 h-3 w-3" />
 										{emails.length} filter{emails.length !== 1 ? "s" : ""}
 									</Badge>
@@ -442,7 +442,7 @@ function SettingsPage() {
 					<Card
 						className={`border-l-4 transition-shadow ${
 							step3Complete
-								? "border-l-green-500"
+								? "border-l-ds-green-700"
 								: hasFilters
 									? "border-l-primary shadow-sm hover:shadow-md"
 									: "border-l-muted opacity-60"
@@ -461,7 +461,7 @@ function SettingsPage() {
 									</div>
 								</div>
 								{step3Complete && (
-									<Badge className="bg-green-500 hover:bg-green-600">
+									<Badge className="bg-ds-green-700 hover:bg-ds-green-800">
 										<CheckCircle2 className="mr-1 h-3 w-3" />
 										Watching
 									</Badge>
@@ -557,7 +557,7 @@ function SettingsPage() {
 										}
 									>
 										{copiedKey === "url" ? (
-											<Check className="h-4 w-4 text-green-600" />
+											<Check className="h-4 w-4 text-ds-green-700" />
 										) : (
 											<Copy className="h-4 w-4" />
 										)}
@@ -586,7 +586,7 @@ function SettingsPage() {
 										}
 									>
 										{copiedKey === "token" ? (
-											<Check className="h-4 w-4 text-green-600" />
+											<Check className="h-4 w-4 text-ds-green-700" />
 										) : (
 											<Copy className="h-4 w-4" />
 										)}
@@ -742,7 +742,7 @@ function StepCircle({
 			<div
 				className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 font-medium transition-colors ${
 					complete
-						? "border-green-500 bg-green-500 text-white"
+						? "border-ds-green-700 bg-ds-green-700 text-white"
 						: current
 							? "border-primary bg-primary text-primary-foreground"
 							: "border-muted bg-muted text-muted-foreground"
@@ -759,7 +759,7 @@ function StepConnector({ active }: { active: boolean }) {
 	return (
 		<div
 			className={`h-0.5 flex-1 min-w-[24px] rounded transition-colors ${
-				active ? "bg-green-500" : "bg-muted"
+				active ? "bg-ds-green-700" : "bg-muted"
 			}`}
 		/>
 	);

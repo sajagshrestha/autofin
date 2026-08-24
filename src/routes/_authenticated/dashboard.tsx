@@ -457,12 +457,12 @@ function AnalyticsDashboard() {
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Total Expenses
 									</CardTitle>
-									<div className="rounded-full bg-red-500/10 p-1.5">
-										<ArrowDownRight className="h-4 w-4 text-red-500" />
+									<div className="rounded-full bg-ds-red-500/10 p-1.5">
+										<ArrowDownRight className="h-4 w-4 text-ds-red-700" />
 									</div>
 								</CardHeader>
 								<CardContent>
-									<div className="text-2xl font-bold text-red-600">
+									<div className="text-2xl font-bold text-ds-red-700">
 										{formatCurrency(stats.totalExpenses)}
 									</div>
 									<p className="text-xs text-muted-foreground">
@@ -476,12 +476,12 @@ function AnalyticsDashboard() {
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Total Income
 									</CardTitle>
-									<div className="rounded-full bg-green-500/10 p-1.5">
-										<ArrowUpRight className="h-4 w-4 text-green-500" />
+									<div className="rounded-full bg-ds-green-500/10 p-1.5">
+										<ArrowUpRight className="h-4 w-4 text-ds-green-700" />
 									</div>
 								</CardHeader>
 								<CardContent>
-									<div className="text-2xl font-bold text-green-500">
+									<div className="text-2xl font-bold text-ds-green-700">
 										{formatCurrency(stats.totalIncome)}
 									</div>
 									<p className="text-xs text-muted-foreground">
@@ -495,15 +495,15 @@ function AnalyticsDashboard() {
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Savings
 									</CardTitle>
-									<div className="rounded-full bg-emerald-500/10 p-1.5">
+									<div className="rounded-full bg-ds-green-500/10 p-1.5">
 										<PiggyBank
-											className={`h-4 w-4 ${stats.savings >= 0 ? "text-emerald-500" : "text-red-600"}`}
+											className={`h-4 w-4 ${stats.savings >= 0 ? "text-ds-green-700" : "text-ds-red-700"}`}
 										/>
 									</div>
 								</CardHeader>
 								<CardContent>
 									<div
-										className={`text-2xl font-bold ${stats.savings >= 0 ? "text-emerald-600" : "text-red-600"}`}
+										className={`text-2xl font-bold ${stats.savings >= 0 ? "text-ds-green-700" : "text-ds-red-700"}`}
 									>
 										{formatCurrency(stats.savings)}
 									</div>
@@ -518,8 +518,8 @@ function AnalyticsDashboard() {
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Transactions
 									</CardTitle>
-									<div className="rounded-full bg-blue-500/10 p-1.5">
-										<CreditCard className="h-4 w-4 text-blue-500" />
+									<div className="rounded-full bg-ds-blue-500/10 p-1.5">
+										<CreditCard className="h-4 w-4 text-ds-blue-700" />
 									</div>
 								</CardHeader>
 								<CardContent>
@@ -543,11 +543,11 @@ function AnalyticsDashboard() {
 										Loan activity
 									</div>
 									<span className="inline-flex items-center gap-1 text-sm">
-										<ArrowUpRight className="h-3.5 w-3.5 text-red-500" />
+										<ArrowUpRight className="h-3.5 w-3.5 text-ds-red-700" />
 										Lent {formatCurrency(loanFlows.lent)}
 									</span>
 									<span className="inline-flex items-center gap-1 text-sm">
-										<ArrowDownRight className="h-3.5 w-3.5 text-green-600" />
+										<ArrowDownRight className="h-3.5 w-3.5 text-ds-green-700" />
 										Received {formatCurrency(loanFlows.received)}
 									</span>
 									<Link
