@@ -1,6 +1,8 @@
 import { z } from "zod";
+import type { Loan } from "@/server/db/schema";
 import { getContainer } from "@/server/lib/container";
 import { filterDateToUtc } from "@/server/lib/timezone";
+import type { LoanRepository } from "@/server/repositories/loan.repository";
 
 export interface AdvisorToolContext {
 	/** Supabase user id — every query is scoped to this user. */
@@ -28,6 +30,73 @@ function dayStart(date: string, timezone: string): Date {
 
 function dayEnd(date: string, timezone: string): Date {
 	return filterDateToUtc(`${date}T23:59:59.999`, timezone);
+}
+
+interface LoanStat {
+	id: string;
+	direction: "given" | "taken";
+	counterpartyName: string;
+	principalAmount: number;
+	settledAmount: number;
+	remainingAmount: number;
+	settlementCount: number;
+	status: "outstanding" | "settled" | "overpaid";
+	isOverdue: boolean;
+	issuedDate: string;
+	dueDate: string | null;
+	notes: string | null;
+}
+
+/**
+ * Project loans into AI-facing stats. Repayments are the linked transactions
+ * whose `loanId` points at the loan, excluding the loan's own origin
+ * transaction so a brand-new loan starts at zero.
+ */
+function loanToStat(
+	loan: Loan,
+	totals: { settledAmount: number; settlementCount: number },
+): LoanStat {
+	const settled = Number(totals.settledAmount.toFixed(2));
+	const principal = Number.parseFloat(loan.principalAmount);
+	const remaining = Number((principal - settled).toFixed(2));
+	return {
+		id: loan.id,
+		direction: loan.direction,
+		counterpartyName: loan.counterpartyName,
+		principalAmount: principal,
+		settledAmount: settled,
+		remainingAmount: remaining,
+		settlementCount: totals.settlementCount,
+		status:
+			remaining < 0 ? "overpaid" : remaining === 0 ? "settled" : "outstanding",
+		isOverdue:
+			remaining > 0 &&
+			loan.dueDate !== null &&
+			loan.dueDate.getTime() < Date.now(),
+		issuedDate: loan.issuedDate.toISOString(),
+		dueDate: loan.dueDate?.toISOString() ?? null,
+		notes: loan.notes,
+	};
+}
+
+async function loadLoansWithStats(
+	loanRepo: LoanRepository,
+	loans: Loan[],
+): Promise<LoanStat[]> {
+	if (loans.length === 0) return [];
+	const totals = await loanRepo.getSettlementTotals(
+		loans[0].userId,
+		loans.map((loan) => ({
+			loanId: loan.id,
+			excludeTransactionId: loan.transactionId,
+		})),
+	);
+	return loans.map((loan) =>
+		loanToStat(
+			loan,
+			totals.get(loan.id) ?? { settledAmount: 0, settlementCount: 0 },
+		),
+	);
 }
 
 /**
@@ -71,7 +140,7 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 			name: "getSpendingByCategory",
 			title: "Get spending by category",
 			description:
-				"Spending (debits) grouped by category, largest first, for a period. Omit dates for all-time.",
+				"Spending (debits) grouped by category, largest first, for a period. Excludes loan transfers. Omit dates for all-time.",
 			inputSchema: z.object({
 				startDate: dateSchema.optional(),
 				endDate: dateSchema.optional(),
@@ -106,7 +175,7 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 			name: "getMonthlyTrend",
 			title: "Get monthly trend",
 			description:
-				"Monthly income vs expenses for the trailing N months (default 6, max 12), oldest first. Use for trends and month-over-month comparisons.",
+				"Monthly income vs expenses (loan transfers excluded) for the trailing N months (default 6, max 12), oldest first. Use for trends and month-over-month comparisons.",
 			inputSchema: z.object({
 				months: z.number().int().min(1).max(12).default(6),
 			}),
@@ -237,6 +306,112 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 									? ("ai" as const)
 									: ("custom" as const),
 					})),
+				};
+			},
+		},
+
+		{
+			name: "getLoans",
+			title: "Get loans",
+			description:
+				"List tracked loans with current balances. Each entry has direction (given = money you lent, taken = money you borrowed), counterparty, principal, settled, remaining, status (outstanding/settled/overpaid) and overdue flag. Optionally filter by direction or status.",
+			inputSchema: z.object({
+				direction: z.enum(["given", "taken"]).optional(),
+				status: z.enum(["outstanding", "settled", "overpaid"]).optional(),
+			}),
+			execute: async (args, ctx) => {
+				const { direction, status } = args as {
+					direction?: "given" | "taken";
+					status?: "outstanding" | "settled" | "overpaid";
+				};
+				const container = getContainer();
+				const loans = await container.loanRepo.findAllForUser(ctx.userId);
+				const stats = await loadLoansWithStats(container.loanRepo, loans);
+				const filtered = stats.filter(
+					(loan) =>
+						(direction ? loan.direction === direction : true) &&
+						(status ? loan.status === status : true),
+				);
+				return {
+					currency: "NPR",
+					count: filtered.length,
+					loans: filtered,
+				};
+			},
+		},
+
+		{
+			name: "getLoanSummary",
+			title: "Get loan summary",
+			description:
+				"Aggregate loan positions: total principal and outstanding remaining for money lent (given) and borrowed (taken), plus counts of active and overdue loans. No arguments.",
+			inputSchema: z.object({}),
+			execute: async (_args, ctx) => {
+				const container = getContainer();
+				const loans = await container.loanRepo.findAllForUser(ctx.userId);
+				const stats = await loadLoansWithStats(container.loanRepo, loans);
+
+				const sumRemaining = (items: LoanStat[]) =>
+					items.reduce((sum, loan) => sum + loan.remainingAmount, 0);
+				const sumPrincipal = (items: LoanStat[]) =>
+					items.reduce((sum, loan) => sum + loan.principalAmount, 0);
+
+				const given = stats.filter((loan) => loan.direction === "given");
+				const taken = stats.filter((loan) => loan.direction === "taken");
+				const outstandingGiven = given.filter(
+					(loan) => loan.status === "outstanding",
+				);
+				const outstandingTaken = taken.filter(
+					(loan) => loan.status === "outstanding",
+				);
+
+				return {
+					currency: "NPR",
+					totalLoans: stats.length,
+					activeLoans: stats.filter(
+						(loan) =>
+							loan.status === "outstanding" || loan.status === "overpaid",
+					).length,
+					overdueLoans: stats.filter((loan) => loan.isOverdue).length,
+					given: {
+						count: given.length,
+						totalPrincipal: sumPrincipal(given),
+						outstanding: sumRemaining(outstandingGiven),
+					},
+					taken: {
+						count: taken.length,
+						totalPrincipal: sumPrincipal(taken),
+						outstanding: sumRemaining(outstandingTaken),
+					},
+				};
+			},
+		},
+
+		{
+			name: "getLoanSettlements",
+			title: "Get loan repayments",
+			description:
+				"List the repayment transactions recorded against a single loan (the loan's origin is excluded), oldest first. Requires a loan id from getLoans.",
+			inputSchema: z.object({
+				loanId: z.string().describe("Loan id from getLoans"),
+			}),
+			execute: async (args, ctx) => {
+				const { loanId } = args as { loanId: string };
+				const container = getContainer();
+				const loan = await container.loanRepo.findById(ctx.userId, loanId);
+				if (!loan) {
+					return { error: `Loan not found: ${loanId}` };
+				}
+				const settlements = await container.loanRepo.findSettlements(
+					ctx.userId,
+					loan,
+				);
+				return {
+					currency: "NPR",
+					loanId,
+					direction: loan.direction,
+					counterpartyName: loan.counterpartyName,
+					settlements,
 				};
 			},
 		},

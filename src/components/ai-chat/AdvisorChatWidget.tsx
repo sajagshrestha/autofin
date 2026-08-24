@@ -27,6 +27,9 @@ const TOOL_LABELS: Record<string, string> = {
 	getSpendingByCategory: "Breaking down by category",
 	getMonthlyTrend: "Analyzing monthly trends",
 	listTransactions: "Searching your transactions",
+	getLoans: "Pulling your loans",
+	getLoanSummary: "Summarizing loan positions",
+	getLoanSettlements: "Listing loan repayments",
 };
 
 const markdownClass =

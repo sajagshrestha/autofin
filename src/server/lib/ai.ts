@@ -3,7 +3,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 
 export type AIProviderName = "openai" | "anthropic" | "google";
-const DEFAULT_PROVIDER: AIProviderName = "google";
+const DEFAULT_PROVIDER: AIProviderName = "openai";
 
 /**
  * Get the configured AI provider based on environment variable.
@@ -42,7 +42,7 @@ export function getDefaultModelId(): string {
 		case "google":
 			return "gemini-2.5-flash-lite";
 		default:
-			return "gpt-4o-mini";
+			return "gpt-5.6-luna";
 	}
 }
 
@@ -59,7 +59,7 @@ export function getAIModel() {
 /** Model ID for the full (non-lite) model — used for the advisor chat. */
 const ADIVISOR_MODEL_IDS: Record<AIProviderName, string> = {
 	google: "gemini-2.5-flash",
-	openai: "gpt-4o",
+	openai: "gpt-5.6-luna",
 	anthropic: "claude-sonnet-4-20250514",
 };
 

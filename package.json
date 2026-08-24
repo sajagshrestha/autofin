@@ -21,10 +21,10 @@
     "db:check": "bun run scripts/check-db.ts"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.23",
-    "@ai-sdk/google": "^3.0.13",
-    "@ai-sdk/openai": "^3.0.19",
-    "@ai-sdk/react": "^3.0.267",
+    "@ai-sdk/anthropic": "^4.0.41",
+    "@ai-sdk/google": "^4.0.50",
+    "@ai-sdk/openai": "^4.0.46",
+    "@ai-sdk/react": "^4.0.80",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@headlessui/react": "^2.2.9",
@@ -48,7 +48,7 @@
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/react-start": "^1.132.0",
     "@tanstack/react-table": "^8.21.3",
-    "ai": "^6.0.50",
+    "ai": "^7.0.77",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

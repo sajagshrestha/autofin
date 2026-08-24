@@ -70,7 +70,7 @@ export const mcpRouter = new Hono()
 								version: SERVER_INFO.version,
 							},
 							instructions:
-								"Read-only access to this AutoFin user's transactions. All amounts are NPR. Use the provided date format YYYY-MM-DD.",
+								"Read-only access to this AutoFin user's transactions and tracked loans. All amounts are NPR. Use the provided date format YYYY-MM-DD.",
 						}),
 					);
 					break;
