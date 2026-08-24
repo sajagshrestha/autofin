@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
 	ArrowRight,
 	CreditCard,
@@ -14,8 +14,15 @@ import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { getSessionUserFn } from "@/server/functions/session.fns";
 
 export const Route = createFileRoute("/")({
+	beforeLoad: async () => {
+		const { user } = await getSessionUserFn();
+		if (user) {
+			throw redirect({ to: "/dashboard" });
+		}
+	},
 	component: LandingPage,
 });
 
