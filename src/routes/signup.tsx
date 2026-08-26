@@ -1,5 +1,10 @@
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	redirect,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useState } from "react";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { Logo } from "@/components/Logo";
@@ -25,6 +30,9 @@ import { rpc, unwrap } from "@/lib/api-client";
 import { type SignupFormData, signupSchema } from "@/schemas/auth";
 
 export const Route = createFileRoute("/signup")({
+	beforeLoad: () => {
+		throw redirect({ to: "/login" });
+	},
 	component: SignupPage,
 });
 
@@ -99,10 +107,10 @@ function SignupPage() {
 	}
 
 	return (
-		<div className="flex min-h-screen items-center justify-center p-4">
+		<div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
+			<Logo className="h-12" />
 			<Card className="w-full max-w-md">
 				<CardHeader className="items-center text-center">
-					<Logo className="h-12" />
 					<CardTitle>Sign Up</CardTitle>
 					<CardDescription>
 						Closed beta. Contact the developer at{" "}

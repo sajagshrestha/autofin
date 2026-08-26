@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { GoogleIcon } from "@/components/GoogleIcon";
@@ -72,10 +72,10 @@ function LoginPage() {
 	});
 
 	return (
-		<div className="flex min-h-screen items-center justify-center p-4">
+		<div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
+			<Logo className="h-12" />
 			<Card className="w-full max-w-md">
 				<CardHeader className="items-center text-center">
-					<Logo className="h-12" />
 					<CardTitle>Login</CardTitle>
 					<CardDescription>
 						Enter your email and password to sign in
@@ -183,13 +183,7 @@ function LoginPage() {
 							{googleLoading ? "Signing in..." : "Continue with Google"}
 						</Button>
 						<p className="text-center text-sm text-muted-foreground">
-							Don't have an account?{" "}
-							<Link
-								to="/signup"
-								className="text-primary hover:underline font-medium"
-							>
-								Sign up
-							</Link>
+							Sign-ups are temporarily disabled. This is a closed beta.
 						</p>
 					</CardFooter>
 				</form>
