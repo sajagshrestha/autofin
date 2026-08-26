@@ -9,7 +9,8 @@ import {
 	Wallet,
 	X,
 } from "lucide-react";
-import { useState } from "react";
+import { motion, useMotionValueEvent, useScroll } from "motion/react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "./Logo";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -39,6 +40,19 @@ export default function Header() {
 	const navigate = useNavigate();
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
+
+	const [hidden, setHidden] = useState(false);
+	const lastY = useRef(0);
+	const { scrollY } = useScroll();
+	useMotionValueEvent(scrollY, "change", (y) => {
+		const previous = lastY.current;
+		lastY.current = y;
+		if (y > previous && y > 96) {
+			setHidden(true);
+		} else if (y < previous) {
+			setHidden(false);
+		}
+	});
 
 	const handleSignOut = async () => {
 		await signOut();
@@ -113,7 +127,12 @@ export default function Header() {
 			</aside>
 
 			{/* Mobile Header */}
-			<header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background/80 backdrop-blur-xl border-b border-border z-50 flex items-center justify-between px-4">
+			<motion.header
+				initial={false}
+				animate={hidden ? { y: -64 } : { y: 0 }}
+				transition={{ type: "spring", stiffness: 300, damping: 30 }}
+				className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background/80 backdrop-blur-xl border-b border-border z-50 flex items-center justify-between px-4"
+			>
 				<Link to="/dashboard">
 					<Logo className="h-7" />
 				</Link>
@@ -128,7 +147,7 @@ export default function Header() {
 						<Menu size={24} />
 					</button>
 				</div>
-			</header>
+			</motion.header>
 
 			{/* Mobile Slide-in Menu */}
 			{isMobileMenuOpen && (
