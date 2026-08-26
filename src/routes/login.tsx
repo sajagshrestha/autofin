@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { GoogleIcon } from "@/components/GoogleIcon";
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -73,7 +74,8 @@ function LoginPage() {
 	return (
 		<div className="flex min-h-screen items-center justify-center p-4">
 			<Card className="w-full max-w-md">
-				<CardHeader>
+				<CardHeader className="items-center text-center">
+					<Logo className="h-12" />
 					<CardTitle>Login</CardTitle>
 					<CardDescription>
 						Enter your email and password to sign in

@@ -2,6 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { GoogleIcon } from "@/components/GoogleIcon";
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -100,9 +101,19 @@ function SignupPage() {
 	return (
 		<div className="flex min-h-screen items-center justify-center p-4">
 			<Card className="w-full max-w-md">
-				<CardHeader>
+				<CardHeader className="items-center text-center">
+					<Logo className="h-12" />
 					<CardTitle>Sign Up</CardTitle>
-					<CardDescription>Create an account to get started</CardDescription>
+					<CardDescription>
+						Closed beta. Contact the developer at{" "}
+						<a
+							href="mailto:sajagshrestha0852@gmail.com"
+							className="text-primary font-medium hover:underline"
+						>
+							sajagshrestha0852@gmail.com
+						</a>{" "}
+						to get access.
+					</CardDescription>
 				</CardHeader>
 				<form
 					onSubmit={(e) => {
