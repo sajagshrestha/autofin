@@ -77,6 +77,7 @@ function AnalyticsDashboard() {
 					startDate: range.startDate ?? "",
 					endDate: range.endDate ?? "",
 				}),
+				resetScroll: false,
 			});
 		},
 		[navigate],
@@ -90,6 +91,7 @@ function AnalyticsDashboard() {
 					startDate: range.startDate ?? "",
 					endDate: range.endDate ?? "",
 				}),
+				resetScroll: false,
 			});
 		},
 		[navigate],
@@ -99,6 +101,7 @@ function AnalyticsDashboard() {
 		(newCategory: string) => {
 			navigate({
 				search: (prev) => ({ ...prev, category: newCategory }),
+				resetScroll: false,
 			});
 		},
 		[navigate],
