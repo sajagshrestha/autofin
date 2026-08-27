@@ -565,22 +565,44 @@ function AnalyticsDashboard() {
 
 						{loanFlows.count > 0 && (
 							<Card className="border-primary/20 bg-primary/[0.03]">
-								<CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-									<div className="flex items-center gap-2 text-sm font-medium">
-										<Wallet className="h-4 w-4 text-primary" />
-										Loan activity
+								<CardContent className="space-y-3 px-4 py-3">
+									<div className="flex items-center justify-between">
+										<div className="flex items-center gap-2 text-sm font-medium">
+											<Wallet className="h-4 w-4 text-primary" />
+											Loan activity
+										</div>
+										<span className="text-xs text-muted-foreground">
+											{loanFlows.count} transfer
+											{loanFlows.count !== 1 ? "s" : ""}
+										</span>
 									</div>
-									<span className="inline-flex items-center gap-1 text-sm">
-										<ArrowUpRight className="h-3.5 w-3.5 text-ds-red-700" />
-										Lent {formatCurrency(loanFlows.lent)}
-									</span>
-									<span className="inline-flex items-center gap-1 text-sm">
-										<ArrowDownRight className="h-3.5 w-3.5 text-ds-green-700" />
-										Received {formatCurrency(loanFlows.received)}
-									</span>
+									<div className="grid grid-cols-2 gap-3">
+										<div className="flex items-center gap-2 rounded-lg bg-ds-red-500/10 px-3 py-2">
+											<ArrowUpRight className="h-4 w-4 shrink-0 text-ds-red-700" />
+											<div className="min-w-0">
+												<p className="text-[11px] leading-tight text-muted-foreground">
+													Lent
+												</p>
+												<p className="truncate text-sm font-semibold tabular-nums text-ds-red-700">
+													{formatCurrency(loanFlows.lent)}
+												</p>
+											</div>
+										</div>
+										<div className="flex items-center gap-2 rounded-lg bg-ds-green-500/10 px-3 py-2">
+											<ArrowDownRight className="h-4 w-4 shrink-0 text-ds-green-700" />
+											<div className="min-w-0">
+												<p className="text-[11px] leading-tight text-muted-foreground">
+													Received
+												</p>
+												<p className="truncate text-sm font-semibold tabular-nums text-ds-green-700">
+													{formatCurrency(loanFlows.received)}
+												</p>
+											</div>
+										</div>
+									</div>
 									<Link
 										to="/loans"
-										className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+										className="flex w-full items-center justify-center gap-1 rounded-md border border-primary/20 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 hover:underline"
 									>
 										View loans <ArrowRight className="h-3 w-3" />
 									</Link>
