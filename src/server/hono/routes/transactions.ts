@@ -6,6 +6,10 @@ import type { ApiEnv } from "@/server/hono/middleware";
 import { requireUser } from "@/server/hono/middleware";
 import { getContainer } from "@/server/lib/container";
 import { toTransactionDto } from "@/server/lib/dto";
+import {
+	batchImportMessage,
+	singleTransactionMessage,
+} from "@/server/lib/notifications";
 import { filterDateToUtc, localToUtc } from "@/server/lib/timezone";
 import type { DuplicateMatch } from "@/server/repositories/transaction.repository";
 
@@ -502,11 +506,6 @@ export const transactionsRouter = new Hono<ApiEnv>()
 				totalCredit,
 				transactions: importedRows,
 			});
-			void container.pushService.sendToUser(user.id, {
-				title: "Statement imported",
-				body: `${importedRows.length} transaction${importedRows.length !== 1 ? "s" : ""} imported from your statement.`,
-				url: "/transactions",
-			});
 		}
 
 		const transactions = await Promise.all(
@@ -515,11 +514,54 @@ export const transactionsRouter = new Hono<ApiEnv>()
 				return txn ? toTransactionDto(txn) : null;
 			}),
 		);
+		const createdDtos = transactions.filter((t) => t !== null);
+
+		// Push a notification with merchant + category context. A single row
+		// deep-links to the transaction; a batch summarizes totals and top
+		// merchants. Builds off the DTOs so the category names are included.
+		if (createdDtos.length > 0) {
+			if (createdDtos.length === 1) {
+				const txn = createdDtos[0];
+				void container.pushService.sendToUser(user.id, {
+					...singleTransactionMessage({
+						amount: Number(txn.amount),
+						type: txn.type,
+						merchant: txn.merchant,
+						category: txn.category?.name,
+					}),
+					url: `/transactions/${txn.id}`,
+				});
+			} else {
+				const totalDebit = createdDtos
+					.filter((t) => t.type === "debit")
+					.reduce((sum, t) => sum + Number(t.amount), 0);
+				const totalCredit = createdDtos
+					.filter((t) => t.type === "credit")
+					.reduce((sum, t) => sum + Number(t.amount), 0);
+				const topMerchants = [
+					...new Set(
+						createdDtos
+							.map((t) => t.merchant)
+							.filter((m): m is string => Boolean(m)),
+					),
+				].slice(0, 3);
+
+				void container.pushService.sendToUser(user.id, {
+					...batchImportMessage({
+						count: createdDtos.length,
+						totalDebit,
+						totalCredit,
+						topMerchants,
+					}),
+					url: "/transactions",
+				});
+			}
+		}
 
 		return c.json(
 			{
 				created: createdIds.length,
-				transactions: transactions.filter((t) => t !== null),
+				transactions: createdDtos,
 			},
 			201,
 		);

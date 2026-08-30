@@ -1,4 +1,5 @@
 import type { Database } from "@/server/db/connection";
+import { singleTransactionMessage } from "@/server/lib/notifications";
 import { localToUtc } from "@/server/lib/timezone";
 import type { CategoryRepository } from "@/server/repositories/category.repository";
 import type { GmailOAuthRepository } from "@/server/repositories/gmail-oauth.repository";
@@ -621,11 +622,17 @@ export class GmailService extends BaseService {
 									transactionDate: transactionDate?.toISOString() ?? null,
 								});
 
+								const { title, body: pushBody } = singleTransactionMessage({
+									amount: txn.amount,
+									type: txn.type,
+									merchant: txn.merchant,
+									category: txn.newCategory
+										? txn.newCategory.name
+										: txn.categoryName || "Uncategorized",
+								});
 								await this.pushService.sendToUser(userId, {
-									title: "New transaction",
-									body:
-										(txn.type === "credit" ? "Credit" : "Debit") +
-										` ${txn.amount}${txn.merchant ? ` · ${txn.merchant}` : ""}`,
+									title,
+									body: pushBody,
 									url: `/transactions/${created.id}`,
 								});
 
