@@ -1065,13 +1065,31 @@ export class GmailService extends BaseService {
 			}
 		}
 
-		const query = emails.map((e) => `from:${e.trim()}`).join(" OR ");
-		const filter = await this.createFilter(userId, { query }, labelIds);
+		// Create one filter per sender. Joining all senders into a single
+		// `from:a OR from:b ...` query blows past Gmail's filter query length
+		// limit once a few addresses are configured, so we use a filter per
+		// sender and keep every ID in `autofinFilterIds`.
+		const filterIds: string[] = [];
+		for (const email of emails) {
+			const trimmed = email.trim();
+			if (!trimmed) continue;
+			const filter = await this.createFilter(
+				userId,
+				{ from: trimmed },
+				labelIds,
+			);
+			filterIds.push(filter.id);
+		}
+
+		if (filterIds.length === 0) {
+			return { filterId: "" };
+		}
+
 		await this.gmailOAuthRepo.setFilterConfig(userId, {
-			filterIds: [filter.id],
+			filterIds,
 			senderEmails: emails,
 		});
-		return { filterId: filter.id };
+		return { filterId: filterIds[0] };
 	}
 
 	/**
