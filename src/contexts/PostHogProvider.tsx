@@ -19,9 +19,9 @@ export function PostHogProvider() {
 	}, []);
 
 	useEffect(() => {
-		const url = `${location.pathname}${location.search}`;
+		const url = `${location.pathname}${location.searchStr}`;
 		capturePageView(url);
-	}, [location.pathname, location.search]);
+	}, [location.pathname, location.searchStr]);
 
 	const userId = user?.id;
 	const userEmail = userId ? user?.email : undefined;
