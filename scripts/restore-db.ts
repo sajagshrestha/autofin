@@ -10,6 +10,15 @@ config({ path: '.env' });
 const run = promisify(execFile);
 const BACKUP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../backups');
 
+interface ExecError extends Error {
+  code?: string | number;
+  stderr?: string;
+}
+
+function asExecError(error: unknown): ExecError {
+  return error instanceof Error ? (error as ExecError) : new Error(String(error));
+}
+
 const BENIGN_ERROR_PATTERNS = [
   /DROP SCHEMA IF EXISTS public;?/,
   /CREATE SCHEMA public;?/,
@@ -20,7 +29,7 @@ const BENIGN_ERROR_PATTERNS = [
   /^pg_restore: error: (schema|relation|type|function) ".*" already exists/i,
 ];
 
-function isBenign(line) {
+function isBenign(line: string) {
   return BENIGN_ERROR_PATTERNS.some((pattern) => pattern.test(line));
 }
 
@@ -38,7 +47,7 @@ async function findLatestBackup() {
   return path.join(BACKUP_DIR, withMtime.sort((a, b) => b.mtime - a.mtime)[0].file);
 }
 
-async function restoreDatabase(filePath) {
+async function restoreDatabase(filePath: string) {
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
@@ -73,13 +82,14 @@ async function restoreDatabase(filePath) {
       { maxBuffer: 10 * 1024 * 1024 },
     );
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    const execError = asExecError(error);
+    if (execError.code === 'ENOENT') {
       console.error('✗ pg_restore was not found on PATH.');
       console.error('  Install PostgreSQL tools (e.g. brew install postgresql@17).');
       process.exit(1);
     }
-    stderr = error.stderr || error.message || '';
-    exitCode = error.code ?? 1;
+    stderr = execError.stderr || execError.message || '';
+    exitCode = typeof execError.code === 'number' ? execError.code : 1;
   }
 
   if (exitCode) {

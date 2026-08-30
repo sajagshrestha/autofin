@@ -10,6 +10,15 @@ config({ path: '.env' });
 const run = promisify(execFile);
 const BACKUP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../backups');
 
+interface ExecError extends Error {
+  code?: string | number;
+  stderr?: string;
+}
+
+function asExecError(error: unknown): ExecError {
+  return error instanceof Error ? (error as ExecError) : new Error(String(error));
+}
+
 async function backupDatabase() {
   const databaseUrl = process.env.DATABASE_URL;
 
@@ -36,13 +45,14 @@ async function backupDatabase() {
       filePath,
     ]);
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    const execError = asExecError(error);
+    if (execError.code === 'ENOENT') {
       console.error('✗ pg_dump was not found on PATH.');
       console.error('  Install PostgreSQL tools (e.g. brew install postgresql@17), or use the Supabase CLI instead:');
       console.error('    supabase db dump --data-only -f backup.sql');
       process.exit(1);
     }
-    console.error('✗ Backup failed:', error.stderr || error.message);
+    console.error('✗ Backup failed:', execError.stderr || execError.message);
     process.exit(1);
   }
 
