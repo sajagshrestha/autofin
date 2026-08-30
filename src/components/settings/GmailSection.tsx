@@ -1,10 +1,13 @@
 import {
+	AlertTriangle,
 	CheckCircle2,
 	Filter,
 	Loader2,
 	Mail,
 	Radio,
 	RefreshCw,
+	Trash2,
+	X,
 	XCircle,
 } from "lucide-react";
 import { useId, useState } from "react";
@@ -18,9 +21,19 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
+	useDeleteSenderFilters,
 	useDisconnectGmailAccount,
 	useSetSenderFilters,
 	useStartGmailWatch,
@@ -61,6 +74,9 @@ function validateEmails(emails: string[]): {
 export function GmailSection() {
 	const filterEmailsId = useId();
 	const [filterInput, setFilterInput] = useState("");
+	const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+	const [confirmStopWatch, setConfirmStopWatch] = useState(false);
+	const [confirmClearFilters, setConfirmClearFilters] = useState(false);
 
 	const { data: authUrlData, isLoading: isAuthUrlLoading } =
 		useGetGmailAuthorizationUrl();
@@ -74,14 +90,14 @@ export function GmailSection() {
 		isLoading: isFiltersLoading,
 		isFetched: isFiltersFetched,
 	} = useGetSenderFilters({ enabled: connectionStatus?.authorized ?? false });
-	const { data: watchStatus } = useGetGmailWatchStatus({
-		enabled:
-			(connectionStatus?.authorized ?? false) &&
-			(senderFilters?.emails?.length ?? 0) > 0,
-	});
+	const { data: watchStatus, refetch: refetchWatchStatus } =
+		useGetGmailWatchStatus({
+			enabled: connectionStatus?.authorized ?? false,
+		});
 
 	const disconnectMutation = useDisconnectGmailAccount();
 	const setFiltersMutation = useSetSenderFilters();
+	const deleteFiltersMutation = useDeleteSenderFilters();
 	const startWatchMutation = useStartGmailWatch();
 	const stopWatchMutation = useStopGmailWatch();
 
@@ -94,6 +110,14 @@ export function GmailSection() {
 	const displayFilterValue =
 		filterInput !== "" ? filterInput : emails.join("\n");
 
+	// Live validation of what the user has typed (only while actively editing)
+	const hasEdits = filterInput !== "";
+	const liveParsed = hasEdits ? parseEmailsFromTextarea(filterInput) : [];
+	const liveValid = hasEdits ? validateEmails(liveParsed) : null;
+
+	const isWatchActive =
+		(watchStatus?.hasWatch && !watchStatus.isExpired) ?? false;
+
 	const handleConnectGoogle = () => {
 		if (authUrlData?.authorizationUrl) {
 			window.location.href = authUrlData.authorizationUrl;
@@ -103,6 +127,7 @@ export function GmailSection() {
 	const handleDisconnectGoogle = () => {
 		disconnectMutation.mutate(undefined, {
 			onSuccess: () => {
+				setConfirmDisconnect(false);
 				refetchStatus();
 				setFilterInput("");
 				toast.success("Google account disconnected");
@@ -116,8 +141,9 @@ export function GmailSection() {
 	};
 
 	const handleSaveFilters = () => {
-		const parsed = parseEmailsFromTextarea(displayFilterValue);
-		const { valid, invalid } = validateEmails(parsed);
+		const { valid, invalid } = validateEmails(
+			parseEmailsFromTextarea(displayFilterValue),
+		);
 
 		if (invalid.length > 0) {
 			toast.error("Invalid email addresses", {
@@ -142,9 +168,42 @@ export function GmailSection() {
 		);
 	};
 
+	const handleRemoveEmail = (email: string) => {
+		const next = emails.filter((e) => e !== email);
+		setFiltersMutation.mutate(
+			{ emails: next },
+			{
+				onSuccess: () => {
+					toast.success("Filter removed");
+				},
+				onError: (error) => {
+					toast.error("Failed to remove filter", {
+						description: error.message,
+					});
+				},
+			},
+		);
+	};
+
+	const handleClearFilters = () => {
+		deleteFiltersMutation.mutate(undefined, {
+			onSuccess: () => {
+				setConfirmClearFilters(false);
+				setFilterInput("");
+				toast.success("All filters cleared");
+			},
+			onError: (error) => {
+				toast.error("Failed to clear filters", {
+					description: error.message,
+				});
+			},
+		});
+	};
+
 	const handleStartWatching = () => {
 		startWatchMutation.mutate(undefined, {
 			onSuccess: (data) => {
+				refetchWatchStatus();
 				toast.success("Gmail watch started", {
 					description: `Watching until ${new Date(data.expiration).toLocaleString()}`,
 				});
@@ -160,6 +219,8 @@ export function GmailSection() {
 	const handleStopWatching = () => {
 		stopWatchMutation.mutate(undefined, {
 			onSuccess: () => {
+				setConfirmStopWatch(false);
+				refetchWatchStatus();
 				toast.success("Gmail watch stopped");
 			},
 			onError: (error) => {
@@ -173,8 +234,19 @@ export function GmailSection() {
 	const step1Complete = isConnected;
 	const step2Complete = hasFilters;
 	const step2Current = isConnected && !hasFilters;
-	const step3Complete = watchStatus?.hasWatch ?? false;
-	const step3Current = hasFilters && !step3Complete;
+	const step3Complete = isWatchActive;
+	const step3Current = isConnected && !isWatchActive;
+
+	const isWatchPending =
+		startWatchMutation.isPending || stopWatchMutation.isPending;
+
+	const handleWatchToggle = (checked: boolean) => {
+		if (checked) {
+			handleStartWatching();
+		} else {
+			setConfirmStopWatch(true);
+		}
+	};
 
 	return (
 		<div className="space-y-8">
@@ -223,7 +295,7 @@ export function GmailSection() {
 							</div>
 						</div>
 						{isConnected && (
-							<Badge className="bg-ds-green-700 hover:bg-ds-green-800">
+							<Badge variant="green">
 								<CheckCircle2 className="mr-1 h-3 w-3" />
 								Connected
 							</Badge>
@@ -251,14 +323,16 @@ export function GmailSection() {
 								</div>
 							</div>
 							<Button
-								variant="destructive"
+								variant="outline"
 								className="w-full"
-								onClick={handleDisconnectGoogle}
+								onClick={() => setConfirmDisconnect(true)}
 								disabled={disconnectMutation.isPending}
 							>
 								{disconnectMutation.isPending ? (
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								) : null}
+								) : (
+									<XCircle className="mr-2 h-4 w-4" />
+								)}
 								Disconnect
 							</Button>
 						</div>
@@ -315,7 +389,7 @@ export function GmailSection() {
 							</div>
 						</div>
 						{step2Complete && (
-							<Badge className="bg-ds-green-700 hover:bg-ds-green-800">
+							<Badge variant="green">
 								<CheckCircle2 className="mr-1 h-3 w-3" />
 								{emails.length} filter{emails.length !== 1 ? "s" : ""}
 							</Badge>
@@ -333,6 +407,30 @@ export function GmailSection() {
 						</div>
 					) : (
 						<div className="space-y-4">
+							{hasFilters && (
+								<div className="flex flex-wrap gap-2">
+									{emails.map((email) => (
+										<Badge
+											key={email}
+											variant="gray"
+											contrast="low"
+											className="py-1 pr-1 pl-2"
+										>
+											{email}
+											<button
+												type="button"
+												aria-label={`Remove ${email}`}
+												onClick={() => handleRemoveEmail(email)}
+												disabled={setFiltersMutation.isPending}
+												className="rounded-full p-0.5 transition-colors hover:bg-ds-red-100 hover:text-ds-red-1000 disabled:opacity-50"
+											>
+												<X className="h-3 w-3" />
+											</button>
+										</Badge>
+									))}
+								</div>
+							)}
+
 							<div className="space-y-2">
 								<Label htmlFor={filterEmailsId}>
 									Sender emails (one per line)
@@ -345,28 +443,68 @@ export function GmailSection() {
 									onChange={(e) => setFilterInput(e.target.value)}
 									className="font-mono text-sm"
 								/>
+								{liveValid && liveValid.invalid.length > 0 && (
+									<p className="flex items-center gap-1 text-xs font-medium text-ds-red-1000">
+										<AlertTriangle className="h-3.5 w-3.5" />
+										{liveValid.invalid.length} invalid email
+										{liveValid.invalid.length !== 1 ? "s" : ""}:{" "}
+										{liveValid.invalid.join(", ")}
+									</p>
+								)}
+								{liveValid &&
+									liveValid.invalid.length === 0 &&
+									liveParsed.length > 0 && (
+										<p className="text-xs text-muted-foreground">
+											{liveValid.valid.length} valid email
+											{liveValid.valid.length !== 1 ? "s" : ""} ready to save.
+										</p>
+									)}
 							</div>
-							<Button
-								onClick={handleSaveFilters}
-								disabled={setFiltersMutation.isPending}
-								className="w-full"
-							>
-								{setFiltersMutation.isPending ? (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								) : null}
-								Save Filters
-							</Button>
+
+							<div className="flex gap-3">
+								<Button
+									onClick={handleSaveFilters}
+									disabled={
+										!hasEdits ||
+										(liveValid?.invalid.length ?? 0) > 0 ||
+										setFiltersMutation.isPending
+									}
+									className="flex-1"
+								>
+									{setFiltersMutation.isPending ? (
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									) : null}
+									Save Filters
+								</Button>
+								{hasFilters && (
+									<Button
+										variant="outline"
+										onClick={() => setConfirmClearFilters(true)}
+										disabled={
+											deleteFiltersMutation.isPending ||
+											setFiltersMutation.isPending
+										}
+									>
+										{deleteFiltersMutation.isPending ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : (
+											<Trash2 className="mr-2 h-4 w-4" />
+										)}
+										Clear All
+									</Button>
+								)}
+							</div>
 						</div>
 					)}
 				</CardContent>
 			</Card>
 
-			{/* Step 3: Start Watch */}
+			{/* Step 3: Watch */}
 			<Card
 				className={`border-l-4 transition-shadow ${
 					step3Complete
 						? "border-l-ds-green-700"
-						: hasFilters
+						: isConnected
 							? "border-l-primary shadow-sm hover:shadow-md"
 							: "border-l-muted opacity-60"
 				}`}
@@ -376,65 +514,175 @@ export function GmailSection() {
 						<div className="flex items-center gap-2 space-y-1">
 							<Radio className="h-5 w-5 shrink-0" />
 							<div>
-								<CardTitle>Step 3: Start Watch</CardTitle>
+								<CardTitle>Step 3: Watch your emails</CardTitle>
 								<CardDescription>
-									Start watching for new emails. Watch expires every 7
-									days—check back to renew.
+									Automatically import new emails from your monitored senders.
 								</CardDescription>
 							</div>
 						</div>
-						{step3Complete && (
-							<Badge className="bg-ds-green-700 hover:bg-ds-green-800">
-								<CheckCircle2 className="mr-1 h-3 w-3" />
-								Watching
+						{watchStatus && (
+							<Badge variant={isWatchActive ? "green" : "gray"}>
+								{isWatchActive ? (
+									<CheckCircle2 className="mr-1 h-3 w-3" />
+								) : null}
+								{isWatchActive ? "Watching" : "Paused"}
 							</Badge>
 						)}
 					</div>
 				</CardHeader>
 				<CardContent>
-					{!hasFilters ? (
+					{!isConnected ? (
 						<p className="py-4 text-center text-sm text-muted-foreground">
-							Set your filter list first, then start the watch.
+							Connect Gmail first to start watching.
 						</p>
 					) : (
 						<div className="space-y-4">
-							{step3Complete && watchStatus?.expiration && (
-								<p className="text-sm text-muted-foreground">
-									Expires: {new Date(watchStatus.expiration).toLocaleString()}
+							<div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+								<div className="space-y-1">
+									<p className="text-sm font-medium">Email watching</p>
+									<p className="text-xs text-muted-foreground">
+										{isWatchActive
+											? "On — new emails from monitored senders are imported automatically."
+											: "Paused — new emails won't be imported. Turn it back on anytime."}
+									</p>
+								</div>
+								<Switch
+									checked={isWatchActive}
+									onChange={(e) => handleWatchToggle(e.target.checked)}
+									disabled={isWatchPending}
+									aria-label="Toggle email watching"
+								/>
+							</div>
+
+							{watchStatus?.isExpired && (
+								<div className="flex items-start gap-3 rounded-lg border border-ds-amber-200 bg-ds-amber-100/40 p-4">
+									<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-ds-amber-1000" />
+									<div>
+										<p className="text-sm font-medium text-ds-amber-1000">
+											Something went wrong
+										</p>
+										<p className="text-xs text-muted-foreground">
+											Watching isn't running. Toggle it off and on to restart.
+										</p>
+									</div>
+								</div>
+							)}
+
+							{isWatchPending && (
+								<p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+									<Loader2 className="h-3.5 w-3.5 animate-spin" />
+									{startWatchMutation.isPending
+										? "Starting watch..."
+										: "Stopping watch..."}
 								</p>
 							)}
-							<div className="flex gap-3">
-								<Button
-									variant="outline"
-									onClick={handleStartWatching}
-									disabled={startWatchMutation.isPending}
-									className="flex-1"
-								>
-									{startWatchMutation.isPending ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : (
-										<Radio className="mr-2 h-4 w-4" />
-									)}
-									Start Watch
-								</Button>
-								<Button
-									variant="outline"
-									onClick={handleStopWatching}
-									disabled={stopWatchMutation.isPending}
-									className="flex-1"
-								>
-									{stopWatchMutation.isPending ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : (
-										<XCircle className="mr-2 h-4 w-4" />
-									)}
-									Stop Watch
-								</Button>
-							</div>
 						</div>
 					)}
 				</CardContent>
 			</Card>
+
+			{/* Confirm: Disconnect */}
+			<Dialog open={confirmDisconnect} onOpenChange={setConfirmDisconnect}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Disconnect Gmail?</DialogTitle>
+						<DialogDescription>
+							You'll stop tracking expenses from this email and will need to
+							reconnect to start again. Your existing transactions won't be
+							deleted.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setConfirmDisconnect(false)}
+							disabled={disconnectMutation.isPending}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={handleDisconnectGoogle}
+							disabled={disconnectMutation.isPending}
+						>
+							{disconnectMutation.isPending ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : (
+								<XCircle className="mr-2 h-4 w-4" />
+							)}
+							Disconnect
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Confirm: Clear filters */}
+			<Dialog open={confirmClearFilters} onOpenChange={setConfirmClearFilters}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Clear all filters?</DialogTitle>
+						<DialogDescription>
+							This removes all {emails.length} sender email
+							{emails.length !== 1 ? "s" : ""} from your monitoring list.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setConfirmClearFilters(false)}
+							disabled={deleteFiltersMutation.isPending}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={handleClearFilters}
+							disabled={deleteFiltersMutation.isPending}
+						>
+							{deleteFiltersMutation.isPending ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : (
+								<Trash2 className="mr-2 h-4 w-4" />
+							)}
+							Clear All
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Confirm: Stop watch */}
+			<Dialog open={confirmStopWatch} onOpenChange={setConfirmStopWatch}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Stop watching?</DialogTitle>
+						<DialogDescription>
+							New emails from your monitored senders will stop being imported
+							until you start the watch again.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setConfirmStopWatch(false)}
+							disabled={stopWatchMutation.isPending}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={handleStopWatching}
+							disabled={stopWatchMutation.isPending}
+						>
+							{stopWatchMutation.isPending ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : (
+								<XCircle className="mr-2 h-4 w-4" />
+							)}
+							Stop Watch
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

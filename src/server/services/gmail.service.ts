@@ -1096,6 +1096,29 @@ export class GmailService extends BaseService {
 	}
 
 	/**
+	 * Start watching and persist the expiration so /watch/status can report
+	 * state without calling the Gmail API (which would re-start the watch).
+	 */
+	async startWatchAndPersist(
+		userId: string,
+		topicName: string,
+		labelIds?: string[],
+	): Promise<GmailWatchResponse> {
+		const response = await this.watch(userId, topicName, labelIds);
+		const expiresAt = new Date(Number.parseInt(response.expiration, 10));
+		await this.gmailOAuthRepo.setWatchExpiresAt(userId, expiresAt);
+		return response;
+	}
+
+	/**
+	 * Stop watching and clear the persisted expiration (watch is paused).
+	 */
+	async stopWatchAndClear(userId: string): Promise<void> {
+		await this.stopWatch(userId);
+		await this.gmailOAuthRepo.setWatchExpiresAt(userId, null);
+	}
+
+	/**
 	 * Stop watching for Gmail changes
 	 */
 	async stopWatch(userId: string): Promise<void> {

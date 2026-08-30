@@ -75,13 +75,14 @@ export function useGetGmailWatchStatus(options?: { enabled?: boolean }) {
 				: async () => {
 						const res = await rpc.api.gmail.watch.status.$get();
 						return unwrap<{
-							hasWatch: true;
+							hasWatch: boolean;
 							historyId?: string;
-							expiration: string;
-							expiresAt: string;
+							expiresAt?: string;
 							expiresInHours: number;
 							isExpired: boolean;
 							topicName: string;
+							autoRenews: true;
+							resyncInterval: string;
 							message: string;
 						}>(res);
 					},

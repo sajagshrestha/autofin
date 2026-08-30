@@ -212,6 +212,24 @@ export class GmailOAuthRepository extends BaseRepository {
 	}
 
 	/**
+	 * Get the expiration time of the current Gmail watch (null when paused).
+	 */
+	async getWatchExpiresAt(userId: string): Promise<Date | null> {
+		const token = await this.findByUserId(userId);
+		return token?.watchExpiresAt ?? null;
+	}
+
+	/**
+	 * Persist the watch expiration (null clears it, i.e. the watch is paused).
+	 */
+	async setWatchExpiresAt(
+		userId: string,
+		expiresAt: Date | null,
+	): Promise<void> {
+		await this.updateByUserId(userId, { watchExpiresAt: expiresAt });
+	}
+
+	/**
 	 * Get Autofin filter IDs for a user
 	 */
 	async getAutofinFilterIds(userId: string): Promise<string[]> {

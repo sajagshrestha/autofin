@@ -11,6 +11,10 @@ const inngestHandler = serve({
 	functions: [gmailWatchResync, gmailHistoryPoll],
 });
 
+const PUBSUB_TOPIC =
+	process.env.GMAIL_PUBSUB_TOPIC ??
+	"projects/project-4d4e1b26-7614-4156-a58/topics/autofin";
+
 interface PubSubMessage {
 	message: {
 		data: string; // base64-encoded payload
@@ -102,6 +106,31 @@ export const publicInfraRouter = new Hono()
 				tokens.expires_in,
 				tokens.scope ?? "",
 			);
+
+			// Auto-start watching right after connecting so the user doesn't have to.
+			// Best-effort: the watch requires the Pub/Sub topic + Autofin label; if it
+			// fails (e.g. topic not yet configured), the user can still enable it from
+			// settings and the Inngest resync loop will take over from there.
+			try {
+				const labelIds = await container.gmailService.getWatchLabelIds(
+					sessionUser.id,
+				);
+				await container.gmailService.startWatchAndPersist(
+					sessionUser.id,
+					PUBSUB_TOPIC,
+					labelIds,
+				);
+				await inngest.send({
+					name: "gmail/watch.started",
+					data: {
+						userId: sessionUser.id,
+						topicName: PUBSUB_TOPIC,
+						labelIds,
+					},
+				});
+			} catch (err) {
+				console.warn("Failed to auto-start Gmail watch after connect:", err);
+			}
 
 			return redirectToSettings("connected");
 		} catch (error) {

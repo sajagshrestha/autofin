@@ -59,7 +59,7 @@ export const gmailWatchResync = inngest.createFunction(
 				const labelIds = eventLabelIds?.length
 					? eventLabelIds
 					: await container.gmailService.getWatchLabelIds(userId);
-				const response = await container.gmailService.watch(
+				const response = await container.gmailService.startWatchAndPersist(
 					userId,
 					topicName,
 					labelIds,

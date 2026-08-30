@@ -187,7 +187,7 @@ export const gmailRouter = new Hono<ApiEnv>()
 		const container = getContainer();
 
 		const labelIds = await container.gmailService.getWatchLabelIds(user.id);
-		const response = await container.gmailService.watch(
+		const response = await container.gmailService.startWatchAndPersist(
 			user.id,
 			PUBSUB_TOPIC,
 			labelIds,
@@ -214,28 +214,24 @@ export const gmailRouter = new Hono<ApiEnv>()
 		const user = c.get("user");
 		const container = getContainer();
 
-		const labelIds = await container.gmailService.getWatchLabelIds(user.id);
-		const response = await container.gmailService.watch(
-			user.id,
-			PUBSUB_TOPIC,
-			labelIds,
-		);
-		await container.gmailOAuthRepo.updateHistoryId(user.id, response.historyId);
-
-		const expirationMs = Number.parseInt(response.expiration, 10);
-		const expiresAt = new Date(expirationMs);
+		const expiresAt = await container.gmailOAuthRepo.getWatchExpiresAt(user.id);
+		const hasWatch = expiresAt !== null && expiresAt.getTime() > Date.now();
 		const now = new Date();
-		const hoursUntilExpiry = (expirationMs - now.getTime()) / (1000 * 60 * 60);
+		const hoursUntilExpiry = expiresAt
+			? (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60)
+			: 0;
 
 		return c.json({
-			hasWatch: true as const,
-			historyId: response.historyId,
-			expiration: response.expiration,
-			expiresAt: expiresAt.toISOString(),
+			hasWatch,
+			expiresAt: expiresAt?.toISOString(),
 			expiresInHours: Math.round(hoursUntilExpiry * 10) / 10,
-			isExpired: expiresAt < now,
+			isExpired: expiresAt !== null && expiresAt.getTime() <= Date.now(),
 			topicName: PUBSUB_TOPIC,
-			message: `Watch active, expires in ${Math.round(hoursUntilExpiry)} hours`,
+			autoRenews: true as const,
+			resyncInterval: process.env.GMAIL_WATCH_RESYNC_INTERVAL || "1d",
+			message: hasWatch
+				? `Watch active, expires in ${Math.round(hoursUntilExpiry)} hours`
+				: "Watch is not active",
 		});
 	})
 
@@ -243,7 +239,7 @@ export const gmailRouter = new Hono<ApiEnv>()
 		const user = c.get("user");
 		const container = getContainer();
 
-		await container.gmailService.stopWatch(user.id);
+		await container.gmailService.stopWatchAndClear(user.id);
 
 		try {
 			await inngest.send({
