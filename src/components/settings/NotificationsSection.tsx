@@ -7,6 +7,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/push/notifications";
 import { rpc, unwrap } from "@/lib/api-client";
@@ -74,22 +75,33 @@ export function NotificationsSection() {
 					<p className="text-sm text-muted-foreground">
 						Couldn't load your notification settings. Try again in a moment.
 					</p>
+				) : isLoading ? (
+					<div
+						className="flex items-center justify-between gap-4"
+						role="status"
+						aria-busy="true"
+						aria-label="Loading notification settings"
+					>
+						<div className="space-y-2">
+							<Skeleton className="h-4 w-32" />
+							<Skeleton className="h-3 w-48" />
+						</div>
+						<Skeleton className="h-5 w-9 rounded-full" />
+					</div>
 				) : (
 					<>
 						<div className="flex items-center justify-between gap-4">
 							<div className="space-y-0.5">
 								<p className="text-sm font-medium">Enable notifications</p>
 								<p className="text-xs text-muted-foreground">
-									{isLoading
-										? "Checking…"
-										: enabled
-											? "This device is registered."
-											: "This device isn't registered."}
+									{enabled
+										? "This device is registered."
+										: "This device isn't registered."}
 								</p>
 							</div>
 							<Switch
 								checked={enabled}
-								disabled={isBusy || isLoading}
+								disabled={isBusy}
 								onChange={(e) => handleToggle(e.target.checked)}
 							/>
 						</div>
