@@ -107,6 +107,22 @@ function AnalyticsDashboard() {
 		[navigate],
 	);
 
+	const goToTransactions = useCallback(
+		(type?: "debit" | "credit") => {
+			navigate({
+				to: "/transactions",
+				search: {
+					period,
+					startDate,
+					endDate,
+					type: type ?? "all",
+				},
+				resetScroll: false,
+			});
+		},
+		[navigate, period, startDate, endDate],
+	);
+
 	const transactions = useMemo(
 		() => transactionsData?.transactions || [],
 		[transactionsData],
@@ -480,7 +496,10 @@ function AnalyticsDashboard() {
 					<>
 						{/* Summary Cards */}
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-							<Card className="hover:shadow-md transition-shadow">
+							<Card
+								className="hover:shadow-md transition-shadow cursor-pointer"
+								onClick={() => goToTransactions("debit")}
+							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Total Expenses
@@ -499,7 +518,10 @@ function AnalyticsDashboard() {
 								</CardContent>
 							</Card>
 
-							<Card className="hover:shadow-md transition-shadow">
+							<Card
+								className="hover:shadow-md transition-shadow cursor-pointer"
+								onClick={() => goToTransactions("credit")}
+							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Total Income
@@ -518,7 +540,10 @@ function AnalyticsDashboard() {
 								</CardContent>
 							</Card>
 
-							<Card className="hover:shadow-md transition-shadow">
+							<Card
+								className="hover:shadow-md transition-shadow cursor-pointer"
+								onClick={() => goToTransactions()}
+							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Savings
@@ -541,7 +566,10 @@ function AnalyticsDashboard() {
 								</CardContent>
 							</Card>
 
-							<Card className="hover:shadow-md transition-shadow">
+							<Card
+								className="hover:shadow-md transition-shadow cursor-pointer"
+								onClick={() => goToTransactions()}
+							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Transactions

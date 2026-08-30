@@ -125,6 +125,7 @@ const searchParamsSchema = z.object({
 		.string()
 		.optional()
 		.default(defaultRange.endDate ?? ""),
+	type: z.enum(["all", "debit", "credit"]).optional().default("all"),
 });
 
 export const Route = createFileRoute("/_authenticated/transactions/")({
@@ -133,7 +134,8 @@ export const Route = createFileRoute("/_authenticated/transactions/")({
 });
 
 function TransactionsPage() {
-	const { period, startDate, endDate } = Route.useSearch();
+	const { period, startDate, endDate, type } = Route.useSearch();
+	const typeFilter = type ?? "all";
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [globalFilter, setGlobalFilter] = useState("");
 	const [pagination, setPagination] = useState<PaginationState>({
@@ -230,25 +232,30 @@ function TransactionsPage() {
 		[sortedCategories],
 	);
 	const filteredTransactions = useMemo(() => {
+		const typeFiltered =
+			typeFilter === "all"
+				? transactions
+				: transactions.filter((transaction) => transaction.type === typeFilter);
+
 		if (categoryFilter === ALL_CATEGORIES_FILTER) {
-			return transactions;
+			return typeFiltered;
 		}
 		if (categoryFilter === UNCATEGORIZED_FILTER) {
-			return transactions.filter(
+			return typeFiltered.filter(
 				(transaction) => !transaction.category?.id && !transaction.categoryId,
 			);
 		}
 
-		return transactions.filter(
+		return typeFiltered.filter(
 			(transaction) =>
 				transaction.category?.id === categoryFilter ||
 				transaction.categoryId === categoryFilter,
 		);
-	}, [transactions, categoryFilter]);
+	}, [transactions, categoryFilter, typeFilter]);
 	const noDataDescription =
-		categoryFilter === ALL_CATEGORIES_FILTER
+		categoryFilter === ALL_CATEGORIES_FILTER && typeFilter === "all"
 			? "Get started by adding a transaction or creating one from SMS."
-			: "Try a different category filter, or add/create a transaction.";
+			: "Try a different category or type filter, or add/create a transaction.";
 
 	const handleCategoryFilterChange = useCallback((value: string | null) => {
 		if (!value) return;
@@ -258,6 +265,18 @@ function TransactionsPage() {
 			pageIndex: 0,
 		}));
 	}, []);
+	const handleTypeFilterChange = useCallback(
+		(value: "all" | "debit" | "credit") => {
+			searchNavigate({
+				search: (prev) => ({ ...prev, type: value }),
+			});
+			setPagination((prev) => ({
+				...prev,
+				pageIndex: 0,
+			}));
+		},
+		[searchNavigate],
+	);
 	const handleSearchChange = useCallback((value: string) => {
 		setGlobalFilter(value);
 		setPagination((prev) => ({
@@ -283,7 +302,10 @@ function TransactionsPage() {
 	const clearFilters = useCallback(() => {
 		handleCategoryFilterChange(ALL_CATEGORIES_FILTER);
 		handleSortingChange([]);
-	}, [handleCategoryFilterChange, handleSortingChange]);
+		searchNavigate({
+			search: (prev) => ({ ...prev, type: "all" }),
+		});
+	}, [handleCategoryFilterChange, handleSortingChange, searchNavigate]);
 	const openCreateManual = useCallback(() => {
 		setCreateOptionsOpen(false);
 		setManualDialogOpen(true);
@@ -637,6 +659,21 @@ function TransactionsPage() {
 						headerClassName="w-full sm:w-full justify-between"
 						headerButtons={
 							<div className="flex items-center gap-2">
+								<Select
+									value={typeFilter}
+									onValueChange={(value) =>
+										handleTypeFilterChange(value as "all" | "debit" | "credit")
+									}
+								>
+									<SelectTrigger size="sm" className="w-32">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="all">All types</SelectItem>
+										<SelectItem value="debit">Debit</SelectItem>
+										<SelectItem value="credit">Credit</SelectItem>
+									</SelectContent>
+								</Select>
 								<Button
 									variant="outline"
 									size="sm"
@@ -876,6 +913,24 @@ function TransactionsPage() {
 							<div className="space-y-2">
 								<p className="text-sm font-medium">Category</p>
 								{renderCategoryFilterCombobox("w-full")}
+							</div>
+							<div className="space-y-2">
+								<p className="text-sm font-medium">Type</p>
+								<Select
+									value={typeFilter}
+									onValueChange={(value) =>
+										handleTypeFilterChange(value as "all" | "debit" | "credit")
+									}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Filter by type" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="all">All types</SelectItem>
+										<SelectItem value="debit">Debit (expense)</SelectItem>
+										<SelectItem value="credit">Credit (income)</SelectItem>
+									</SelectContent>
+								</Select>
 							</div>
 							<div className="space-y-2">
 								<p className="text-sm font-medium">Sort by</p>
