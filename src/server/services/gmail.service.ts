@@ -101,6 +101,16 @@ export interface ProcessNotificationResult {
 	processedCount: number;
 	failedCount: number;
 	errors: Array<{ messageId: string; error: string }>;
+	/**
+	 * True when the stored history cursor was too old/expired for the Gmail API.
+	 * The caller can then trigger a label-query backfill to catch missed emails.
+	 */
+	expired?: boolean;
+	/**
+	 * True when a backfill run drained all matching messages (not capped by pages),
+	 * so the caller can safely advance the stored cursor.
+	 */
+	backfillComplete?: boolean;
 }
 
 /**
@@ -298,13 +308,17 @@ export class GmailService extends BaseService {
 		userId: string,
 		notification: GmailNotification,
 		storedHistoryId: string | null,
+		opts: { backfill?: boolean } = {},
 	): Promise<ProcessNotificationResult> {
 		// Use stored history ID if available, otherwise use notification's history ID
 		const historyIdToUse = storedHistoryId || notification.historyId;
 
+		// The latest history ID seen by the Gmail API; used to advance the cursor.
+		let latestHistoryId = notification.historyId;
+
 		const result: ProcessNotificationResult = {
 			success: true,
-			historyId: notification.historyId, // Always return the new history ID from notification
+			historyId: latestHistoryId, // Advanced to the latest history ID from the response
 			processedCount: 0,
 			failedCount: 0,
 			errors: [],
@@ -313,53 +327,76 @@ export class GmailService extends BaseService {
 		console.log(
 			`Processing notification for user ${userId}, ` +
 				`storedHistoryId: ${storedHistoryId}, notificationHistoryId: ${notification.historyId}, ` +
-				`using: ${historyIdToUse}`,
+				`using: ${historyIdToUse}${opts.backfill ? " (backfill)" : ""}`,
 		);
 
 		// Fetch history changes using stored history ID
-		let history: GmailHistory[];
-		try {
-			history = await this.getHistory(userId, historyIdToUse);
-		} catch (error) {
-			const errorMessage =
-				error instanceof Error ? error.message : "Unknown error";
-
-			// Handle specific Gmail API errors
-			if (errorMessage.includes("404") || errorMessage.includes("notFound")) {
-				// History ID is too old or invalid - this is common and not critical
-				console.warn(
-					`History ID ${notification.historyId} not found or expired for user ${userId}`,
-				);
-				return {
-					...result,
-					success: true, // Not a failure, just no history to process
-					errors: [
-						{ messageId: "history", error: "History ID expired or not found" },
-					],
-				};
+		let history: GmailHistory[] = [];
+		if (opts.backfill) {
+			// The stored cursor was too old for the history API. Recover by querying
+			// messages that carry the monitor label and feeding them through the same
+			// per-message pipeline (dedup keeps this idempotent).
+			const backfill = await this.listLabeledMessagesForBackfill(userId);
+			history = backfill.history;
+			result.backfillComplete = backfill.complete;
+			if (backfill.latestHistoryId) {
+				latestHistoryId = backfill.latestHistoryId;
 			}
+		} else {
+			try {
+				const historyResult = await this.getHistory(userId, historyIdToUse);
+				history = historyResult.history;
+				if (historyResult.latestHistoryId) {
+					latestHistoryId = historyResult.latestHistoryId;
+				}
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : "Unknown error";
 
-			if (
-				errorMessage.includes("401") ||
-				errorMessage.includes("invalid_grant")
-			) {
-				// Token expired or revoked
-				console.error(`OAuth token invalid for user ${userId}:`, errorMessage);
+				// Handle specific Gmail API errors
+				if (errorMessage.includes("404") || errorMessage.includes("notFound")) {
+					// History ID is too old or invalid - this is common and not critical
+					console.warn(
+						`History ID ${notification.historyId} not found or expired for user ${userId}`,
+					);
+					return {
+						...result,
+						success: true, // Not a failure, just no history to process
+						expired: true, // Signal caller to run a backfill
+						errors: [
+							{
+								messageId: "history",
+								error: "History ID expired or not found",
+							},
+						],
+					};
+				}
+
+				if (
+					errorMessage.includes("401") ||
+					errorMessage.includes("invalid_grant")
+				) {
+					// Token expired or revoked
+					console.error(
+						`OAuth token invalid for user ${userId}:`,
+						errorMessage,
+					);
+					return {
+						...result,
+						success: false,
+						errors: [
+							{ messageId: "auth", error: "OAuth token expired or revoked" },
+						],
+					};
+				}
+
+				console.error(`Failed to fetch history for user ${userId}:`, error);
 				return {
 					...result,
 					success: false,
-					errors: [
-						{ messageId: "auth", error: "OAuth token expired or revoked" },
-					],
+					errors: [{ messageId: "history", error: errorMessage }],
 				};
 			}
-
-			console.error(`Failed to fetch history for user ${userId}:`, error);
-			return {
-				...result,
-				success: false,
-				errors: [{ messageId: "history", error: errorMessage }],
-			};
 		}
 
 		// Track processed message IDs to avoid duplicates
@@ -716,19 +753,41 @@ export class GmailService extends BaseService {
 		userId: string,
 		startHistoryId: string,
 		maxResults: number = 100,
-	): Promise<GmailHistory[]> {
+	): Promise<{ history: GmailHistory[]; latestHistoryId: string }> {
 		try {
-			const params = new URLSearchParams({
-				startHistoryId: startHistoryId,
-				maxResults: maxResults.toString(),
-			});
+			const history: GmailHistory[] = [];
+			let latestHistoryId = startHistoryId;
+			let pageToken: string | undefined;
+			// Safety cap so a pathological mailbox can't page forever in one run.
+			const maxPages = 10;
 
-			const response = await this.gmailRequest<{ history: GmailHistory[] }>(
-				userId,
-				`/users/me/history?${params.toString()}`,
-			);
+			for (let page = 0; page < maxPages; page++) {
+				const params = new URLSearchParams({
+					startHistoryId: startHistoryId,
+					maxResults: maxResults.toString(),
+				});
+				if (pageToken) {
+					params.append("pageToken", pageToken);
+				}
 
-			return response.history || [];
+				const response = await this.gmailRequest<{
+					history: GmailHistory[];
+					historyId: string;
+					nextPageToken?: string;
+				}>(userId, `/users/me/history?${params.toString()}`);
+
+				history.push(...(response.history || []));
+				if (response.historyId) {
+					latestHistoryId = response.historyId;
+				}
+
+				pageToken = response.nextPageToken;
+				if (!pageToken) {
+					break;
+				}
+			}
+
+			return { history, latestHistoryId };
 		} catch (error) {
 			console.error("Failed to get history:", error);
 			throw error;
@@ -763,6 +822,71 @@ export class GmailService extends BaseService {
 			messages: Array<{ id: string; threadId: string }>;
 			nextPageToken?: string;
 		}>(userId, `/users/me/messages?${params.toString()}`);
+	}
+
+	/**
+	 * Query-based recovery for when the stored history cursor has expired.
+	 *
+	 * The history API can't rewind past a stale cursor, so instead we list
+	 * unread messages carrying the user's monitor label (processed messages are
+	 * marked read, so unread = not yet processed) and shape them into synthetic
+	 * history entries. They then flow through the same per-message pipeline
+	 * (emailId + amount/date dedup) as webhook/poll processing.
+	 */
+	private async listLabeledMessagesForBackfill(userId: string): Promise<{
+		history: GmailHistory[];
+		latestHistoryId: string;
+		complete: boolean;
+	}> {
+		const watchLabelIds = await this.getWatchLabelIds(userId);
+		const label = await this.getLabel(userId, watchLabelIds[0]);
+		const query = `label:"${label.name}" is:unread`;
+
+		const history: GmailHistory[] = [];
+		let pageToken: string | undefined;
+		const maxPages = 5;
+
+		for (let page = 0; page < maxPages; page++) {
+			const { messages, nextPageToken } = await this.listMessages(
+				userId,
+				query,
+				100,
+				pageToken,
+			);
+
+			for (const m of messages) {
+				history.push({
+					messagesAdded: [
+						{
+							message: {
+								id: m.id,
+								threadId: m.threadId,
+								labelIds: watchLabelIds,
+							} as GmailMessage,
+						},
+					],
+				} as GmailHistory);
+			}
+
+			pageToken = nextPageToken;
+			if (!pageToken) {
+				break;
+			}
+		}
+
+		const complete = !pageToken;
+		if (!complete) {
+			console.warn(
+				`Backfill for user ${userId} capped at ${maxPages} pages; more labeled unread messages remain`,
+			);
+		}
+
+		const profile = await this.getProfile(userId);
+		return {
+			history,
+			latestHistoryId: profile.historyId,
+			complete,
+		};
 	}
 
 	/**

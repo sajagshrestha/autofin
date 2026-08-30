@@ -2,12 +2,13 @@ import { Hono } from "hono";
 import { serve } from "inngest/edge";
 import { getSessionUserFromCookieHeader } from "@/server/auth/session";
 import { inngest } from "@/server/inngest/client";
+import { gmailHistoryPoll } from "@/server/inngest/functions/gmail-history-poll";
 import { gmailWatchResync } from "@/server/inngest/functions/gmail-watch-resync";
 import { getContainer } from "@/server/lib/container";
 
 const inngestHandler = serve({
 	client: inngest,
-	functions: [gmailWatchResync],
+	functions: [gmailWatchResync, gmailHistoryPoll],
 });
 
 interface PubSubMessage {

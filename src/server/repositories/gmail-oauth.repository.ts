@@ -8,6 +8,14 @@ import { BaseRepository } from "./base.repository";
 
 export class GmailOAuthRepository extends BaseRepository {
 	/**
+	 * List all connected Gmail tokens (across users) — used by the
+	 * hourly catch-up poll that re-scans history for missed Pub/Sub events.
+	 */
+	async findAll(): Promise<GmailOAuthToken[]> {
+		return this.db.select().from(gmailOAuthTokens);
+	}
+
+	/**
 	 * Find token by user ID
 	 */
 	async findByUserId(userId: string): Promise<GmailOAuthToken | null> {
