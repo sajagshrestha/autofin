@@ -4,6 +4,7 @@ import {
 	useContext,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 
@@ -27,17 +28,45 @@ export function AdvisorChatProvider({
 }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isFullscreen, setIsFullscreen] = useState(false);
+	const pushedRef = useRef(false);
 
-	const openChat = useCallback(() => setIsOpen(true), []);
+	const openChat = useCallback(() => {
+		// Push a history entry so the browser back button (mobile) closes the
+		// chat instead of navigating away.
+		if (!pushedRef.current) {
+			window.history.pushState({ advisorChat: true }, "");
+			pushedRef.current = true;
+		}
+		setIsOpen(true);
+	}, []);
+
 	const closeChat = useCallback(() => {
 		setIsOpen(false);
 		setIsFullscreen(false);
+		// Undo the pushed history entry so back doesn't land on a dead state.
+		if (pushedRef.current) {
+			pushedRef.current = false;
+			window.history.back();
+		}
 	}, []);
 	const toggleChat = useCallback(() => setIsOpen((open) => !open), []);
 	const toggleFullscreen = useCallback(
 		() => setIsFullscreen((full) => !full),
 		[],
 	);
+
+	// Back button closes the chat when it's open (mobile).
+	useEffect(() => {
+		const onPopState = () => {
+			if (isOpen) {
+				pushedRef.current = false;
+				setIsOpen(false);
+				setIsFullscreen(false);
+			}
+		};
+		window.addEventListener("popstate", onPopState);
+		return () => window.removeEventListener("popstate", onPopState);
+	}, [isOpen]);
 
 	// Escape closes fullscreen first, then the panel.
 	useEffect(() => {
