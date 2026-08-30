@@ -103,15 +103,23 @@ export default function Header() {
 				{/* User Section */}
 				<div className="p-4 border-t border-border/60">
 					<div className="flex items-center gap-3">
-						<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-							<span className="text-sm font-semibold text-primary">
-								{user?.email?.charAt(0).toUpperCase() || "U"}
-							</span>
-						</div>
-						<div className="flex-1 min-w-0">
-							<p className="text-sm font-medium truncate">{user?.email}</p>
-						</div>
-						<div className="flex items-center gap-1">
+						<Link
+							to="/settings"
+							className="flex items-center gap-3 flex-1 min-w-0 rounded-lg hover:bg-muted px-1 py-1 transition-colors"
+							aria-label="Settings"
+						>
+							<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+								<span className="text-sm font-semibold text-primary">
+									{user?.email?.charAt(0).toUpperCase() || "U"}
+								</span>
+							</div>
+							<div className="flex-1 min-w-0">
+								<p className="text-sm font-medium truncate">
+									{user?.email}
+								</p>
+							</div>
+						</Link>
+						<div className="flex items-center gap-1 shrink-0">
 							<ThemeSwitcher />
 							<Button
 								variant="ghost"
@@ -194,8 +202,12 @@ export default function Header() {
 
 						{user && (
 							<div className="p-4 border-t border-border">
-								<div className="flex items-center gap-3 mb-3">
-									<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+								<Link
+									to="/settings"
+									onClick={() => setIsMobileMenuOpen(false)}
+									className="flex items-center gap-3 mb-3 rounded-lg hover:bg-accent px-1 py-1 transition-colors"
+								>
+									<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
 										<span className="text-sm font-semibold text-primary">
 											{user?.email?.charAt(0).toUpperCase() || "U"}
 										</span>
@@ -205,7 +217,7 @@ export default function Header() {
 											{user?.email}
 										</p>
 									</div>
-								</div>
+								</Link>
 								<Button
 									variant="outline"
 									className="w-full"
