@@ -8,7 +8,7 @@ export interface SwitchProps
 const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
 	({ className, ...props }, ref) => {
 		return (
-			<label className="inline-flex items-center gap-2 cursor-pointer">
+			<label className="group inline-flex items-center gap-2 cursor-pointer">
 				<input type="checkbox" className="peer sr-only" ref={ref} {...props} />
 				<div
 					className={cn(
@@ -18,7 +18,7 @@ const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
 				>
 					<span
 						className={cn(
-							"pointer-events-none block h-4 w-4 translate-x-0.5 rounded-full bg-background shadow-lg ring-0 transition-transform duration-200 ease-in-out peer-checked:translate-x-[18px]",
+							"pointer-events-none block h-4 w-4 translate-x-0.5 rounded-full bg-background shadow-lg ring-0 transition-transform duration-200 ease-in-out group-has-[:checked]:translate-x-[18px]",
 						)}
 					/>
 				</div>
