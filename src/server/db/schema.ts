@@ -210,6 +210,30 @@ export const loans = pgTable("loans", {
 export type Loan = typeof loans.$inferSelect;
 export type NewLoan = typeof loans.$inferInsert;
 
+/**
+ * Browser Web Push subscriptions (PWA notifications). `endpoint` is unique —
+ * each subscription identifies exactly one installed device/browser.
+ */
+export const pushSubscriptions = pgTable("push_subscriptions", {
+	id: text("id").primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" }),
+	endpoint: text("endpoint").notNull().unique(),
+	p256dh: text("p256dh").notNull(),
+	auth: text("auth").notNull(),
+	userAgent: text("user_agent"),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
+
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
 
@@ -251,3 +275,13 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 		references: [categories.id],
 	}),
 }));
+
+export const pushSubscriptionsRelations = relations(
+	pushSubscriptions,
+	({ one }) => ({
+		user: one(users, {
+			fields: [pushSubscriptions.userId],
+			references: [users.id],
+		}),
+	}),
+);

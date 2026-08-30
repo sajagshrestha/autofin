@@ -26,6 +26,7 @@ import { Route as AuthenticatedSettingsAiRouteImport } from './routes/_authentic
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsGmailRouteImport } from './routes/_authenticated/settings/gmail'
 import { Route as AuthenticatedSettingsMcpRouteImport } from './routes/_authenticated/settings/mcp'
+import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedTransactionsIndexRouteImport } from './routes/_authenticated/transactions/index'
 import { Route as AuthenticatedTransactionsTransactionIdRouteImport } from './routes/_authenticated/transactions/$transactionId'
 import { Route as AuthenticatedTransactionsImportRouteImport } from './routes/_authenticated/transactions/import'
@@ -120,6 +121,12 @@ const AuthenticatedSettingsMcpRoute =
     path: '/settings/mcp',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSettingsNotificationsRoute =
+  AuthenticatedSettingsNotificationsRouteImport.update({
+    id: '/settings/notifications',
+    path: '/settings/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedTransactionsIndexRoute =
   AuthenticatedTransactionsIndexRouteImport.update({
     id: '/transactions/',
@@ -153,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/gmail': typeof AuthenticatedSettingsGmailRoute
   '/settings/mcp': typeof AuthenticatedSettingsMcpRoute
+  '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/categories/': typeof AuthenticatedCategoriesIndexRoute
@@ -174,6 +182,7 @@ export interface FileRoutesByTo {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/gmail': typeof AuthenticatedSettingsGmailRoute
   '/settings/mcp': typeof AuthenticatedSettingsMcpRoute
+  '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/categories': typeof AuthenticatedCategoriesIndexRoute
@@ -197,6 +206,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/gmail': typeof AuthenticatedSettingsGmailRoute
   '/_authenticated/settings/mcp': typeof AuthenticatedSettingsMcpRoute
+  '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/transactions/$transactionId': typeof AuthenticatedTransactionsTransactionIdRoute
   '/_authenticated/transactions/import': typeof AuthenticatedTransactionsImportRoute
   '/_authenticated/categories/': typeof AuthenticatedCategoriesIndexRoute
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/gmail'
     | '/settings/mcp'
+    | '/settings/notifications'
     | '/transactions/$transactionId'
     | '/transactions/import'
     | '/categories/'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/gmail'
     | '/settings/mcp'
+    | '/settings/notifications'
     | '/transactions/$transactionId'
     | '/transactions/import'
     | '/categories'
@@ -263,6 +275,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/gmail'
     | '/_authenticated/settings/mcp'
+    | '/_authenticated/settings/notifications'
     | '/_authenticated/transactions/$transactionId'
     | '/_authenticated/transactions/import'
     | '/_authenticated/categories/'
@@ -403,6 +416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsMcpRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings/notifications': {
+      id: '/_authenticated/settings/notifications'
+      path: '/settings/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof AuthenticatedSettingsNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/transactions/': {
       id: '/_authenticated/transactions/'
       path: '/transactions'
@@ -434,6 +454,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
   AuthenticatedSettingsGmailRoute: typeof AuthenticatedSettingsGmailRoute
   AuthenticatedSettingsMcpRoute: typeof AuthenticatedSettingsMcpRoute
+  AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
   AuthenticatedTransactionsTransactionIdRoute: typeof AuthenticatedTransactionsTransactionIdRoute
   AuthenticatedTransactionsImportRoute: typeof AuthenticatedTransactionsImportRoute
   AuthenticatedCategoriesIndexRoute: typeof AuthenticatedCategoriesIndexRoute
@@ -450,6 +471,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
   AuthenticatedSettingsGmailRoute: AuthenticatedSettingsGmailRoute,
   AuthenticatedSettingsMcpRoute: AuthenticatedSettingsMcpRoute,
+  AuthenticatedSettingsNotificationsRoute:
+    AuthenticatedSettingsNotificationsRoute,
   AuthenticatedTransactionsTransactionIdRoute:
     AuthenticatedTransactionsTransactionIdRoute,
   AuthenticatedTransactionsImportRoute: AuthenticatedTransactionsImportRoute,

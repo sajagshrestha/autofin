@@ -7,6 +7,7 @@ import { AiPreferencesSection } from "@/components/settings/AiPreferencesSection
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { GmailSection } from "@/components/settings/GmailSection";
 import { McpSection } from "@/components/settings/McpSection";
+import { NotificationsSection } from "@/components/settings/NotificationsSection";
 import { SETTINGS_SECTIONS } from "@/components/settings/sections";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -57,11 +58,12 @@ function SettingsIndexPage() {
 			{/* Desktop: tabbed interface */}
 			<div className="hidden md:block">
 				<Tabs defaultValue="gmail" className="w-full">
-					<TabsList className="grid w-full grid-cols-4">
+					<TabsList className="grid w-full grid-cols-5">
 						<TabsTrigger value="gmail">Gmail</TabsTrigger>
 						<TabsTrigger value="ai">AI Preferences</TabsTrigger>
 						<TabsTrigger value="mcp">MCP</TabsTrigger>
 						<TabsTrigger value="appearance">Appearance</TabsTrigger>
+						<TabsTrigger value="notifications">Notifications</TabsTrigger>
 					</TabsList>
 					<TabsContent value="gmail" className="mt-6">
 						<GmailSection />
@@ -74,6 +76,9 @@ function SettingsIndexPage() {
 					</TabsContent>
 					<TabsContent value="appearance" className="mt-6">
 						<AppearanceSection />
+					</TabsContent>
+					<TabsContent value="notifications" className="mt-6">
+						<NotificationsSection />
 					</TabsContent>
 				</Tabs>
 			</div>

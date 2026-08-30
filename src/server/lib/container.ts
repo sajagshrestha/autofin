@@ -10,6 +10,8 @@ import type { GmailOAuthRepository } from "@/server/repositories/gmail-oauth.rep
 import { GmailOAuthRepository as GmailOAuthRepositoryImpl } from "@/server/repositories/gmail-oauth.repository";
 import type { LoanRepository } from "@/server/repositories/loan.repository";
 import { LoanRepository as LoanRepositoryImpl } from "@/server/repositories/loan.repository";
+import type { PushSubscriptionRepository } from "@/server/repositories/push-subscription.repository";
+import { PushSubscriptionRepository as PushSubscriptionRepositoryImpl } from "@/server/repositories/push-subscription.repository";
 import type { TransactionRepository } from "@/server/repositories/transaction.repository";
 import { TransactionRepository as TransactionRepositoryImpl } from "@/server/repositories/transaction.repository";
 import type { UserRepository } from "@/server/repositories/user.repository";
@@ -22,6 +24,8 @@ import type { GmailService } from "@/server/services/gmail.service";
 import { GmailService as GmailServiceImpl } from "@/server/services/gmail.service";
 import type { LoggerService } from "@/server/services/logger.service";
 import { LoggerServiceImpl } from "@/server/services/logger.service";
+import type { PushService } from "@/server/services/push.service";
+import { PushServiceImpl } from "@/server/services/push.service";
 import type { StatementExtractorService } from "@/server/services/statement-extractor.service";
 import { StatementExtractorService as StatementExtractorServiceImpl } from "@/server/services/statement-extractor.service";
 import type { TransactionExtractorService } from "@/server/services/transaction-extractor.service";
@@ -39,10 +43,12 @@ export interface Container {
 	readonly gmailOAuthRepo: GmailOAuthRepository;
 	readonly categoryRepo: CategoryRepository;
 	readonly loanRepo: LoanRepository;
+	readonly pushSubscriptionRepo: PushSubscriptionRepository;
 	readonly transactionRepo: TransactionRepository;
 	// Services
 	readonly loggerService: LoggerService;
 	readonly discordService: DiscordService;
+	readonly pushService: PushService;
 	readonly gmailService: GmailService;
 	readonly transactionExtractor: TransactionExtractorService;
 	readonly statementExtractor: StatementExtractorService;
@@ -62,6 +68,8 @@ export function createContainer(db: Database): Container {
 	const gmailOAuthRepo: GmailOAuthRepository = new GmailOAuthRepositoryImpl(db);
 	const categoryRepo: CategoryRepository = new CategoryRepositoryImpl(db);
 	const loanRepo: LoanRepository = new LoanRepositoryImpl(db);
+	const pushSubscriptionRepo: PushSubscriptionRepository =
+		new PushSubscriptionRepositoryImpl(db);
 	const transactionRepo: TransactionRepository = new TransactionRepositoryImpl(
 		db,
 	);
@@ -69,6 +77,7 @@ export function createContainer(db: Database): Container {
 	// Services (depend on db and repositories)
 	const loggerService: LoggerService = new LoggerServiceImpl();
 	const discordService: DiscordService = new DiscordServiceImpl();
+	const pushService: PushService = new PushServiceImpl(pushSubscriptionRepo);
 	const transactionExtractor: TransactionExtractorService =
 		new TransactionExtractorServiceImpl(loggerService, discordService);
 	const statementExtractor: StatementExtractorService =
@@ -82,6 +91,7 @@ export function createContainer(db: Database): Container {
 		userPreferenceRepo,
 		transactionExtractor,
 		discordService,
+		pushService,
 	);
 	return {
 		db,
@@ -90,9 +100,11 @@ export function createContainer(db: Database): Container {
 		gmailOAuthRepo,
 		categoryRepo,
 		loanRepo,
+		pushSubscriptionRepo,
 		transactionRepo,
 		loggerService,
 		discordService,
+		pushService,
 		gmailService,
 		transactionExtractor,
 		statementExtractor,

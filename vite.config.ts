@@ -6,21 +6,28 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import {nitro} from "nitro/vite";
 
 /**
- * Force-bundle the supabase stack into the server chunk on all surfaces
- * (Vite SSR env + Nitro/Vercel externals). Externalized "_libs" chunks lose
- * their transitive deps (tslib) in some deployment tracers, which crashes
- * at runtime — bundling removes the entire class of failure.
+ * Force-bundle a few dependency stacks into the server chunk for the
+ * production/Nitro build. Externalized "_libs" chunks lose their transitive
+ * deps (tslib) in some deployment tracers, which crashes at runtime — bundling
+ * removes that class of failure.
+ *
+ * web-push (pure CJS) is only force-bundled in the build; in dev SSR it must
+ * stay externalized so Vite loads it through Node's CJS require instead of the
+ * ESM module runner (which has no `require`).
  */
-function bundleSupabaseOnServer(): PluginOption {
+function bundleServerDeps(): PluginOption {
 	return {
-		name: "autofin:bundle-supabase-on-server",
+		name: "autofin:bundle-server-deps",
 		enforce: "post",
-		config(config) {
+		config(config, env) {
 			const targets = [
 				"@supabase/ssr",
 				"@supabase/supabase-js",
 				"@supabase/auth-js",
 			];
+			if (env.command === "build") {
+				targets.push("web-push");
+			}
 
 			const environments = (config.environments ??= {}) as Record<
 				string,
@@ -54,7 +61,7 @@ export default defineConfig(({mode}) => {
       include: ["react-markdown"]
     },
     plugins: [
-      bundleSupabaseOnServer(),
+      bundleServerDeps(),
       tanstackStart(),
       // react's vite plugin must come after start's vite plugin
       viteReact(),

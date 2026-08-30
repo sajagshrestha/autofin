@@ -7,6 +7,7 @@ import type { UserRepository } from "@/server/repositories/user.repository";
 import type { UserPreferenceRepository } from "@/server/repositories/user-preference.repository";
 import { BaseService } from "./base.service";
 import type { DiscordService } from "./discord.service";
+import type { PushService } from "./push.service";
 import type { TransactionExtractorService } from "./transaction-extractor.service";
 
 /**
@@ -136,6 +137,7 @@ export class GmailService extends BaseService {
 		private readonly userPreferenceRepo: UserPreferenceRepository,
 		private readonly transactionExtractor: TransactionExtractorService,
 		private readonly discordService: DiscordService,
+		private readonly pushService: PushService,
 	) {
 		super(db);
 	}
@@ -617,6 +619,14 @@ export class GmailService extends BaseService {
 									source: "gmail",
 									category: categoryLabel,
 									transactionDate: transactionDate?.toISOString() ?? null,
+								});
+
+								await this.pushService.sendToUser(userId, {
+									title: "New transaction",
+									body:
+										(txn.type === "credit" ? "Credit" : "Debit") +
+										` ${txn.amount}${txn.merchant ? ` · ${txn.merchant}` : ""}`,
+									url: `/transactions/${created.id}`,
 								});
 
 								console.log(

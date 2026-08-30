@@ -30,6 +30,56 @@ self.addEventListener("activate", (event) => {
 	);
 });
 
+self.addEventListener("push", (event) => {
+	let payload = {
+		title: "AutoFin",
+		body: "You have a new notification.",
+		url: "/",
+	};
+	try {
+		const data = event.data?.json();
+		if (data) {
+			payload = {
+				title: data.title ?? payload.title,
+				body: data.body ?? payload.body,
+				url: data.url ?? payload.url,
+			};
+		}
+	} catch {
+		// Fall back to the default payload if the message isn't JSON.
+	}
+
+	event.waitUntil(
+		self.registration.showNotification(payload.title, {
+			body: payload.body,
+			icon: "/logo192.png",
+			badge: "/logo192.png",
+			data: { url: payload.url },
+		}),
+	);
+});
+
+self.addEventListener("notificationclick", (event) => {
+	event.notification.close();
+	const target = new URL(
+		event.notification.data?.url ?? "/",
+		self.location.origin,
+	);
+
+	event.waitUntil(
+		self.clients
+			.matchAll({ type: "window", includeUncontrolled: true })
+			.then((clients) => {
+				for (const client of clients) {
+					if (new URL(client.url).pathname === target.pathname) {
+						return client.focus();
+					}
+				}
+				return self.clients.openWindow(target);
+			}),
+	);
+});
+
 self.addEventListener("fetch", (event) => {
 	const { request } = event;
 	if (request.method !== "GET") return;

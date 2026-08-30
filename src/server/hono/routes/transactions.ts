@@ -502,6 +502,11 @@ export const transactionsRouter = new Hono<ApiEnv>()
 				totalCredit,
 				transactions: importedRows,
 			});
+			void container.pushService.sendToUser(user.id, {
+				title: "Statement imported",
+				body: `${importedRows.length} transaction${importedRows.length !== 1 ? "s" : ""} imported from your statement.`,
+				url: "/transactions",
+			});
 		}
 
 		const transactions = await Promise.all(

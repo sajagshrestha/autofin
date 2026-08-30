@@ -15,6 +15,7 @@ import { loansRouter } from "@/server/hono/routes/loans";
 import { mcpRouter } from "@/server/hono/routes/mcp";
 import { preferencesRouter } from "@/server/hono/routes/preferences";
 import { publicInfraRouter } from "@/server/hono/routes/public-infra";
+import { pushRouter } from "@/server/hono/routes/push";
 import { statementsRouter } from "@/server/hono/routes/statements";
 import { transactionsRouter } from "@/server/hono/routes/transactions";
 
@@ -35,7 +36,8 @@ const api = new Hono()
 	.route("/statements", statementsRouter)
 	.route("/integrations", integrationsRouter)
 	.route("/preferences", preferencesRouter)
-	.route("/gmail", gmailRouter);
+	.route("/gmail", gmailRouter)
+	.route("/push", pushRouter);
 
 export const apiApp = new Hono()
 	.use("*", requestLogger)
