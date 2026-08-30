@@ -1,6 +1,5 @@
-import { Bell, Loader2, Send } from "lucide-react";
+import { Bell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -22,8 +21,16 @@ export function NotificationsSection() {
 		try {
 			if (next) {
 				await subscribe.mutateAsync();
+				// Fire one immediately so the user sees it working without hunting
+				// for a button. Failures here are non-fatal — the sub is already saved.
+				try {
+					const res = await rpc.api.push.test.$post();
+					await unwrap(res);
+				} catch {
+					/* test notification is best-effort */
+				}
 				toast.success("Notifications enabled", {
-					description: "You'll be notified when a statement import completes.",
+					description: "A test notification should have just appeared.",
 				});
 			} else {
 				await unsubscribe.mutateAsync();
@@ -38,20 +45,6 @@ export function NotificationsSection() {
 					description: error instanceof Error ? error.message : undefined,
 				},
 			);
-		}
-	};
-
-	const handleTest = async () => {
-		try {
-			const res = await rpc.api.push.test.$post();
-			await unwrap(res);
-			toast.success("Test notification sent", {
-				description: "Check your notification center.",
-			});
-		} catch (error) {
-			toast.error("Failed to send test notification", {
-				description: error instanceof Error ? error.message : undefined,
-			});
 		}
 	};
 
@@ -109,17 +102,6 @@ export function NotificationsSection() {
 									: "Unsubscribing…"}
 							</p>
 						)}
-
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							disabled={!enabled || isBusy}
-							onClick={handleTest}
-						>
-							<Send className="mr-2 h-4 w-4" />
-							Send test notification
-						</Button>
 					</>
 				)}
 			</CardContent>
