@@ -55,7 +55,8 @@ self.addEventListener("push", (event) => {
 			icon: "/logo192.png",
 			// Android renders the status-bar icon as a monochrome silhouette using
 			// only the alpha channel — a full-bleed color logo shows as a solid
-			// white block. icon-badge.png is a white glyph on transparent.
+			// white block. icon-badge.png is the mini-logo wordmark (white glyph
+			// on transparent) so the status-bar icon echoes the app icon.
 			badge: "/icon-badge.png",
 			data: { url: payload.url },
 		}),
