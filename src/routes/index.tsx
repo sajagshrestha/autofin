@@ -81,6 +81,11 @@ function LandingPage() {
 
 	return (
 		<div className="min-h-screen flex flex-col bg-background text-foreground">
+			{/* Closed beta banner */}
+			<div className="bg-primary text-primary-foreground text-center text-sm font-medium px-4 py-2">
+				🚀 We're currently in closed beta — thanks for being an early tester! 🎉
+			</div>
+
 			{/* Navbar */}
 			<nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
 				<div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
