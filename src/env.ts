@@ -15,6 +15,8 @@ export const env = createEnv({
 		VITE_SUPABASE_URL: z.string().url(),
 		VITE_SUPABASE_ANON_KEY: z.string().min(1),
 		VITE_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+		VITE_POSTHOG_KEY: z.string().min(1).optional(),
+		VITE_POSTHOG_HOST: z.string().url().optional(),
 	},
 
 	/**

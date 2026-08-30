@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { PageLoadingBar } from "@/components/PageLoadingBar";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PostHogProvider } from "@/contexts/PostHogProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { env } from "@/env";
 import { queryClient } from "@/lib/query-client";
@@ -81,6 +82,7 @@ function RootComponent() {
 				<ThemeProvider>
 					<AuthProvider>
 						<QueryClientProvider client={queryClient}>
+							<PostHogProvider />
 							<Outlet />
 						</QueryClientProvider>
 						<Toaster />
