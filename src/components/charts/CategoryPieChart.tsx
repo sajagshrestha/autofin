@@ -6,19 +6,27 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { cn } from "@/lib/utils";
 
 export type CategoryPieDataPoint = {
 	name: string;
 	value: number;
 	icon?: string | null;
 	fill: string;
+	/** Category id, or null for the "Uncategorized" grouping. */
+	id?: string | null;
 };
 
 type CategoryPieChartProps = {
 	data: CategoryPieDataPoint[];
+	/** Fired when a slice or legend item is clicked or keyboard-activated. */
+	onDataPointClick?: (point: CategoryPieDataPoint) => void;
 };
 
-export function CategoryPieChart({ data }: CategoryPieChartProps) {
+export function CategoryPieChart({
+	data,
+	onDataPointClick,
+}: CategoryPieChartProps) {
 	const definition = useMemo(() => {
 		const slices = pie(data, { value: "value" });
 
@@ -72,21 +80,36 @@ export function CategoryPieChart({ data }: CategoryPieChartProps) {
 								definition={definition}
 								height={350}
 								ariaLabel="Spending share by category"
+								className={onDataPointClick ? "cursor-pointer" : undefined}
+								onSelect={(point) => {
+									if (point) onDataPointClick?.(point.datum);
+								}}
 							/>
 						</div>
 						<div className="flex flex-wrap gap-2 justify-center">
 							{data.map((item) => (
-								<Badge
+								<button
 									key={item.name}
-									variant="secondary"
-									className="flex items-center gap-1.5"
+									type="button"
+									disabled={!onDataPointClick}
+									onClick={() => onDataPointClick?.(item)}
+									className={cn(
+										"rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+										onDataPointClick &&
+											"transition-opacity hover:opacity-75 disabled:opacity-100",
+									)}
 								>
-									<span
-										className="w-2 h-2 rounded-full"
-										style={{ backgroundColor: item.fill }}
-									/>
-									{item.name}
-								</Badge>
+									<Badge
+										variant="secondary"
+										className="flex items-center gap-1.5"
+									>
+										<span
+											className="w-2 h-2 rounded-full"
+											style={{ backgroundColor: item.fill }}
+										/>
+										{item.name}
+									</Badge>
+								</button>
 							))}
 						</div>
 					</div>

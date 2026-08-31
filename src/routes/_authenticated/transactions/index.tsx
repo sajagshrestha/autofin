@@ -15,6 +15,7 @@ import {
 	Eye,
 	FileText,
 	HandCoins,
+	Landmark,
 	Loader2,
 	MessageSquarePlus,
 	MoreVertical,
@@ -25,6 +26,7 @@ import {
 	TrendingDown,
 	TrendingUp,
 	Wallet,
+	X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -97,10 +99,12 @@ import {
 } from "@/hooks/transactions/mutations";
 import { useGetAllTransactions } from "@/hooks/transactions/queries";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { cn } from "@/lib/utils";
 
 const defaultRange = getDateRangeForPeriod("last7d");
 const ALL_CATEGORIES_FILTER = "all";
 const UNCATEGORIZED_FILTER = "uncategorized";
+const ALL_BANKS_FILTER = "all";
 type CategoryFilterOption = CategoryComboboxOption;
 const sortOptions = [
 	{ value: "none", label: "No sorting" },
@@ -127,6 +131,8 @@ const searchParamsSchema = z.object({
 		.optional()
 		.default(defaultRange.endDate ?? ""),
 	type: z.enum(["all", "debit", "credit"]).optional().default("all"),
+	category: z.string().optional().default(ALL_CATEGORIES_FILTER),
+	bank: z.string().optional().default(""),
 });
 
 export const Route = createFileRoute("/_authenticated/transactions/")({
@@ -135,17 +141,17 @@ export const Route = createFileRoute("/_authenticated/transactions/")({
 });
 
 function TransactionsPage() {
-	const { period, startDate, endDate, type } = Route.useSearch();
+	const { period, startDate, endDate, type, category, bank } =
+		Route.useSearch();
 	const typeFilter = type ?? "all";
+	const categoryFilter = category ?? ALL_CATEGORIES_FILTER;
+	const bankFilter = bank ?? "";
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [globalFilter, setGlobalFilter] = useState("");
 	const [pagination, setPagination] = useState<PaginationState>({
 		pageIndex: 0,
 		pageSize: 10,
 	});
-	const [categoryFilter, setCategoryFilter] = useState<string>(
-		ALL_CATEGORIES_FILTER,
-	);
 	const [editingTransaction, setEditingTransaction] =
 		useState<Transaction | null>(null);
 	const [deletingTransaction, setDeletingTransaction] =
@@ -232,40 +238,72 @@ function TransactionsPage() {
 		],
 		[sortedCategories],
 	);
+	const bankOptions = useMemo(() => {
+		const banks = new Map<string, string>();
+		for (const transaction of transactions) {
+			if (transaction.bankName)
+				banks.set(transaction.bankName, transaction.bankName);
+		}
+		return Array.from(banks.keys()).sort();
+	}, [transactions]);
 	const filteredTransactions = useMemo(() => {
 		const typeFiltered =
 			typeFilter === "all"
 				? transactions
 				: transactions.filter((transaction) => transaction.type === typeFilter);
 
+		let categoryFiltered: typeof transactions;
 		if (categoryFilter === ALL_CATEGORIES_FILTER) {
-			return typeFiltered;
-		}
-		if (categoryFilter === UNCATEGORIZED_FILTER) {
-			return typeFiltered.filter(
+			categoryFiltered = typeFiltered;
+		} else if (categoryFilter === UNCATEGORIZED_FILTER) {
+			categoryFiltered = typeFiltered.filter(
 				(transaction) => !transaction.category?.id && !transaction.categoryId,
+			);
+		} else {
+			categoryFiltered = typeFiltered.filter(
+				(transaction) =>
+					transaction.category?.id === categoryFilter ||
+					transaction.categoryId === categoryFilter,
 			);
 		}
 
-		return typeFiltered.filter(
-			(transaction) =>
-				transaction.category?.id === categoryFilter ||
-				transaction.categoryId === categoryFilter,
+		if (bankFilter === "") return categoryFiltered;
+		return categoryFiltered.filter(
+			(transaction) => transaction.bankName === bankFilter,
 		);
-	}, [transactions, categoryFilter, typeFilter]);
+	}, [transactions, categoryFilter, typeFilter, bankFilter]);
 	const noDataDescription =
-		categoryFilter === ALL_CATEGORIES_FILTER && typeFilter === "all"
+		categoryFilter === ALL_CATEGORIES_FILTER &&
+		typeFilter === "all" &&
+		bankFilter === ""
 			? "Get started by adding a transaction or creating one from SMS."
-			: "Try a different category or type filter, or add/create a transaction.";
+			: "Try a different category, type, or bank filter, or add/create a transaction.";
 
-	const handleCategoryFilterChange = useCallback((value: string | null) => {
-		if (!value) return;
-		setCategoryFilter(value);
-		setPagination((prev) => ({
-			...prev,
-			pageIndex: 0,
-		}));
-	}, []);
+	const handleCategoryFilterChange = useCallback(
+		(value: string | null) => {
+			if (!value) return;
+			searchNavigate({
+				search: (prev) => ({ ...prev, category: value }),
+			});
+			setPagination((prev) => ({
+				...prev,
+				pageIndex: 0,
+			}));
+		},
+		[searchNavigate],
+	);
+	const handleBankFilterChange = useCallback(
+		(value: string) => {
+			searchNavigate({
+				search: (prev) => ({ ...prev, bank: value }),
+			});
+			setPagination((prev) => ({
+				...prev,
+				pageIndex: 0,
+			}));
+		},
+		[searchNavigate],
+	);
 	const handleTypeFilterChange = useCallback(
 		(value: "all" | "debit" | "credit") => {
 			searchNavigate({
@@ -301,12 +339,34 @@ function TransactionsPage() {
 		setFiltersSheetOpen(open);
 	}, []);
 	const clearFilters = useCallback(() => {
-		handleCategoryFilterChange(ALL_CATEGORIES_FILTER);
 		handleSortingChange([]);
 		searchNavigate({
-			search: (prev) => ({ ...prev, type: "all" }),
+			search: (prev) => ({
+				...prev,
+				type: "all",
+				category: ALL_CATEGORIES_FILTER,
+				bank: "",
+			}),
 		});
-	}, [handleCategoryFilterChange, handleSortingChange, searchNavigate]);
+		setPagination((prev) => ({
+			...prev,
+			pageIndex: 0,
+		}));
+	}, [handleSortingChange, searchNavigate]);
+	const activeFilterCount = useMemo(() => {
+		let count = 0;
+		if (categoryFilter !== ALL_CATEGORIES_FILTER) count++;
+		if (typeFilter !== "all") count++;
+		if (bankFilter !== "") count++;
+		if (sorting[0]) count++;
+		return count;
+	}, [categoryFilter, typeFilter, bankFilter, sorting]);
+	const categoryLabel = useMemo(
+		() =>
+			categoryFilterOptions.find((option) => option.id === categoryFilter)
+				?.label ?? categoryFilter,
+		[categoryFilterOptions, categoryFilter],
+	);
 	const openCreateManual = useCallback(() => {
 		setCreateOptionsOpen(false);
 		setManualDialogOpen(true);
@@ -649,6 +709,33 @@ function TransactionsPage() {
 						/>
 					</div>
 				</div>
+				{activeFilterCount > 0 && (
+					<div className="flex flex-wrap items-center gap-2">
+						<span className="text-sm font-medium text-muted-foreground">
+							Active filters:
+						</span>
+						{typeFilter !== "all" && (
+							<FilterChip
+								label={typeFilter === "debit" ? "Debit" : "Credit"}
+								onClear={() => handleTypeFilterChange("all")}
+							/>
+						)}
+						{categoryFilter !== ALL_CATEGORIES_FILTER && (
+							<FilterChip
+								label={categoryLabel}
+								onClear={() =>
+									handleCategoryFilterChange(ALL_CATEGORIES_FILTER)
+								}
+							/>
+						)}
+						{bankFilter !== "" && (
+							<FilterChip
+								label={bankFilter}
+								onClear={() => handleBankFilterChange("")}
+							/>
+						)}
+					</div>
+				)}
 				<div className="hidden md:block">
 					<DataTable
 						columns={columns}
@@ -694,9 +781,17 @@ function TransactionsPage() {
 									variant="outline"
 									size="sm"
 									onClick={() => setFiltersSheetOpen(true)}
+									className={cn(
+										activeFilterCount > 0 && "border-primary/60 text-primary",
+									)}
 								>
 									<SlidersHorizontal className="mr-2 h-4 w-4" />
 									Filters
+									{activeFilterCount > 0 && (
+										<span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+											{activeFilterCount}
+										</span>
+									)}
 								</Button>
 								<Button
 									variant="outline"
@@ -745,9 +840,17 @@ function TransactionsPage() {
 									variant="outline"
 									size="sm"
 									onClick={() => setFiltersSheetOpen(true)}
+									className={cn(
+										activeFilterCount > 0 && "border-primary/60 text-primary",
+									)}
 								>
 									<SlidersHorizontal className="mr-2 h-4 w-4" />
 									Filters
+									{activeFilterCount > 0 && (
+										<span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+											{activeFilterCount}
+										</span>
+									)}
 								</Button>
 								<Button
 									variant="outline"
@@ -950,6 +1053,32 @@ function TransactionsPage() {
 										<SelectItem value="all">All types</SelectItem>
 										<SelectItem value="debit">Debit (expense)</SelectItem>
 										<SelectItem value="credit">Credit (income)</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="space-y-2">
+								<p className="flex items-center gap-1.5 text-sm font-medium">
+									<Landmark className="h-3.5 w-3.5 text-muted-foreground" />
+									Bank
+								</p>
+								<Select
+									value={bankFilter === "" ? ALL_BANKS_FILTER : bankFilter}
+									onValueChange={(value) =>
+										handleBankFilterChange(
+											value === ALL_BANKS_FILTER ? "" : value,
+										)
+									}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Filter by bank" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value={ALL_BANKS_FILTER}>All banks</SelectItem>
+										{bankOptions.map((name) => (
+											<SelectItem key={name} value={name}>
+												{name}
+											</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</div>
@@ -1254,6 +1383,30 @@ function TransactionsPage() {
 			</div>
 			<Outlet />
 		</>
+	);
+}
+
+/* ── Active filter chip ─────────────────────────────────────────────────── */
+
+function FilterChip({
+	label,
+	onClear,
+}: {
+	label: string;
+	onClear: () => void;
+}) {
+	return (
+		<Badge variant="secondary" className="gap-1 py-0.5 pl-2.5 pr-1">
+			<span className="max-w-[180px] truncate">{label}</span>
+			<button
+				type="button"
+				onClick={onClear}
+				aria-label={`Remove ${label} filter`}
+				className="rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			>
+				<X className="h-3 w-3" />
+			</button>
+		</Badge>
 	);
 }
 

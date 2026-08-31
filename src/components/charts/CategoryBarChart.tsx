@@ -13,13 +13,20 @@ export type CategoryBarDataPoint = {
 	value: number;
 	icon?: string | null;
 	fill: string;
+	/** Category id, or null for the "Uncategorized" grouping. */
+	id?: string | null;
 };
 
 type CategoryBarChartProps = {
 	data: CategoryBarDataPoint[];
+	/** Fired when a bar is clicked or keyboard-activated. */
+	onDataPointClick?: (point: CategoryBarDataPoint) => void;
 };
 
-export function CategoryBarChart({ data }: CategoryBarChartProps) {
+export function CategoryBarChart({
+	data,
+	onDataPointClick,
+}: CategoryBarChartProps) {
 	const definition = useMemo(() => {
 		return defineChart({
 			marks: [
@@ -66,6 +73,10 @@ export function CategoryBarChart({ data }: CategoryBarChartProps) {
 						definition={definition}
 						height={Math.max(300, data.length * 44)}
 						ariaLabel="Spending by category"
+						className={onDataPointClick ? "cursor-pointer" : undefined}
+						onSelect={(point) => {
+							if (point) onDataPointClick?.(point.datum);
+						}}
 					/>
 				) : (
 					<div className="h-[300px] flex items-center justify-center text-muted-foreground">

@@ -13,25 +13,37 @@ export type MonthlyTrendsDataPoint = {
 	month: string;
 	expenses: number;
 	income: number;
+	/** Month bucket key in `yyyy-MM` form, used for click-to-filter. */
+	key?: string;
 };
 
 type TrendRow = {
 	month: string;
 	kind: "Income" | "Expenses";
 	amount: number;
+	key?: string;
 };
 
 type MonthlyTrendsChartProps = {
 	data: MonthlyTrendsDataPoint[];
+	/** Fired when a month point is clicked or keyboard-activated. */
+	onDataPointClick?: (point: {
+		key?: string;
+		month: string;
+		kind: "Income" | "Expenses";
+	}) => void;
 };
 
-export function MonthlyTrendsChart({ data }: MonthlyTrendsChartProps) {
+export function MonthlyTrendsChart({
+	data,
+	onDataPointClick,
+}: MonthlyTrendsChartProps) {
 	const definition = useMemo(() => {
 		// Long format lets both series share one scale while explicit y1/y2 keep
 		// them overlapping (not stacked), matching the previous chart semantics.
 		const rows: TrendRow[] = data.flatMap((d) => [
-			{ month: d.month, kind: "Income", amount: d.income },
-			{ month: d.month, kind: "Expenses", amount: d.expenses },
+			{ month: d.month, kind: "Income", amount: d.income, key: d.key },
+			{ month: d.month, kind: "Expenses", amount: d.expenses, key: d.key },
 		]);
 
 		return defineChart({
@@ -91,6 +103,10 @@ export function MonthlyTrendsChart({ data }: MonthlyTrendsChartProps) {
 						definition={definition}
 						height={300}
 						ariaLabel="Monthly income and expenses trends"
+						className={onDataPointClick ? "cursor-pointer" : undefined}
+						onSelect={(point) => {
+							if (point) onDataPointClick?.(point.datum);
+						}}
 					/>
 				) : (
 					<div className="h-[300px] flex items-center justify-center text-muted-foreground">

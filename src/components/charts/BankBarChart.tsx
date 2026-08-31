@@ -11,13 +11,17 @@ import { BAR_PRIMARY } from "./chart-theme";
 export type BankBarDataPoint = {
 	name: string;
 	amount: number;
+	/** Full untruncated bank name, used for click-to-filter. */
+	fullName?: string;
 };
 
 type BankBarChartProps = {
 	data: BankBarDataPoint[];
+	/** Fired when a bar is clicked or keyboard-activated. */
+	onDataPointClick?: (point: BankBarDataPoint) => void;
 };
 
-export function BankBarChart({ data }: BankBarChartProps) {
+export function BankBarChart({ data, onDataPointClick }: BankBarChartProps) {
 	const definition = useMemo(() => {
 		return defineChart({
 			marks: [
@@ -64,6 +68,10 @@ export function BankBarChart({ data }: BankBarChartProps) {
 						definition={definition}
 						height={300}
 						ariaLabel="Spending by bank"
+						className={onDataPointClick ? "cursor-pointer" : undefined}
+						onSelect={(point) => {
+							if (point) onDataPointClick?.(point.datum);
+						}}
 					/>
 				) : (
 					<div className="h-[300px] flex items-center justify-center text-muted-foreground">

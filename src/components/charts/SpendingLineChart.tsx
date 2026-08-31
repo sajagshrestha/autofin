@@ -17,6 +17,11 @@ export type SpendingDataPoint = {
 	day: number;
 	label: string;
 	spending: number;
+	/** Bucket date range (ISO) used when a point is clicked to filter transactions. */
+	startDate?: string;
+	endDate?: string;
+	/** Date period matching the bucket granularity, e.g. "daily" or "monthly". */
+	period?: string;
 };
 
 export type SpendingCategoryOption = {
@@ -37,6 +42,8 @@ type SpendingLineChartProps = {
 	/** Selected category name; empty string means all categories */
 	selectedCategory?: string;
 	onCategoryChange?: (category: string) => void;
+	/** Fired when a data point is clicked or keyboard-activated. */
+	onDataPointClick?: (point: SpendingDataPoint) => void;
 };
 
 export function SpendingLineChart({
@@ -46,6 +53,7 @@ export function SpendingLineChart({
 	categories,
 	selectedCategory = "",
 	onCategoryChange,
+	onDataPointClick,
 }: SpendingLineChartProps) {
 	const definition = useMemo(() => {
 		return defineChart({
@@ -133,6 +141,10 @@ export function SpendingLineChart({
 						definition={definition}
 						height={300}
 						ariaLabel="Spending over time"
+						className={onDataPointClick ? "cursor-pointer" : undefined}
+						onSelect={(point) => {
+							if (point) onDataPointClick?.(point.datum);
+						}}
 					/>
 				) : (
 					<div className="h-[300px] flex items-center justify-center text-muted-foreground">

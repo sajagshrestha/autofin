@@ -3,7 +3,12 @@ import {
 	eachDayOfInterval,
 	eachMonthOfInterval,
 	eachWeekOfInterval,
+	endOfDay,
+	endOfMonth,
+	endOfWeek,
 	format,
+	startOfDay,
+	startOfMonth,
 	startOfWeek,
 } from "date-fns";
 import {
@@ -18,9 +23,14 @@ import { useCallback, useMemo } from "react";
 import { z } from "zod";
 import {
 	BankBarChart,
+	type BankBarDataPoint,
 	CategoryBarChart,
+	type CategoryBarDataPoint,
 	CategoryPieChart,
+	type CategoryPieDataPoint,
 	MonthlyTrendsChart,
+	type MonthlyTrendsDataPoint,
+	type SpendingDataPoint,
 	SpendingLineChart,
 } from "@/components/charts";
 import { pickChartColor } from "@/components/charts/chart-theme";
@@ -107,20 +117,71 @@ function AnalyticsDashboard() {
 		[navigate],
 	);
 
+	type TransactionNavOptions = {
+		type?: "debit" | "credit";
+		category?: string;
+		bank?: string;
+		startDate?: string;
+		endDate?: string;
+		period?: DatePeriod;
+	};
+
 	const goToTransactions = useCallback(
-		(type?: "debit" | "credit") => {
+		(opts: TransactionNavOptions = {}) => {
 			navigate({
 				to: "/transactions",
 				search: {
-					period,
-					startDate,
-					endDate,
-					type: type ?? "all",
+					period: opts.period ?? period,
+					startDate: opts.startDate ?? startDate,
+					endDate: opts.endDate ?? endDate,
+					type: opts.type ?? "all",
+					category: opts.category ?? "all",
+					bank: opts.bank ?? "",
 				},
 				resetScroll: false,
 			});
 		},
 		[navigate, period, startDate, endDate],
+	);
+
+	const handleSpendingPointClick = useCallback(
+		(point: SpendingDataPoint) => {
+			if (!point.startDate || !point.endDate || !point.period) return;
+			goToTransactions({
+				startDate: point.startDate,
+				endDate: point.endDate,
+				period: point.period as DatePeriod,
+			});
+		},
+		[goToTransactions],
+	);
+
+	const handleCategoryPointClick = useCallback(
+		(point: CategoryBarDataPoint | CategoryPieDataPoint) => {
+			goToTransactions({ category: point.id ?? "uncategorized" });
+		},
+		[goToTransactions],
+	);
+
+	const handleMonthPointClick = useCallback(
+		(point: Pick<MonthlyTrendsDataPoint, "key">) => {
+			if (!point.key) return;
+			const start = startOfMonth(new Date(`${point.key}-01`));
+			goToTransactions({
+				startDate: start.toISOString(),
+				endDate: endOfMonth(start).toISOString(),
+				period: "monthly",
+			});
+		},
+		[goToTransactions],
+	);
+
+	const handleBankPointClick = useCallback(
+		(point: BankBarDataPoint) => {
+			if (!point.fullName) return;
+			goToTransactions({ bank: point.fullName });
+		},
+		[goToTransactions],
 	);
 
 	const transactions = useMemo(
@@ -205,6 +266,7 @@ function AnalyticsDashboard() {
 				}),
 				expenses: data.expenses,
 				income: data.income,
+				key: month,
 			}));
 	}, [regularTransactions]);
 
@@ -213,21 +275,24 @@ function AnalyticsDashboard() {
 
 		const categoryMap = new Map<
 			string,
-			{ amount: number; icon?: string | null }
+			{ amount: number; icon?: string | null; id: string | null }
 		>();
 
 		regularTransactions.forEach((t) => {
 			if (t.type === "credit") return;
 			const categoryName = t.category?.name || "Uncategorized";
 			const categoryIcon = t.category?.icon || null;
+			const categoryId = t.category?.id ?? null;
 			const amount = parseFloat(t.amount || "0");
 			const existing = categoryMap.get(categoryName) || {
 				amount: 0,
 				icon: categoryIcon,
+				id: categoryId,
 			};
 			categoryMap.set(categoryName, {
 				amount: existing.amount + amount,
 				icon: categoryIcon,
+				id: existing.id ?? categoryId,
 			});
 		});
 
@@ -238,6 +303,7 @@ function AnalyticsDashboard() {
 				value: data.amount,
 				icon: data.icon,
 				fill: pickChartColor(index),
+				id: data.id,
 			}));
 	}, [regularTransactions]);
 
@@ -342,11 +408,35 @@ function AnalyticsDashboard() {
 			const amount = parseFloat(t.amount || "0");
 			keyToSpending.set(key, (keyToSpending.get(key) ?? 0) + amount);
 		});
-		return buckets.map((b, index) => ({
-			day: index + 1,
-			label: b.label,
-			spending: keyToSpending.get(b.key) ?? 0,
-		}));
+
+		const bucketPeriod: DatePeriod =
+			period === "weekly"
+				? "weekly"
+				: period === "daily" || period === "last7d" || period === "monthly"
+					? "daily"
+					: "monthly";
+		const bucketRange = (date: Date): { startDate: Date; endDate: Date } => {
+			if (bucketPeriod === "weekly")
+				return {
+					startDate: startOfWeek(date, { weekStartsOn: 1 }),
+					endDate: endOfWeek(date, { weekStartsOn: 1 }),
+				};
+			if (bucketPeriod === "daily")
+				return { startDate: startOfDay(date), endDate: endOfDay(date) };
+			return { startDate: startOfMonth(date), endDate: endOfMonth(date) };
+		};
+
+		return buckets.map((b, index) => {
+			const range = bucketRange(b.date);
+			return {
+				day: index + 1,
+				label: b.label,
+				spending: keyToSpending.get(b.key) ?? 0,
+				startDate: range.startDate.toISOString(),
+				endDate: range.endDate.toISOString(),
+				period: bucketPeriod,
+			};
+		});
 	}, [spendingSource, period, startDate, endDate]);
 
 	// Chart subtitle and granularity from date filter
@@ -393,6 +483,7 @@ function AnalyticsDashboard() {
 			.slice(0, 5)
 			.map(([name, amount]) => ({
 				name: name.length > 12 ? `${name.slice(0, 12)}...` : name,
+				fullName: name,
 				amount,
 			}));
 	}, [regularTransactions]);
@@ -498,7 +589,7 @@ function AnalyticsDashboard() {
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 							<Card
 								className="hover:shadow-md transition-shadow cursor-pointer"
-								onClick={() => goToTransactions("debit")}
+								onClick={() => goToTransactions({ type: "debit" })}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
 									<CardTitle className="text-sm font-medium text-muted-foreground">
@@ -520,7 +611,7 @@ function AnalyticsDashboard() {
 
 							<Card
 								className="hover:shadow-md transition-shadow cursor-pointer"
-								onClick={() => goToTransactions("credit")}
+								onClick={() => goToTransactions({ type: "credit" })}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
 									<CardTitle className="text-sm font-medium text-muted-foreground">
@@ -646,16 +737,29 @@ function AnalyticsDashboard() {
 							categories={spendingCategories}
 							selectedCategory={category}
 							onCategoryChange={handleCategoryChange}
+							onDataPointClick={handleSpendingPointClick}
 						/>
 
 						{/* Charts Row */}
-						<CategoryBarChart data={categoryData} />
-						<CategoryPieChart data={categoryData} />
+						<CategoryBarChart
+							data={categoryData}
+							onDataPointClick={handleCategoryPointClick}
+						/>
+						<CategoryPieChart
+							data={categoryData}
+							onDataPointClick={handleCategoryPointClick}
+						/>
 
 						{/* Bottom Charts Row */}
 						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-							<MonthlyTrendsChart data={monthlyData} />
-							<BankBarChart data={bankData} />
+							<MonthlyTrendsChart
+								data={monthlyData}
+								onDataPointClick={handleMonthPointClick}
+							/>
+							<BankBarChart
+								data={bankData}
+								onDataPointClick={handleBankPointClick}
+							/>
 						</div>
 					</>
 				)}
