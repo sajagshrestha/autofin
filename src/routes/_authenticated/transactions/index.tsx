@@ -110,6 +110,7 @@ const sortOptions = [
 	{ value: "category", label: "Category" },
 	{ value: "bankName", label: "Bank" },
 	{ value: "remarks", label: "Remarks" },
+	{ value: "notes", label: "Notes" },
 ] as const;
 
 const searchParamsSchema = z.object({
@@ -355,6 +356,7 @@ function TransactionsPage() {
 				transaction.category?.name ?? "Uncategorized",
 				transaction.bankName ?? "",
 				transaction.remarks ?? "",
+				transaction.notes ?? "",
 				transaction.amount ?? "",
 				transaction.currency ?? "",
 				transaction.type ?? "",
@@ -389,6 +391,8 @@ function TransactionsPage() {
 					return (transaction.bankName ?? "").toLowerCase();
 				case "remarks":
 					return (transaction.remarks ?? "").toLowerCase();
+				case "notes":
+					return (transaction.notes ?? "").toLowerCase();
 				default:
 					return "";
 			}
@@ -569,6 +573,18 @@ function TransactionsPage() {
 				return (
 					<div className="max-w-[200px] truncate" title={remarks || undefined}>
 						{remarks || <span className="text-muted-foreground">-</span>}
+					</div>
+				);
+			},
+		},
+		{
+			accessorKey: "notes",
+			header: "Notes",
+			cell: ({ row }) => {
+				const notes = row.getValue("notes") as string | null;
+				return (
+					<div className="max-w-[200px] truncate" title={notes || undefined}>
+						{notes || <span className="text-muted-foreground">-</span>}
 					</div>
 				);
 			},
@@ -849,6 +865,11 @@ function TransactionsPage() {
 										{transaction.remarks ? (
 											<p className="text-sm text-muted-foreground line-clamp-2">
 												{transaction.remarks}
+											</p>
+										) : null}
+										{transaction.notes ? (
+											<p className="text-sm text-muted-foreground line-clamp-2">
+												{transaction.notes}
 											</p>
 										) : null}
 									</CardContent>

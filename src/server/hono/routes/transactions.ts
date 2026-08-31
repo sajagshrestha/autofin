@@ -21,6 +21,7 @@ const createSchema = z.object({
 	categoryId: z.string().optional(),
 	merchant: z.string().max(255).optional(),
 	remarks: z.string().max(500).optional(),
+	notes: z.string().max(500).optional(),
 	transactionDate: z.iso.datetime().optional(),
 });
 
@@ -33,6 +34,7 @@ const updateSchema = z.object({
 	categoryId: z.string().optional(),
 	merchant: z.string().max(255).optional(),
 	remarks: z.string().max(500).optional(),
+	notes: z.string().max(500).optional(),
 	transactionDate: z.iso.datetime().optional(),
 });
 
@@ -66,6 +68,7 @@ const bulkImportSchema = z.object({
 				type: transactionTypeSchema,
 				merchant: z.string().max(255).optional(),
 				remarks: z.string().max(500).optional(),
+				notes: z.string().max(500).optional(),
 				transactionDate: z.iso.datetime().optional(),
 				categoryId: z.string().optional(),
 				confidence: z.number().min(0).max(1).optional(),
@@ -224,6 +227,7 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			categoryId: body.categoryId,
 			merchant: body.merchant,
 			remarks: body.remarks,
+			notes: body.notes,
 			transactionDate,
 			currency: "NPR",
 			isAiCreated: false,
@@ -476,6 +480,7 @@ export const transactionsRouter = new Hono<ApiEnv>()
 				currency: "NPR",
 				merchant: row.merchant,
 				remarks: row.remarks,
+				notes: row.notes,
 				transactionDate: row.transactionDate
 					? new Date(row.transactionDate)
 					: null,

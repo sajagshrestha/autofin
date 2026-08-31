@@ -4,6 +4,7 @@ export const editTransactionSchema = z.object({
 	merchant: z.string().min(1, "Merchant name is required"),
 	categoryId: z.string(),
 	remarks: z.string(),
+	notes: z.string(),
 });
 
 export const createFromSmsSchema = z.object({
@@ -30,6 +31,7 @@ export const createTransactionSchema = z.object({
 	categoryId: z.string(),
 	merchant: z.string(),
 	remarks: z.string(),
+	notes: z.string(),
 	transactionDate: z
 		.string()
 		.refine(

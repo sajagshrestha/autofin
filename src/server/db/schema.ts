@@ -137,6 +137,7 @@ export const transactions = pgTable("transactions", {
 	bankName: text("bank_name"),
 	transactionDate: timestamp("transaction_date", { withTimezone: true }),
 	remarks: text("remarks"),
+	notes: text("notes"),
 
 	// Source tracking - emailId is UNIQUE to prevent duplicate processing
 	loanId: text("loan_id").references((): AnyPgColumn => loans.id, {

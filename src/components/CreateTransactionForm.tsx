@@ -67,6 +67,7 @@ export function CreateTransactionForm({
 			categoryId: "",
 			merchant: "",
 			remarks: "",
+			notes: "",
 			transactionDate: new Date().toISOString(),
 		},
 		onSubmit: async ({ value }) => {
@@ -286,6 +287,24 @@ export function CreateTransactionForm({
 								<Field>
 									<FieldLabel htmlFor={field.name}>
 										Remarks (optional)
+									</FieldLabel>
+									<Input
+										id={field.name}
+										name={field.name}
+										placeholder="Add notes"
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+									/>
+								</Field>
+							)}
+						</form.Field>
+
+						<form.Field name="notes">
+							{(field) => (
+								<Field>
+									<FieldLabel htmlFor={field.name}>
+										Notes (optional)
 									</FieldLabel>
 									<Input
 										id={field.name}

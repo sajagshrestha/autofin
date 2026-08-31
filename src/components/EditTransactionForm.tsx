@@ -59,6 +59,7 @@ export function EditTransactionForm({
 			merchant: transaction.merchant || "",
 			categoryId: transaction.category?.id ?? transaction.categoryId ?? "",
 			remarks: transaction.remarks || "",
+			notes: transaction.notes || "",
 		},
 		onSubmit: async ({ value }) => {
 			onSubmit(mapEditFormToUpdateBody(value));
@@ -201,6 +202,21 @@ export function EditTransactionForm({
 							{(field) => (
 								<Field>
 									<FieldLabel htmlFor={field.name}>Remarks</FieldLabel>
+									<Input
+										id={field.name}
+										name={field.name}
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+									/>
+								</Field>
+							)}
+						</form.Field>
+
+						<form.Field name="notes">
+							{(field) => (
+								<Field>
+									<FieldLabel htmlFor={field.name}>Notes</FieldLabel>
 									<Input
 										id={field.name}
 										name={field.name}

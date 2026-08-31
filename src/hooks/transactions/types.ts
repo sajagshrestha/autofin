@@ -19,6 +19,7 @@ export interface Transaction {
 	bankName: string | null;
 	transactionDate: string | null;
 	remarks: string | null;
+	notes: string | null;
 	/** Set when this transaction is the origin of / a repayment on a tracked loan */
 	loanId?: string | null;
 	emailId?: string | null;
@@ -58,6 +59,7 @@ export type UpdateTransactionBody = {
 	categoryId?: string;
 	merchant?: string;
 	remarks?: string;
+	notes?: string;
 	transactionDate?: string;
 };
 
@@ -66,6 +68,7 @@ export type EditTransactionFormValues = {
 	merchant: string;
 	categoryId: string;
 	remarks: string;
+	notes: string;
 };
 
 /** Map edit-form values to an update payload (`id` added by callers). */
@@ -76,6 +79,7 @@ export function mapEditFormToUpdateBody(
 		merchant: values.merchant || undefined,
 		categoryId: values.categoryId || undefined,
 		remarks: values.remarks || undefined,
+		notes: values.notes || undefined,
 	};
 }
 
@@ -85,6 +89,7 @@ export type CreateTransactionBody = {
 	categoryId?: string;
 	merchant?: string;
 	remarks?: string;
+	notes?: string;
 	transactionDate?: string;
 };
 
@@ -95,6 +100,7 @@ export type CreateTransactionFormValues = {
 	categoryId: string;
 	merchant: string;
 	remarks: string;
+	notes: string;
 	transactionDate: string;
 };
 
@@ -108,6 +114,7 @@ export function mapCreateFormToCreateBody(
 		categoryId: values.categoryId || undefined,
 		merchant: values.merchant.trim() || undefined,
 		remarks: values.remarks.trim() || undefined,
+		notes: values.notes.trim() || undefined,
 		transactionDate: values.transactionDate
 			? new Date(values.transactionDate).toISOString()
 			: undefined,

@@ -86,6 +86,7 @@ export class TransactionRepository extends BaseRepository {
 				bankName: transactions.bankName,
 				transactionDate: transactions.transactionDate,
 				remarks: transactions.remarks,
+				notes: transactions.notes,
 				emailId: transactions.emailId,
 				isAiCreated: transactions.isAiCreated,
 				rawEmailContent: transactions.rawEmailContent,
@@ -141,6 +142,7 @@ export class TransactionRepository extends BaseRepository {
 				bankName: transactions.bankName,
 				transactionDate: transactions.transactionDate,
 				remarks: transactions.remarks,
+				notes: transactions.notes,
 				emailId: transactions.emailId,
 				isAiCreated: transactions.isAiCreated,
 				rawEmailContent: transactions.rawEmailContent,
@@ -191,7 +193,7 @@ export class TransactionRepository extends BaseRepository {
 		data: Partial<
 			Pick<
 				NewTransaction,
-				"categoryId" | "merchant" | "remarks" | "transactionDate"
+				"categoryId" | "merchant" | "remarks" | "notes" | "transactionDate"
 			>
 		>,
 	): Promise<Transaction | null> {

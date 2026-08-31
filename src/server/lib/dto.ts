@@ -16,6 +16,7 @@ export interface TransactionDto {
 	bankName: string | null;
 	transactionDate: string | null;
 	remarks: string | null;
+	notes: string | null;
 	loanId?: string | null;
 	aiConfidence: string | null;
 	isAiCreated: boolean;
@@ -41,6 +42,7 @@ export function toTransactionDto(txn: TransactionRow): TransactionDto {
 		bankName: txn.bankName,
 		transactionDate: txn.transactionDate?.toISOString() ?? null,
 		remarks: txn.remarks,
+		notes: txn.notes,
 		loanId: txn.loanId ?? null,
 		aiConfidence: txn.aiConfidence ?? null,
 		isAiCreated: txn.isAiCreated,

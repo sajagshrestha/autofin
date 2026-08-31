@@ -323,6 +323,13 @@ function TransactionDetailPage() {
 						</>
 					)}
 
+					{transaction.notes != null && transaction.notes !== "" && (
+						<>
+							<Separator />
+							<DetailRow label="Notes" value={transaction.notes} />
+						</>
+					)}
+
 					<Separator />
 
 					<div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-2">

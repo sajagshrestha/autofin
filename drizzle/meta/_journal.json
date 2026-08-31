@@ -43,6 +43,13 @@
       "when": 1788080035873,
       "tag": "0005_pink_captain_america",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788148357528,
+      "tag": "0006_faithful_malcolm_colcord",
+      "breakpoints": true
     }
   ]
 }
