@@ -191,6 +191,28 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 		},
 
 		{
+			name: "renderChart",
+			title: "Render a chart",
+			description:
+				"Visualize data you already retrieved (getMonthlyTrend, getSpendingByCategory, getSpendingSummary). Call after a data tool when a chart would help the answer. type is the chart kind; data must be an array of objects matching that kind's shape: monthlyTrend -> {month, income, expenses}; categoryPie/categoryBar -> {name, value}; bank -> {name, amount}; spending -> {label, spending}. Prefer monthlyTrend for trends and categoryPie for category breakdowns.",
+			inputSchema: z.object({
+				type: z.enum([
+					"monthlyTrend",
+					"categoryPie",
+					"categoryBar",
+					"bank",
+					"spending",
+				]),
+				title: z
+					.string()
+					.optional()
+					.describe("Short chart title; omit to use the default"),
+				data: z.array(z.record(z.string(), z.unknown())).describe("Chart data points"),
+			}),
+			execute: async (args) => args,
+		},
+
+		{
 			name: "listTransactions",
 			title: "List transactions",
 			description:

@@ -15,6 +15,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { useAdvisorChat } from "./advisor-chat-context";
+import { ChatChart } from "./ChatChart";
 
 const SUGGESTIONS = [
 	"How much did I spend this month?",
@@ -30,7 +31,10 @@ const TOOL_LABELS: Record<string, string> = {
 	getLoans: "Pulling your loans",
 	getLoanSummary: "Summarizing loan positions",
 	getLoanSettlements: "Listing loan repayments",
+	renderChart: "Building a chart",
 };
+
+const CHART_TOOL_NAME = "renderChart";
 
 const markdownClass =
 	"prose prose-sm dark:prose-invert max-w-none [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold [&_p]:leading-relaxed [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_strong]:font-semibold [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:text-[0.85em] [&_table]:my-2 [&_table]:w-full [&_table]:text-xs [&_th]:border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:px-2 [&_td]:py-1";
@@ -78,9 +82,31 @@ function ChatMessages() {
 					}
 
 					if (isToolUIPart(part)) {
-						const label =
-							TOOL_LABELS[getToolName(part)] ?? "Checking your data";
+						const toolName = getToolName(part);
 						const done = part.state === "output-available";
+
+						if (toolName === CHART_TOOL_NAME) {
+							return (
+								<div key={index} className="w-full">
+									{done ? (
+										<ChatChart
+											output={part.output as {
+												type: string;
+												title?: string;
+												data: Array<Record<string, unknown>>;
+											}}
+										/>
+									) : (
+										<div className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
+											<Loader2 className="h-3 w-3 animate-spin" />
+											{TOOL_LABELS[toolName] ?? "Checking your data"}
+										</div>
+									)}
+								</div>
+							);
+						}
+
+						const label = TOOL_LABELS[toolName] ?? "Checking your data";
 						return (
 							<div
 								key={index}
