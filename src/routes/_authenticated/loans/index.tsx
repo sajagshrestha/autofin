@@ -11,8 +11,9 @@ import {
 	TrendingUp,
 	Wallet,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	type Loan,
@@ -46,7 +48,14 @@ import {
 } from "@/hooks/loans";
 import { formatCurrency } from "@/lib/formatCurrency";
 
+const loansSearchSchema = z.object({
+	tab: z.enum(["outstanding", "settled"]).optional().default("outstanding"),
+});
+
+type LoanTab = z.infer<typeof loansSearchSchema>["tab"];
+
 export const Route = createFileRoute("/_authenticated/loans/")({
+	validateSearch: loansSearchSchema,
 	component: LoansPage,
 });
 
@@ -79,6 +88,8 @@ function statusBadge(loan: Loan) {
 }
 
 function LoansPage() {
+	const { tab } = Route.useSearch();
+	const navigate = Route.useNavigate();
 	const { data, isLoading } = useGetLoans();
 
 	const [createOpen, setCreateOpen] = useState(false);
@@ -87,16 +98,32 @@ function LoansPage() {
 
 	const loans = useMemo(() => data?.loans ?? [], [data]);
 
+	const { outstandingLoans, settledLoans } = useMemo(() => {
+		const outstandingLoans: Loan[] = [];
+		const settledLoans: Loan[] = [];
+		for (const loan of loans) {
+			if (loan.status === "outstanding") outstandingLoans.push(loan);
+			else settledLoans.push(loan);
+		}
+		return { outstandingLoans, settledLoans };
+	}, [loans]);
+
 	const totals = useMemo(() => {
 		let givenOutstanding = 0;
 		let takenOutstanding = 0;
-		for (const loan of loans) {
-			if (loan.status !== "outstanding") continue;
+		for (const loan of outstandingLoans) {
 			if (loan.direction === "given") givenOutstanding += loan.remainingAmount;
 			else takenOutstanding += loan.remainingAmount;
 		}
 		return { givenOutstanding, takenOutstanding };
-	}, [loans]);
+	}, [outstandingLoans]);
+
+	const handleTabChange = useCallback(
+		(value: LoanTab) => {
+			navigate({ search: { tab: value }, resetScroll: false });
+		},
+		[navigate],
+	);
 
 	return (
 		<div className="max-w-5xl mx-auto space-y-6 min-w-0 overflow-hidden">
@@ -174,116 +201,77 @@ function LoansPage() {
 					</CardContent>
 				</Card>
 			) : (
-				<div className="space-y-3">
-					{loans.map((loan) => {
-						const progress =
-							loan.principalAmount && Number(loan.principalAmount) > 0
-								? Math.min(
-										100,
-										Math.round(
-											(loan.settledAmount / Number(loan.principalAmount)) * 100,
-										),
-									)
-								: 0;
-
-						return (
-							<Card key={loan.id} className="hover:shadow-md transition-shadow">
-								<CardContent className="p-4">
-									<div className="flex items-start justify-between gap-3">
-										<div className="min-w-0 space-y-1">
-											<div className="flex flex-wrap items-center gap-2">
-												<span className="font-semibold truncate">
-													{loan.counterpartyName}
-												</span>
-												{directionBadge(loan.direction)}
-												{statusBadge(loan)}
-											</div>
-											<p className="text-sm text-muted-foreground">
-												Principal{" "}
-												<span className="font-medium text-foreground">
-													{formatCurrency(Number(loan.principalAmount))}
-												</span>{" "}
-												· Settled{" "}
-												<span className="font-medium text-foreground">
-													{formatCurrency(loan.settledAmount)}
-												</span>{" "}
-												({loan.settlementCount} payment
-												{loan.settlementCount !== 1 ? "s" : ""})
-												{loan.dueDate && (
-													<>
-														{" "}
-														· Due {new Date(loan.dueDate).toLocaleDateString()}
-													</>
-												)}
-											</p>
-										</div>
-										<div className="flex items-center gap-2 shrink-0">
-											<div className="text-right">
-												<p
-													className={`font-semibold ${loan.remainingAmount <= 0 ? "text-ds-green-700 dark:text-ds-green-900" : ""}`}
-												>
-													{formatCurrency(Math.max(loan.remainingAmount, 0))}
-												</p>
-												<p className="text-xs text-muted-foreground">
-													remaining
-												</p>
-											</div>
-											<DropdownMenu>
-												<DropdownMenuTrigger asChild>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="h-8 w-8"
-													>
-														<MoreVertical className="h-4 w-4" />
-													</Button>
-												</DropdownMenuTrigger>
-												<DropdownMenuContent align="end">
-													<DropdownMenuItem onClick={() => setDetailLoan(loan)}>
-														View details
-													</DropdownMenuItem>
-													<DropdownMenuItem
-														className="text-ds-red-700 focus:text-ds-red-700"
-														onClick={() => setDeleteTarget(loan)}
-													>
-														<Trash2 className="mr-2 h-4 w-4" />
-														Delete
-													</DropdownMenuItem>
-												</DropdownMenuContent>
-											</DropdownMenu>
-										</div>
+				<Tabs
+					value={tab}
+					onValueChange={(value) => handleTabChange(value as LoanTab)}
+				>
+					<TabsList>
+						<TabsTrigger value="outstanding">
+							Outstanding
+							<span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-xs font-semibold tabular-nums">
+								{outstandingLoans.length}
+							</span>
+						</TabsTrigger>
+						<TabsTrigger value="settled">
+							Settled
+							<span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-xs font-semibold tabular-nums">
+								{settledLoans.length}
+							</span>
+						</TabsTrigger>
+					</TabsList>
+					<TabsContent value="outstanding" className="mt-4">
+						{outstandingLoans.length === 0 ? (
+							<Card>
+								<CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+									<div className="rounded-full bg-ds-green-700/10 p-3">
+										<HandCoins className="h-6 w-6 text-ds-green-700" />
 									</div>
-
-									<div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
-										<div
-											className={`h-full rounded-full ${loan.status === "outstanding" ? "bg-primary" : "bg-ds-green-700"}`}
-											style={{ width: `${progress}%` }}
-										/>
-									</div>
-									<div className="mt-2 flex items-center justify-between">
-										<p className="text-xs text-muted-foreground">
-											{progress}% settled
-											{loan.isOverdue && (
-												<span className="ml-2 text-destructive font-medium">
-													Past due date
-												</span>
-											)}
-										</p>
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={loan.status !== "outstanding"}
-											onClick={() => setDetailLoan(loan)}
-										>
-											<TrendingUp className="mr-2 h-4 w-4" />
-											Settle
-										</Button>
-									</div>
+									<p className="font-medium">No outstanding loans</p>
+									<p className="text-sm text-muted-foreground">
+										Everything is settled. New loans you track will appear here.
+									</p>
 								</CardContent>
 							</Card>
-						);
-					})}
-				</div>
+						) : (
+							<div className="space-y-3">
+								{outstandingLoans.map((loan) => (
+									<LoanCard
+										key={loan.id}
+										loan={loan}
+										onViewDetails={setDetailLoan}
+										onDelete={setDeleteTarget}
+									/>
+								))}
+							</div>
+						)}
+					</TabsContent>
+					<TabsContent value="settled" className="mt-4">
+						{settledLoans.length === 0 ? (
+							<Card>
+								<CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+									<div className="rounded-full bg-primary/10 p-3">
+										<Wallet className="h-6 w-6 text-primary" />
+									</div>
+									<p className="font-medium">No settled loans yet</p>
+									<p className="text-sm text-muted-foreground">
+										Loans move here once they're fully repaid.
+									</p>
+								</CardContent>
+							</Card>
+						) : (
+							<div className="space-y-3">
+								{settledLoans.map((loan) => (
+									<LoanCard
+										key={loan.id}
+										loan={loan}
+										onViewDetails={setDetailLoan}
+										onDelete={setDeleteTarget}
+									/>
+								))}
+							</div>
+						)}
+					</TabsContent>
+				</Tabs>
 			)}
 
 			<CreateLoanDialog
@@ -304,6 +292,114 @@ function LoansPage() {
 				onClose={() => setDeleteTarget(null)}
 			/>
 		</div>
+	);
+}
+
+/* ── Loan card ─────────────────────────────────────────────────────────── */
+
+function LoanCard({
+	loan,
+	onViewDetails,
+	onDelete,
+}: {
+	loan: Loan;
+	onViewDetails: (loan: Loan) => void;
+	onDelete: (loan: Loan) => void;
+}) {
+	const progress =
+		loan.principalAmount && Number(loan.principalAmount) > 0
+			? Math.min(
+					100,
+					Math.round((loan.settledAmount / Number(loan.principalAmount)) * 100),
+				)
+			: 0;
+
+	return (
+		<Card className="hover:shadow-md transition-shadow">
+			<CardContent className="p-4">
+				<div className="flex items-start justify-between gap-3">
+					<div className="min-w-0 space-y-1">
+						<div className="flex flex-wrap items-center gap-2">
+							<span className="font-semibold truncate">
+								{loan.counterpartyName}
+							</span>
+							{directionBadge(loan.direction)}
+							{statusBadge(loan)}
+						</div>
+						<p className="text-sm text-muted-foreground">
+							Principal{" "}
+							<span className="font-medium text-foreground">
+								{formatCurrency(Number(loan.principalAmount))}
+							</span>{" "}
+							· Settled{" "}
+							<span className="font-medium text-foreground">
+								{formatCurrency(loan.settledAmount)}
+							</span>{" "}
+							({loan.settlementCount} payment
+							{loan.settlementCount !== 1 ? "s" : ""})
+							{loan.dueDate && (
+								<> · Due {new Date(loan.dueDate).toLocaleDateString()}</>
+							)}
+						</p>
+					</div>
+					<div className="flex items-center gap-2 shrink-0">
+						<div className="text-right">
+							<p
+								className={`font-semibold ${loan.remainingAmount <= 0 ? "text-ds-green-700 dark:text-ds-green-900" : ""}`}
+							>
+								{formatCurrency(Math.max(loan.remainingAmount, 0))}
+							</p>
+							<p className="text-xs text-muted-foreground">remaining</p>
+						</div>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" size="icon" className="h-8 w-8">
+									<MoreVertical className="h-4 w-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem onClick={() => onViewDetails(loan)}>
+									View details
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									className="text-ds-red-700 focus:text-ds-red-700"
+									onClick={() => onDelete(loan)}
+								>
+									<Trash2 className="mr-2 h-4 w-4" />
+									Delete
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
+				</div>
+
+				<div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
+					<div
+						className={`h-full rounded-full ${loan.status === "outstanding" ? "bg-primary" : "bg-ds-green-700"}`}
+						style={{ width: `${progress}%` }}
+					/>
+				</div>
+				<div className="mt-2 flex items-center justify-between">
+					<p className="text-xs text-muted-foreground">
+						{progress}% settled
+						{loan.isOverdue && (
+							<span className="ml-2 text-destructive font-medium">
+								Past due date
+							</span>
+						)}
+					</p>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={loan.status !== "outstanding"}
+						onClick={() => onViewDetails(loan)}
+					>
+						<TrendingUp className="mr-2 h-4 w-4" />
+						Settle
+					</Button>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }
 
