@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/date-filter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetAllTransactions } from "@/hooks/transactions/queries";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { formatCurrency } from "@/lib/formatCurrency";
 
 const defaultRange = getDateRangeForPeriod("monthly");
@@ -71,6 +72,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function AnalyticsDashboard() {
 	const { period, startDate, endDate, category } = Route.useSearch();
 	const navigate = Route.useNavigate();
+	// Chart click-to-filter is a pointer-heavy interaction; keep it desktop-only
+	// to avoid accidental navigations while scrolling on touch devices.
+	const isDesktop = useMediaQuery("(min-width: 768px)");
 
 	const { data: transactionsData, isLoading } = useGetAllTransactions({
 		startDate,
@@ -737,28 +741,34 @@ function AnalyticsDashboard() {
 							categories={spendingCategories}
 							selectedCategory={category}
 							onCategoryChange={handleCategoryChange}
-							onDataPointClick={handleSpendingPointClick}
+							onDataPointClick={
+								isDesktop ? handleSpendingPointClick : undefined
+							}
 						/>
 
 						{/* Charts Row */}
 						<CategoryBarChart
 							data={categoryData}
-							onDataPointClick={handleCategoryPointClick}
+							onDataPointClick={
+								isDesktop ? handleCategoryPointClick : undefined
+							}
 						/>
 						<CategoryPieChart
 							data={categoryData}
-							onDataPointClick={handleCategoryPointClick}
+							onDataPointClick={
+								isDesktop ? handleCategoryPointClick : undefined
+							}
 						/>
 
 						{/* Bottom Charts Row */}
 						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 							<MonthlyTrendsChart
 								data={monthlyData}
-								onDataPointClick={handleMonthPointClick}
+								onDataPointClick={isDesktop ? handleMonthPointClick : undefined}
 							/>
 							<BankBarChart
 								data={bankData}
-								onDataPointClick={handleBankPointClick}
+								onDataPointClick={isDesktop ? handleBankPointClick : undefined}
 							/>
 						</div>
 					</>
