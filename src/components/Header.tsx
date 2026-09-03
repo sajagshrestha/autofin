@@ -5,6 +5,8 @@ import {
 	Home,
 	LogOut,
 	Menu,
+	PanelLeftClose,
+	PanelLeftOpen,
 	Settings,
 	Wallet,
 	X,
@@ -12,6 +14,8 @@ import {
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { cn } from "@/lib/utils";
 import { Logo } from "./Logo";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Button } from "./ui/button";
@@ -36,6 +40,7 @@ const NAV_ITEMS = [
 
 export default function Header() {
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const { collapsed, toggle } = useSidebar();
 	const { user, signOut } = useAuth();
 	const navigate = useNavigate();
 	const routerState = useRouterState();
@@ -69,12 +74,43 @@ export default function Header() {
 	return (
 		<>
 			{/* Desktop Sidebar */}
-			<aside className="hidden md:flex fixed left-0 top-0 h-full w-64 lg:w-72 flex-col bg-background/80 backdrop-blur-xl border-r border-border z-40">
-				{/* Logo */}
-				<div className="px-6 py-5 border-b border-border/60">
-					<Link to="/dashboard" className="gap-3">
-						<Logo className="h-8" />
+			<aside
+				className={cn(
+					"hidden md:flex fixed left-0 top-0 h-full flex-col bg-background/80 backdrop-blur-xl border-r border-border z-40 transition-[width] duration-200 ease-in-out",
+					collapsed ? "w-20" : "w-64 xl:w-72",
+				)}
+			>
+				{/* Logo + collapse toggle */}
+				<div
+					className={cn(
+						"flex items-center border-b border-border/60 py-5",
+						collapsed ? "flex-col gap-3 px-2" : "justify-between px-6",
+					)}
+				>
+					<Link
+						to="/dashboard"
+						className="flex items-center gap-3 min-w-0"
+						aria-label="AutoFin home"
+					>
+						{collapsed ? (
+							<img src="/mini-logo-192.png" alt="AutoFin" className="h-8 w-8" />
+						) : (
+							<Logo className="h-8" />
+						)}
 					</Link>
+					<button
+						type="button"
+						onClick={toggle}
+						aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+						aria-expanded={!collapsed}
+						className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+					>
+						{collapsed ? (
+							<PanelLeftOpen className="h-4 w-4" />
+						) : (
+							<PanelLeftClose className="h-4 w-4" />
+						)}
+					</button>
 				</div>
 
 				{/* Navigation Links */}
@@ -85,16 +121,20 @@ export default function Header() {
 							<Link
 								key={item.to}
 								to={item.to}
-								className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${
+								title={collapsed ? item.label : undefined}
+								aria-label={item.label}
+								className={cn(
+									"flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors",
+									collapsed && "justify-center px-0",
 									active
 										? "bg-primary/10 text-primary font-semibold"
-										: "text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
-								}`}
+										: "text-muted-foreground hover:bg-muted hover:text-foreground font-medium",
+								)}
 							>
 								<item.icon
-									className={`h-4 w-4 ${active ? "stroke-[2.25]" : ""}`}
+									className={`h-4 w-4 shrink-0 ${active ? "stroke-[2.25]" : ""}`}
 								/>
-								<span>{item.label}</span>
+								{!collapsed && <span className="truncate">{item.label}</span>}
 							</Link>
 						);
 					})}
@@ -102,24 +142,20 @@ export default function Header() {
 
 				{/* User Section */}
 				<div className="p-4 border-t border-border/60">
-					<div className="flex items-center gap-3">
-						<Link
-							to="/settings"
-							className="flex items-center gap-3 flex-1 min-w-0 rounded-lg hover:bg-muted px-1 py-1 transition-colors"
-							aria-label="Settings"
-						>
-							<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-								<span className="text-sm font-semibold text-primary">
-									{user?.email?.charAt(0).toUpperCase() || "U"}
-								</span>
-							</div>
-							<div className="flex-1 min-w-0">
-								<p className="text-sm font-medium truncate">
-									{user?.email}
-								</p>
-							</div>
-						</Link>
-						<div className="flex items-center gap-1 shrink-0">
+					{collapsed ? (
+						<div className="flex flex-col items-center gap-2">
+							<Link
+								to="/settings"
+								className="rounded-full hover:opacity-80 transition-opacity"
+								aria-label="Settings"
+								title={user?.email ?? "Settings"}
+							>
+								<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+									<span className="text-sm font-semibold text-primary">
+										{user?.email?.charAt(0).toUpperCase() || "U"}
+									</span>
+								</div>
+							</Link>
 							<ThemeSwitcher />
 							<Button
 								variant="ghost"
@@ -130,7 +166,35 @@ export default function Header() {
 								<LogOut className="h-4 w-4" />
 							</Button>
 						</div>
-					</div>
+					) : (
+						<div className="flex items-center gap-3">
+							<Link
+								to="/settings"
+								className="flex items-center gap-3 flex-1 min-w-0 rounded-lg hover:bg-muted px-1 py-1 transition-colors"
+								aria-label="Settings"
+							>
+								<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+									<span className="text-sm font-semibold text-primary">
+										{user?.email?.charAt(0).toUpperCase() || "U"}
+									</span>
+								</div>
+								<div className="flex-1 min-w-0">
+									<p className="text-sm font-medium truncate">{user?.email}</p>
+								</div>
+							</Link>
+							<div className="flex items-center gap-1 shrink-0">
+								<ThemeSwitcher />
+								<Button
+									variant="ghost"
+									size="icon"
+									onClick={handleSignOut}
+									aria-label="Sign out"
+								>
+									<LogOut className="h-4 w-4" />
+								</Button>
+							</div>
+						</div>
+					)}
 				</div>
 			</aside>
 

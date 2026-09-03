@@ -515,7 +515,7 @@ function AnalyticsDashboard() {
 				{isLoading ? (
 					<>
 						{/* Summary cards skeleton */}
-						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+						<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 							{Array.from({ length: 4 }).map((_, i) => (
 								<Card key={i} className="hover:shadow-md transition-shadow">
 									<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -541,7 +541,7 @@ function AnalyticsDashboard() {
 						</Card>
 
 						{/* Charts row skeleton */}
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 							<Card>
 								<CardHeader>
 									<Skeleton className="h-6 w-40" />
@@ -568,7 +568,7 @@ function AnalyticsDashboard() {
 						</div>
 
 						{/* Bottom charts row skeleton */}
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 							<Card>
 								<CardHeader>
 									<Skeleton className="h-6 w-52" />
@@ -590,9 +590,9 @@ function AnalyticsDashboard() {
 				) : (
 					<>
 						{/* Summary Cards */}
-						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+						<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 							<Card
-								className="hover:shadow-md transition-shadow cursor-pointer"
+								className="hover:shadow-md transition-shadow cursor-pointer min-w-0"
 								onClick={() => goToTransactions({ type: "debit" })}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -604,7 +604,7 @@ function AnalyticsDashboard() {
 									</div>
 								</CardHeader>
 								<CardContent>
-									<div className="text-2xl font-bold text-ds-red-700">
+									<div className="text-xl xl:text-2xl font-bold text-ds-red-700 truncate tabular-nums">
 										{formatCurrency(stats.totalExpenses)}
 									</div>
 									<p className="text-xs text-muted-foreground">
@@ -614,7 +614,7 @@ function AnalyticsDashboard() {
 							</Card>
 
 							<Card
-								className="hover:shadow-md transition-shadow cursor-pointer"
+								className="hover:shadow-md transition-shadow cursor-pointer min-w-0"
 								onClick={() => goToTransactions({ type: "credit" })}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -626,7 +626,7 @@ function AnalyticsDashboard() {
 									</div>
 								</CardHeader>
 								<CardContent>
-									<div className="text-2xl font-bold text-ds-green-700">
+									<div className="text-xl xl:text-2xl font-bold text-ds-green-700 truncate tabular-nums">
 										{formatCurrency(stats.totalIncome)}
 									</div>
 									<p className="text-xs text-muted-foreground">
@@ -636,7 +636,7 @@ function AnalyticsDashboard() {
 							</Card>
 
 							<Card
-								className="hover:shadow-md transition-shadow cursor-pointer"
+								className="hover:shadow-md transition-shadow cursor-pointer min-w-0"
 								onClick={() => goToTransactions()}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -651,7 +651,7 @@ function AnalyticsDashboard() {
 								</CardHeader>
 								<CardContent>
 									<div
-										className={`text-2xl font-bold ${stats.savings >= 0 ? "text-ds-green-700" : "text-ds-red-700"}`}
+										className={`text-xl xl:text-2xl font-bold truncate tabular-nums ${stats.savings >= 0 ? "text-ds-green-700" : "text-ds-red-700"}`}
 									>
 										{formatCurrency(stats.savings)}
 									</div>
@@ -662,7 +662,7 @@ function AnalyticsDashboard() {
 							</Card>
 
 							<Card
-								className="hover:shadow-md transition-shadow cursor-pointer"
+								className="hover:shadow-md transition-shadow cursor-pointer min-w-0"
 								onClick={() => goToTransactions()}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -747,21 +747,23 @@ function AnalyticsDashboard() {
 						/>
 
 						{/* Charts Row */}
-						<CategoryBarChart
-							data={categoryData}
-							onDataPointClick={
-								isDesktop ? handleCategoryPointClick : undefined
-							}
-						/>
-						<CategoryPieChart
-							data={categoryData}
-							onDataPointClick={
-								isDesktop ? handleCategoryPointClick : undefined
-							}
-						/>
+						<div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+							<CategoryBarChart
+								data={categoryData}
+								onDataPointClick={
+									isDesktop ? handleCategoryPointClick : undefined
+								}
+							/>
+							<CategoryPieChart
+								data={categoryData}
+								onDataPointClick={
+									isDesktop ? handleCategoryPointClick : undefined
+								}
+							/>
+						</div>
 
 						{/* Bottom Charts Row */}
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 							<MonthlyTrendsChart
 								data={monthlyData}
 								onDataPointClick={isDesktop ? handleMonthPointClick : undefined}
