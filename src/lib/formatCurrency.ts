@@ -28,7 +28,7 @@ export function formatCurrency(
  * Value is in actual units; display shows value/1000 + "k".
  */
 export function formatCurrencyShort(value: number): string {
-	const k = value / 1000;
-	const label = k >= 1 ? `${k}k` : value.toString();
+	const k = Math.abs(value) / 1000;
+	const label = k >= 1 ? `${value / 1000}k` : value.toString();
 	return `${label}`;
 }

@@ -23,10 +23,16 @@ type CategoryPieChartProps = {
 	onDataPointClick?: (point: CategoryPieDataPoint) => void;
 };
 
-export function CategoryPieChart({
+type CategoryPieChartContentProps = CategoryPieChartProps & {
+	/** Chart height in pixels. Defaults to 350. */
+	height?: number;
+};
+
+export function CategoryPieChartContent({
 	data,
 	onDataPointClick,
-}: CategoryPieChartProps) {
+	height = 350,
+}: CategoryPieChartContentProps) {
 	const definition = useMemo(() => {
 		const slices = pie(data, { value: "value" });
 
@@ -67,57 +73,71 @@ export function CategoryPieChart({
 		});
 	}, [data]);
 
+	if (data.length === 0) {
+		return (
+			<div
+				style={{ height }}
+				className="flex items-center justify-center text-muted-foreground"
+			>
+				No category data available
+			</div>
+		);
+	}
+
+	return (
+		<div className="flex flex-col md:flex-row items-center gap-4">
+			<div className="w-full max-w-[350px] mx-auto">
+				<Chart
+					definition={definition}
+					height={height}
+					ariaLabel="Spending share by category"
+					className={onDataPointClick ? "cursor-pointer" : undefined}
+					onSelect={(point) => {
+						if (point) onDataPointClick?.(point.datum);
+					}}
+				/>
+			</div>
+			<div className="flex flex-wrap gap-2 justify-center">
+				{data.map((item) => (
+					<button
+						key={item.name}
+						type="button"
+						disabled={!onDataPointClick}
+						onClick={() => onDataPointClick?.(item)}
+						className={cn(
+							"rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+							onDataPointClick &&
+								"transition-opacity hover:opacity-75 disabled:opacity-100",
+						)}
+					>
+						<Badge variant="secondary" className="flex items-center gap-1.5">
+							<span
+								className="w-2 h-2 rounded-full"
+								style={{ backgroundColor: item.fill }}
+							/>
+							{item.name}
+						</Badge>
+					</button>
+				))}
+			</div>
+		</div>
+	);
+}
+
+export function CategoryPieChart({
+	data,
+	onDataPointClick,
+}: CategoryPieChartProps) {
 	return (
 		<Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">
 			<CardHeader>
 				<CardTitle>Spending by Category</CardTitle>
 			</CardHeader>
 			<CardContent>
-				{data.length > 0 ? (
-					<div className="flex flex-col md:flex-row items-center gap-4">
-						<div className="w-full max-w-[350px] mx-auto">
-							<Chart
-								definition={definition}
-								height={350}
-								ariaLabel="Spending share by category"
-								className={onDataPointClick ? "cursor-pointer" : undefined}
-								onSelect={(point) => {
-									if (point) onDataPointClick?.(point.datum);
-								}}
-							/>
-						</div>
-						<div className="flex flex-wrap gap-2 justify-center">
-							{data.map((item) => (
-								<button
-									key={item.name}
-									type="button"
-									disabled={!onDataPointClick}
-									onClick={() => onDataPointClick?.(item)}
-									className={cn(
-										"rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-										onDataPointClick &&
-											"transition-opacity hover:opacity-75 disabled:opacity-100",
-									)}
-								>
-									<Badge
-										variant="secondary"
-										className="flex items-center gap-1.5"
-									>
-										<span
-											className="w-2 h-2 rounded-full"
-											style={{ backgroundColor: item.fill }}
-										/>
-										{item.name}
-									</Badge>
-								</button>
-							))}
-						</div>
-					</div>
-				) : (
-					<div className="h-[350px] flex items-center justify-center text-muted-foreground">
-						No category data available
-					</div>
-				)}
+				<CategoryPieChartContent
+					data={data}
+					onDataPointClick={onDataPointClick}
+				/>
 			</CardContent>
 		</Card>
 	);

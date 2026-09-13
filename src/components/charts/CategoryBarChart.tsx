@@ -23,10 +23,16 @@ type CategoryBarChartProps = {
 	onDataPointClick?: (point: CategoryBarDataPoint) => void;
 };
 
-export function CategoryBarChart({
+type CategoryBarChartContentProps = CategoryBarChartProps & {
+	/** Chart height in pixels. Defaults to fit the category count. */
+	height?: number;
+};
+
+export function CategoryBarChartContent({
 	data,
 	onDataPointClick,
-}: CategoryBarChartProps) {
+	height,
+}: CategoryBarChartContentProps) {
 	const definition = useMemo(() => {
 		return defineChart({
 			marks: [
@@ -62,27 +68,46 @@ export function CategoryBarChart({
 		});
 	}, [data]);
 
+	const chartHeight = height ?? Math.max(300, data.length * 44);
+
+	if (data.length === 0) {
+		return (
+			<div
+				style={{ height: chartHeight }}
+				className="flex items-center justify-center text-muted-foreground"
+			>
+				No category data available
+			</div>
+		);
+	}
+
+	return (
+		<Chart
+			definition={definition}
+			height={chartHeight}
+			ariaLabel="Spending by category"
+			className={onDataPointClick ? "cursor-pointer" : undefined}
+			onSelect={(point) => {
+				if (point) onDataPointClick?.(point.datum);
+			}}
+		/>
+	);
+}
+
+export function CategoryBarChart({
+	data,
+	onDataPointClick,
+}: CategoryBarChartProps) {
 	return (
 		<Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">
 			<CardHeader>
 				<CardTitle>Spending by Category (Bar)</CardTitle>
 			</CardHeader>
 			<CardContent>
-				{data.length > 0 ? (
-					<Chart
-						definition={definition}
-						height={Math.max(300, data.length * 44)}
-						ariaLabel="Spending by category"
-						className={onDataPointClick ? "cursor-pointer" : undefined}
-						onSelect={(point) => {
-							if (point) onDataPointClick?.(point.datum);
-						}}
-					/>
-				) : (
-					<div className="h-[300px] flex items-center justify-center text-muted-foreground">
-						No category data available
-					</div>
-				)}
+				<CategoryBarChartContent
+					data={data}
+					onDataPointClick={onDataPointClick}
+				/>
 			</CardContent>
 		</Card>
 	);

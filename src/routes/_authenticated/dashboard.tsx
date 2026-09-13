@@ -6,10 +6,12 @@ import {
 	endOfDay,
 	endOfMonth,
 	endOfWeek,
+	endOfYear,
 	format,
 	startOfDay,
 	startOfMonth,
 	startOfWeek,
+	startOfYear,
 } from "date-fns";
 import {
 	ArrowDownRight,
@@ -22,14 +24,10 @@ import {
 import { useCallback, useMemo } from "react";
 import { z } from "zod";
 import {
-	BankBarChart,
-	type BankBarDataPoint,
-	CategoryBarChart,
-	type CategoryBarDataPoint,
-	CategoryPieChart,
-	type CategoryPieDataPoint,
-	MonthlyTrendsChart,
-	type MonthlyTrendsDataPoint,
+	CategorySpendingChart,
+	type CategorySpendingDataPoint,
+	IncomeVsExpensesChart,
+	SavingsPerMonthChart,
 	type SpendingDataPoint,
 	SpendingLineChart,
 } from "@/components/charts";
@@ -79,6 +77,13 @@ function AnalyticsDashboard() {
 	const { data: transactionsData, isLoading } = useGetAllTransactions({
 		startDate,
 		endDate,
+	});
+
+	// Savings-per-month ignores the dashboard date filter and always shows the
+	// current calendar year, so it needs its own year-scoped fetch.
+	const { data: yearTransactionsData } = useGetAllTransactions({
+		startDate: startOfYear(new Date()).toISOString(),
+		endDate: endOfYear(new Date()).toISOString(),
 	});
 
 	const handlePeriodChange = useCallback(
@@ -161,14 +166,14 @@ function AnalyticsDashboard() {
 	);
 
 	const handleCategoryPointClick = useCallback(
-		(point: CategoryBarDataPoint | CategoryPieDataPoint) => {
+		(point: CategorySpendingDataPoint) => {
 			goToTransactions({ category: point.id ?? "uncategorized" });
 		},
 		[goToTransactions],
 	);
 
 	const handleMonthPointClick = useCallback(
-		(point: Pick<MonthlyTrendsDataPoint, "key">) => {
+		(point: { key?: string }) => {
 			if (!point.key) return;
 			const start = startOfMonth(new Date(`${point.key}-01`));
 			goToTransactions({
@@ -176,14 +181,6 @@ function AnalyticsDashboard() {
 				endDate: endOfMonth(start).toISOString(),
 				period: "monthly",
 			});
-		},
-		[goToTransactions],
-	);
-
-	const handleBankPointClick = useCallback(
-		(point: BankBarDataPoint) => {
-			if (!point.fullName) return;
-			goToTransactions({ bank: point.fullName });
 		},
 		[goToTransactions],
 	);
@@ -273,6 +270,38 @@ function AnalyticsDashboard() {
 				key: month,
 			}));
 	}, [regularTransactions]);
+
+	// Net savings per month for the current calendar year (Jan through the
+	// current month). Loan transfers are excluded, matching the summary cards.
+	const savingsData = useMemo(() => {
+		const transactions = yearTransactionsData?.transactions ?? [];
+		const year = new Date().getFullYear();
+		const now = new Date();
+		const months = eachMonthOfInterval({
+			start: startOfYear(now),
+			end: startOfMonth(now),
+		});
+
+		const savingsByMonth = new Map<string, number>();
+		for (const t of transactions) {
+			if (t.loanId) continue;
+			const date = t.transactionDate ? new Date(t.transactionDate) : null;
+			if (!date || date.getFullYear() !== year) continue;
+			const amount = parseFloat(t.amount || "0");
+			const signed = t.type === "credit" ? amount : -amount;
+			const key = format(date, "yyyy-MM");
+			savingsByMonth.set(key, (savingsByMonth.get(key) ?? 0) + signed);
+		}
+
+		return months.map((m) => {
+			const key = format(m, "yyyy-MM");
+			return {
+				month: format(m, "MMM"),
+				savings: savingsByMonth.get(key) ?? 0,
+				key,
+			};
+		});
+	}, [yearTransactionsData]);
 
 	const categoryData = useMemo(() => {
 		if (!regularTransactions.length) return [];
@@ -467,30 +496,6 @@ function AnalyticsDashboard() {
 				: ("month" as const);
 		return { chartPeriodLabel: label, chartGranularity: granularity };
 	}, [period, startDate, endDate]);
-
-	// Bank breakdown for bar chart
-	const bankData = useMemo(() => {
-		if (!regularTransactions.length) return [];
-
-		const bankMap = new Map<string, number>();
-
-		regularTransactions.forEach((t) => {
-			if (t.type === "credit") return;
-			const bankName = t.bankName || "Unknown Bank";
-			const amount = parseFloat(t.amount || "0");
-			const existing = bankMap.get(bankName) || 0;
-			bankMap.set(bankName, existing + amount);
-		});
-
-		return Array.from(bankMap.entries())
-			.sort((a, b) => b[1] - a[1])
-			.slice(0, 5)
-			.map(([name, amount]) => ({
-				name: name.length > 12 ? `${name.slice(0, 12)}...` : name,
-				fullName: name,
-				amount,
-			}));
-	}, [regularTransactions]);
 
 	return (
 		<div className="space-y-8 min-w-0 overflow-hidden">
@@ -746,31 +751,23 @@ function AnalyticsDashboard() {
 							}
 						/>
 
-						{/* Charts Row */}
-						<div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-							<CategoryBarChart
-								data={categoryData}
-								onDataPointClick={
-									isDesktop ? handleCategoryPointClick : undefined
-								}
-							/>
-							<CategoryPieChart
-								data={categoryData}
-								onDataPointClick={
-									isDesktop ? handleCategoryPointClick : undefined
-								}
-							/>
-						</div>
+						{/* Category breakdown — bar/pie toggle */}
+						<CategorySpendingChart
+							data={categoryData}
+							onDataPointClick={
+								isDesktop ? handleCategoryPointClick : undefined
+							}
+						/>
 
 						{/* Bottom Charts Row */}
 						<div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-							<MonthlyTrendsChart
-								data={monthlyData}
+							<SavingsPerMonthChart
+								data={savingsData}
 								onDataPointClick={isDesktop ? handleMonthPointClick : undefined}
 							/>
-							<BankBarChart
-								data={bankData}
-								onDataPointClick={isDesktop ? handleBankPointClick : undefined}
+							<IncomeVsExpensesChart
+								data={monthlyData}
+								onDataPointClick={isDesktop ? handleMonthPointClick : undefined}
 							/>
 						</div>
 					</>
