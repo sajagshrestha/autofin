@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { rpc, unwrap } from "@/lib/api-client";
+import { unwrap } from "@/lib/api-client";
+import { useApiClient } from "@/lib/api-context";
 import type { Loan, LoanSettlement } from "./types";
 
 export const LOANS_QUERY_KEYS = {
@@ -12,6 +13,7 @@ export const LOANS_QUERY_KEYS = {
  * Fetches all tracked loans for the user (with settlement stats).
  */
 export function useGetLoans() {
+	const rpc = useApiClient();
 	return useQuery({
 		queryKey: LOANS_QUERY_KEYS.list,
 		queryFn: async () => {
@@ -25,6 +27,7 @@ export function useGetLoans() {
  * Fetches one loan plus its settlement transactions.
  */
 export function useGetLoan(id: string | null) {
+	const rpc = useApiClient();
 	return useQuery({
 		queryKey: LOANS_QUERY_KEYS.detail(id ?? "_"),
 		queryFn: async () => {

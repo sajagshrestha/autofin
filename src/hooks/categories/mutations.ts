@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { rpc, unwrap } from "@/lib/api-client";
+import { unwrap } from "@/lib/api-client";
+import { useApiClient } from "@/lib/api-context";
 import { CATEGORIES_QUERY_KEYS } from "./queries";
 import type { Category, CategoryFormBody } from "./types";
 
@@ -7,6 +8,7 @@ import type { Category, CategoryFormBody } from "./types";
  * Creates a new custom category.
  */
 export function useCreateCategory() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: CategoryFormBody) => {
@@ -25,6 +27,7 @@ export function useCreateCategory() {
  * Updates an existing custom category.
  */
 export function useUpdateCategory() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: CategoryFormBody & { id: string }) => {
@@ -46,6 +49,7 @@ export function useUpdateCategory() {
  * Deletes a custom category.
  */
 export function useDeleteCategory() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: { id: string }) => {

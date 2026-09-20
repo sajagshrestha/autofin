@@ -1,6 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
-	ArrowUpRight,
 	CreditCard,
 	FolderTree,
 	LayoutDashboard,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDemo } from "@/contexts/DemoContext";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { cn } from "@/lib/utils";
 import { useAdvisorChat } from "./ai-chat/advisor-chat-context";
@@ -42,6 +42,8 @@ export default function Header() {
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const { collapsed, toggle } = useSidebar();
 	const { user, signOut } = useAuth();
+	const demo = useDemo();
+	const accountEmail = demo ? "demo@autofin.app" : user?.email;
 	const { openChat } = useAdvisorChat();
 	const navigate = useNavigate();
 	const currentPath = useRouterState({
@@ -50,6 +52,10 @@ export default function Header() {
 	const active = (to: string) =>
 		currentPath === to || currentPath.startsWith(`${to}/`);
 	const handleSignOut = async () => {
+		if (demo) {
+			demo.requestAccess();
+			return;
+		}
 		await signOut();
 		navigate({ to: "/login" });
 	};
@@ -58,6 +64,7 @@ export default function Header() {
 			<Link
 				key={item.to}
 				to={item.to}
+				data-demo-action={demo && item.to === "/settings" ? "" : undefined}
 				onClick={() => setMobileOpen(false)}
 				aria-label={item.label}
 				aria-current={active(item.to) ? "page" : undefined}
@@ -141,7 +148,7 @@ export default function Header() {
 							"w-full justify-start text-muted-foreground",
 							collapsed && "justify-center px-0",
 						)}
-						onClick={openChat}
+						onClick={demo?.requestAccess ?? openChat}
 						aria-label="Ask AI advisor"
 						title={collapsed ? "AI advisor" : undefined}
 					>
@@ -149,23 +156,7 @@ export default function Header() {
 						{!collapsed && "AI advisor"}
 					</Button>
 				</div>
-				{!collapsed && (
-					<div className="mx-4 mb-5 rounded-2xl border bg-card p-4">
-						<div className="mb-3 flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-							<Upload className="size-4" />
-						</div>
-						<p className="text-sm font-semibold">Less manual entry.</p>
-						<p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-							Turn a bank statement into organized transactions.
-						</p>
-						<Link
-							to="/transactions/import"
-							className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-						>
-							Import a statement <ArrowUpRight className="size-3.5" />
-						</Link>
-					</div>
-				)}
+
 				<div
 					className={cn(
 						"border-t p-3",
@@ -174,6 +165,7 @@ export default function Header() {
 				>
 					<Link
 						to="/settings"
+						data-demo-action
 						aria-label="Account settings"
 						className={cn(
 							"flex min-w-0 items-center gap-3 rounded-xl p-2 hover:bg-muted",
@@ -181,15 +173,15 @@ export default function Header() {
 						)}
 					>
 						<span className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-sm font-semibold">
-							{user?.email?.charAt(0).toUpperCase() || "A"}
+							{accountEmail?.charAt(0).toUpperCase() || "A"}
 						</span>
 						{!collapsed && (
 							<span className="min-w-0">
 								<span className="block text-sm font-medium">
-									Personal account
+									{demo ? "Demo account" : "Personal account"}
 								</span>
 								<span className="block truncate text-xs text-muted-foreground">
-									{user?.email}
+									{accountEmail}
 								</span>
 							</span>
 						)}
@@ -266,7 +258,8 @@ export default function Header() {
 										className="h-auto min-h-16 w-full justify-start gap-3 rounded-xl border-primary/15 bg-primary/5 px-3 py-3 text-left whitespace-normal hover:bg-primary/10"
 										onClick={() => {
 											setMobileOpen(false);
-											openChat();
+											if (demo) demo.requestAccess();
+											else openChat();
 										}}
 									>
 										<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -313,14 +306,14 @@ export default function Header() {
 									className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 transition-colors hover:bg-muted"
 								>
 									<span className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-sm font-semibold">
-										{user?.email?.charAt(0).toUpperCase() || "A"}
+										{accountEmail?.charAt(0).toUpperCase() || "A"}
 									</span>
 									<span className="min-w-0">
 										<span className="block text-xs font-semibold">
-											Personal account
+											{demo ? "Demo account" : "Personal account"}
 										</span>
 										<span className="mt-0.5 block break-all text-xs text-muted-foreground">
-											{user?.email}
+											{accountEmail}
 										</span>
 									</span>
 								</Link>

@@ -67,7 +67,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 	component: AnalyticsDashboard,
 });
 
-function AnalyticsDashboard() {
+export function AnalyticsDashboard() {
 	const { period, startDate, endDate, category } = Route.useSearch();
 	const navigate = Route.useNavigate();
 	// Chart click-to-filter is a pointer-heavy interaction; keep it desktop-only

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { rpc, unwrap } from "@/lib/api-client";
+import { unwrap } from "@/lib/api-client";
+import { useApiClient } from "@/lib/api-context";
 import type { Category } from "./types";
 
 export const CATEGORIES_QUERY_KEYS = {
@@ -12,6 +13,7 @@ export const CATEGORIES_QUERY_KEYS = {
  * Fetches all categories (predefined + user custom).
  */
 export function useGetAllCategories() {
+	const rpc = useApiClient();
 	return useQuery({
 		queryKey: CATEGORIES_QUERY_KEYS.list,
 		queryFn: async () => {
@@ -25,6 +27,7 @@ export function useGetAllCategories() {
  * Fetches a specific category by its ID.
  */
 export function useGetCategoryById(id: string) {
+	const rpc = useApiClient();
 	return useQuery({
 		queryKey: CATEGORIES_QUERY_KEYS.detail(id),
 		queryFn: async () => {

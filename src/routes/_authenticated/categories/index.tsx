@@ -44,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/categories/")({
 	component: CategoriesPage,
 });
 
-function CategoriesPage() {
+export function CategoriesPage() {
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [globalFilter, setGlobalFilter] = useState("");
 	const [pagination, setPagination] = useState<PaginationState>({
@@ -137,6 +137,7 @@ function CategoriesPage() {
 								{canEdit && (
 									<>
 										<DropdownMenuItem
+											data-demo-action
 											onClick={() => setEditingCategory(category)}
 										>
 											<Pencil className="mr-2 h-4 w-4" />
@@ -144,6 +145,7 @@ function CategoriesPage() {
 										</DropdownMenuItem>
 										<DropdownMenuSeparator />
 										<DropdownMenuItem
+											data-demo-action
 											onClick={() => setDeletingCategory(category)}
 											className="text-ds-red-700 focus:text-ds-red-700"
 										>
@@ -230,7 +232,11 @@ function CategoriesPage() {
 									categories.
 								</p>
 							</div>
-							<Button onClick={() => setCreateOpen(true)} className="gap-2">
+							<Button
+								data-demo-action
+								onClick={() => setCreateOpen(true)}
+								className="gap-2"
+							>
 								<Plus className="h-4 w-4" />
 								Add category
 							</Button>
@@ -312,6 +318,7 @@ function CategoriesPage() {
 								</Button>
 								<Button
 									variant="destructive"
+									data-demo-action
 									onClick={handleDelete}
 									disabled={deleteMutation.isPending}
 								>

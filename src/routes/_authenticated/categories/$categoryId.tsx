@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/categories/$categoryId")({
 	component: CategoryDetailPage,
 });
 
-function CategoryDetailPage() {
+export function CategoryDetailPage() {
 	const { categoryId } = Route.useParams();
 	const navigate = useNavigate();
 	const [editOpen, setEditOpen] = useState(false);
@@ -153,6 +153,7 @@ function CategoryDetailPage() {
 							variant="outline"
 							size="sm"
 							className="gap-2"
+							data-demo-action
 							onClick={() => setEditOpen(true)}
 						>
 							<Pencil className="h-4 w-4" />
@@ -162,6 +163,7 @@ function CategoryDetailPage() {
 							variant="outline"
 							size="sm"
 							className="gap-2 text-ds-red-700 hover:text-ds-red-800 hover:bg-ds-red-100"
+							data-demo-action
 							onClick={() => setDeleteOpen(true)}
 						>
 							<Trash2 className="h-4 w-4" />
@@ -242,6 +244,7 @@ function CategoryDetailPage() {
 						</Button>
 						<Button
 							variant="destructive"
+							data-demo-action
 							onClick={handleDelete}
 							disabled={deleteMutation.isPending}
 						>

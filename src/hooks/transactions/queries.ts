@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { rpc, unwrap } from "@/lib/api-client";
+import { unwrap } from "@/lib/api-client";
+import { useApiClient } from "@/lib/api-context";
 import type { ListTransactionsFilters } from "./types";
 
 export const TRANSACTIONS_QUERY_KEYS = {
@@ -29,6 +30,7 @@ function compactParams<T extends Record<string, unknown>>(
 export function useGetAllTransactions(
 	params?: Partial<ListTransactionsFilters>,
 ) {
+	const rpc = useApiClient();
 	const clean = compactParams(params);
 	return useQuery({
 		queryKey: TRANSACTIONS_QUERY_KEYS.list(clean),
@@ -53,6 +55,7 @@ export function useGetTransactionSummary(params?: {
 	startDate?: string;
 	endDate?: string;
 }) {
+	const rpc = useApiClient();
 	const clean = compactParams(params);
 	return useQuery({
 		queryKey: TRANSACTIONS_QUERY_KEYS.summary(clean),
@@ -76,6 +79,7 @@ export function useGetTransactionSummary(params?: {
  * Fetches a single transaction by its ID.
  */
 export function useGetTransactionById(id: string) {
+	const rpc = useApiClient();
 	return useQuery({
 		queryKey: TRANSACTIONS_QUERY_KEYS.detail(id),
 		queryFn: async () => {

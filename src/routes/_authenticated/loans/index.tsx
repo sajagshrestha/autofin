@@ -87,7 +87,7 @@ function statusBadge(loan: Loan) {
 	return <Badge variant="amber">Outstanding</Badge>;
 }
 
-function LoansPage() {
+export function LoansPage() {
 	const { tab } = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const { data, isLoading } = useGetLoans();
@@ -137,7 +137,7 @@ function LoansPage() {
 						Track money you've lent or borrowed — settle via transactions.
 					</p>
 				</div>
-				<Button onClick={() => setCreateOpen(true)}>
+				<Button data-demo-action onClick={() => setCreateOpen(true)}>
 					<Plus className="mr-2 h-4 w-4" />
 					Track a loan
 				</Button>
@@ -194,7 +194,11 @@ function LoansPage() {
 								Record money you've lent or borrowed to keep tabs on it.
 							</p>
 						</div>
-						<Button onClick={() => setCreateOpen(true)} size="sm">
+						<Button
+							data-demo-action
+							onClick={() => setCreateOpen(true)}
+							size="sm"
+						>
 							<Plus className="mr-2 h-4 w-4" />
 							Track your first loan
 						</Button>
@@ -363,6 +367,7 @@ function LoanCard({
 								</DropdownMenuItem>
 								<DropdownMenuItem
 									className="text-ds-red-700 focus:text-ds-red-700"
+									data-demo-action
 									onClick={() => onDelete(loan)}
 								>
 									<Trash2 className="mr-2 h-4 w-4" />
@@ -673,6 +678,7 @@ function LoanDetailDialog({
 
 				{current.status === "outstanding" && !settleOpen && (
 					<Button
+						data-demo-action
 						onClick={() => {
 							setAmount(Math.max(current.remainingAmount, 0).toString());
 							setSettleOpen(true);
@@ -714,6 +720,7 @@ function LoanDetailDialog({
 								Cancel
 							</Button>
 							<Button
+								data-demo-action
 								onClick={recordSettlement}
 								disabled={settleMutation.isPending}
 							>
@@ -774,6 +781,7 @@ function LoanDetailDialog({
 						variant="ghost"
 						size="sm"
 						className="text-ds-red-700 hover:text-ds-red-800"
+						data-demo-action
 						onClick={handleDelete}
 						disabled={deleteMutation.isPending}
 					>
@@ -835,6 +843,7 @@ function DeleteLoanDialog({
 					</Button>
 					<Button
 						variant="destructive"
+						data-demo-action
 						onClick={handleDelete}
 						disabled={deleteMutation.isPending}
 					>

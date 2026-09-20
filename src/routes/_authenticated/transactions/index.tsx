@@ -140,7 +140,7 @@ export const Route = createFileRoute("/_authenticated/transactions/")({
 	component: TransactionsPage,
 });
 
-function TransactionsPage() {
+export function TransactionsPage() {
 	const { period, startDate, endDate, type, category, bank } =
 		Route.useSearch();
 	const typeFilter = type ?? "all";
@@ -518,7 +518,10 @@ function TransactionsPage() {
 						View details
 					</Link>
 				</DropdownMenuItem>
-				<DropdownMenuItem onClick={() => setEditingTransaction(transaction)}>
+				<DropdownMenuItem
+					data-demo-action
+					onClick={() => setEditingTransaction(transaction)}
+				>
 					<Pencil className="mr-2 h-4 w-4" />
 					Edit
 				</DropdownMenuItem>
@@ -526,12 +529,16 @@ function TransactionsPage() {
 					<>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
+							data-demo-action
 							onClick={() => setLoanTrackingTarget(transaction)}
 						>
 							<HandCoins className="mr-2 h-4 w-4" />
 							Track as loan
 						</DropdownMenuItem>
-						<DropdownMenuItem onClick={() => setSettlementTarget(transaction)}>
+						<DropdownMenuItem
+							data-demo-action
+							onClick={() => setSettlementTarget(transaction)}
+						>
 							<Wallet className="mr-2 h-4 w-4" />
 							Track as settlement
 						</DropdownMenuItem>
@@ -539,6 +546,7 @@ function TransactionsPage() {
 				)}
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
+					data-demo-action
 					onClick={() => setDeletingTransaction(transaction)}
 					className="text-ds-red-700 focus:text-ds-red-700"
 				>
@@ -808,6 +816,7 @@ function TransactionsPage() {
 								<Button
 									variant="default"
 									size="sm"
+									data-demo-action
 									onClick={() => setCreateOptionsOpen(true)}
 								>
 									<Plus className="mr-2 h-4 w-4" />
@@ -868,6 +877,7 @@ function TransactionsPage() {
 									variant="outline"
 									size="sm"
 									className="col-span-2"
+									data-demo-action
 									onClick={() => setCreateOptionsOpen(true)}
 								>
 									<Plus className="mr-2 h-4 w-4" />
@@ -1140,13 +1150,18 @@ function TransactionsPage() {
 							</DialogDescription>
 						</DialogHeader>
 						<div className="grid gap-2">
-							<Button className="justify-start" onClick={openCreateManual}>
+							<Button
+								className="justify-start"
+								data-demo-action
+								onClick={openCreateManual}
+							>
 								<Plus className="mr-2 h-4 w-4" />
 								Add manually
 							</Button>
 							<Button
 								variant="outline"
 								className="justify-start"
+								data-demo-action
 								onClick={openCreateFromSms}
 							>
 								<MessageSquarePlus className="mr-2 h-4 w-4" />
@@ -1155,6 +1170,7 @@ function TransactionsPage() {
 							<Button
 								variant="outline"
 								className="justify-start"
+								data-demo-action
 								onClick={openImportStatement}
 							>
 								<FileText className="mr-2 h-4 w-4" />
@@ -1376,6 +1392,7 @@ function TransactionsPage() {
 							</Button>
 							<Button
 								variant="destructive"
+								data-demo-action
 								onClick={handleDelete}
 								disabled={deleteMutation.isPending}
 							>

@@ -50,7 +50,7 @@ function formatAiConfidence(value: string): string {
 	return `${n}%`;
 }
 
-function TransactionDetailPage() {
+export function TransactionDetailPage() {
 	const { transactionId } = Route.useParams();
 	const navigate = useNavigate();
 	const [editOpen, setEditOpen] = useState(false);
@@ -143,6 +143,7 @@ function TransactionDetailPage() {
 						variant="outline"
 						size="sm"
 						className="gap-2"
+						data-demo-action
 						onClick={() => setEditOpen(true)}
 					>
 						<Pencil className="h-4 w-4" />
@@ -153,6 +154,7 @@ function TransactionDetailPage() {
 							variant="outline"
 							size="sm"
 							className="gap-2"
+							data-demo-action
 							onClick={() => {
 								setLoanCounterparty("");
 								setLoanDueDate("");
@@ -465,6 +467,7 @@ function DeleteConfirmButton({
 				variant="outline"
 				size="sm"
 				className="text-destructive hover:text-destructive hover:bg-destructive/10"
+				data-demo-action
 				onClick={() => setOpen(true)}
 			>
 				<Trash2 className="h-4 w-4" />

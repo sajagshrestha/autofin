@@ -4,6 +4,7 @@ import {
 	HeadContent,
 	Outlet,
 	Scripts,
+	useRouterState,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { PageLoadingBar } from "@/components/PageLoadingBar";
@@ -64,6 +65,9 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+	const isDemo = useRouterState({
+		select: (state) => state.location.pathname === "/demo",
+	});
 	useEffect(() => {
 		if (import.meta.env.PROD && "serviceWorker" in navigator) {
 			navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -80,9 +84,9 @@ function RootComponent() {
 			<body className="antialiased">
 				<PageLoadingBar />
 				<ThemeProvider>
-					<AuthProvider>
+					<AuthProvider enabled={!isDemo}>
 						<QueryClientProvider client={queryClient}>
-							<PostHogProvider />
+							{!isDemo && <PostHogProvider />}
 							<Outlet />
 						</QueryClientProvider>
 						<Toaster />

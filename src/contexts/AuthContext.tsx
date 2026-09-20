@@ -1,6 +1,6 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase-browser";
+import { getSupabase } from "@/lib/supabase-browser";
 
 interface AuthContextType {
 	user: User | null;
@@ -19,13 +19,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  * the session cookies); this context only mirrors the session for UI display
  * and starts the Google OAuth redirect, which must happen in the browser.
  */
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({
+	children,
+	enabled = true,
+}: {
+	children: React.ReactNode;
+	enabled?: boolean;
+}) {
 	const [user, setUser] = useState<User | null>(null);
 	const [session, setSession] = useState<Session | null>(null);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
+		if (!enabled) {
+			setUser(null);
+			setSession(null);
+			setLoading(false);
+			return;
+		}
+		let active = true;
+		const supabase = getSupabase();
 		supabase.auth.getSession().then(({ data: { session } }) => {
+			if (!active) return;
 			setSession(session);
 			setUser(session?.user ?? null);
 			setLoading(false);
@@ -39,10 +54,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			setLoading(false);
 		});
 
-		return () => subscription.unsubscribe();
-	}, []);
+		return () => {
+			active = false;
+			subscription.unsubscribe();
+		};
+	}, [enabled]);
 
 	const signInWithGoogle = async () => {
+		if (!enabled)
+			return {
+				error: new Error(
+					"Sign in from the login page to use your own account.",
+				),
+			};
+		const supabase = getSupabase();
 		const { error } = await supabase.auth.signInWithOAuth({
 			provider: "google",
 			options: {
@@ -53,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	};
 
 	const signOut = async () => {
-		await supabase.auth.signOut();
+		if (enabled) await getSupabase().auth.signOut();
 	};
 
 	return (

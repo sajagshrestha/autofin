@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ButtonProps } from "@/components/ui/button";
@@ -18,12 +18,13 @@ export function BackButton({
 	...buttonProps
 }: BackButtonProps) {
 	const navigate = useNavigate();
+	const router = useRouter();
 
 	const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
 		onClick?.(e);
 		if (e.defaultPrevented) return;
-		if (window.history.length > 1) {
-			window.history.back();
+		if (router.history.length > 1) {
+			router.history.back();
 		} else {
 			navigate({ to: fallback });
 		}

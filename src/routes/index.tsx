@@ -1,283 +1,447 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
+	ArrowDown,
 	ArrowRight,
-	CreditCard,
+	ArrowUpRight,
+	Check,
+	ChevronDown,
 	FolderTree,
-	Lightbulb,
+	LayoutDashboard,
 	Mail,
-	ShieldCheck,
+	MessageSquareText,
 	Sparkles,
-	TrendingUp,
+	Wallet,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
 import { getSessionUserFn } from "@/server/functions/session.fns";
+import "@/styles/landing.css";
 
 export const Route = createFileRoute("/")({
 	beforeLoad: async () => {
 		const { user } = await getSessionUserFn();
-		if (user) {
-			throw redirect({ to: "/dashboard" });
-		}
+		if (user) throw redirect({ to: "/dashboard" });
 	},
+	head: () => ({
+		meta: [
+			{ title: "AutoFin — Your finances, on autopilot." },
+			{
+				name: "description",
+				content:
+					"Sync Gmail and let AI categorize your bank transactions automatically. Explore spending, income, and savings in one clear dashboard.",
+			},
+		],
+	}),
 	component: LandingPage,
 });
 
-const FEATURES = [
-	{
-		icon: Mail,
-		title: "Gmail Auto-Tracking",
-		description:
-			"Connect your Gmail account to automatically detect and import transaction alerts from your bank, so you never miss a spend.",
-	},
-	{
-		icon: CreditCard,
-		title: "Transaction Tracking",
-		description:
-			"Automatically track and categorize every transaction across all your bank accounts in one place.",
-	},
-	{
-		icon: FolderTree,
-		title: "Smart Categories",
-		description:
-			"Organize spending with custom categories and intelligent auto-categorization powered by your patterns.",
-	},
-	{
-		icon: Lightbulb,
-		title: "Spending Insights",
-		description:
-			"Discover where your money goes with powerful analytics, trend charts, and actionable insights.",
-	},
-];
+const ACCESS_URL =
+	"mailto:sajagshrestha0852@gmail.com?subject=AutoFin%20beta%20access";
 
 const STEPS = [
 	{
-		step: 1,
-		icon: ShieldCheck,
-		title: "Create Your Account",
-		description: "Sign up in seconds. Your data is encrypted and secure.",
+		number: "01",
+		icon: Mail,
+		title: "Connect Gmail once.",
+		description:
+			"Connect your Gmail account. AutoFin syncs your bank transaction alerts and extracts the details for you.",
+		label: "Bank alerts · Automatic imports",
 	},
 	{
-		step: 2,
-		icon: Sparkles,
-		title: "Connect Your Gmail",
+		number: "02",
+		icon: FolderTree,
+		title: "Let AI organize the details.",
 		description:
-			"Link your Gmail account so AutoFin can automatically read bank transaction emails and import them for you.",
+			"AI matches transactions to your categories and creates new ones when needed. You can review and change any category.",
+		label: "AI categorization · Your control",
 	},
 	{
-		step: 3,
-		icon: TrendingUp,
-		title: "Get Insights",
+		number: "03",
+		icon: LayoutDashboard,
+		title: "Your insights stay up to date.",
 		description:
-			"Instantly see spending trends, category breakdowns, and monthly reports.",
+			"As your transactions sync, your spending charts, income totals, and savings overview update with them.",
+		label: "Spending · Income · Savings",
 	},
 ];
 
-function LandingPage() {
-	const { user, loading } = useAuth();
+const FAQS = [
+	{
+		question: "How do I get access?",
+		answer:
+			"AutoFin is currently in closed beta. Use Request access to email the developer. If you already have an account, you can log in right away.",
+	},
+	{
+		question: "Do I have to connect Gmail?",
+		answer:
+			"No. You can import a bank statement as a PDF or image, paste a transaction SMS, or enter a transaction manually. Connecting Gmail is an optional way to import bank alerts.",
+	},
+	{
+		question: "Can I change a transaction’s category?",
+		answer:
+			"Yes. You can review and edit a transaction’s category, and create your own categories. When there isn’t enough information to categorize a transaction, it stays uncategorized for you to review.",
+	},
+	{
+		question: "What can I ask the AI advisor?",
+		answer:
+			"Ask questions about your recorded transactions, spending patterns, or categories. The advisor uses your transaction history to help you explore where your money goes.",
+	},
+];
 
+function AccessButton({ className = "" }: { className?: string }) {
 	return (
-		<div className="min-h-screen flex flex-col bg-background text-foreground">
-			{/* Closed beta banner */}
-			<div className="bg-primary text-primary-foreground text-center text-sm font-medium px-4 py-2">
-				AutoFin is in closed beta. A clearer picture of your money starts here.
-			</div>
+		<Button asChild size="lg" className={`landing-cta ${className}`}>
+			<a href={ACCESS_URL}>
+				Request access <ArrowUpRight aria-hidden="true" className="size-4" />
+			</a>
+		</Button>
+	);
+}
 
-			{/* Navbar */}
-			<nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
-				<div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-					<Link to="/" className="flex items-center gap-2">
-						<Logo className="h-8" />
+function LandingPage() {
+	return (
+		<div className="landing min-h-screen bg-background text-foreground">
+			<a href="#home-content" className="landing-skip">
+				Skip to content
+			</a>
+			<header className="landing-header">
+				<nav
+					aria-label="Main navigation"
+					className="landing-container flex h-20 items-center justify-between gap-5"
+				>
+					<Link to="/" aria-label="AutoFin home">
+						<Logo className="h-9" />
 					</Link>
-
-					<div className="flex items-center gap-2">
+					<div className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
+						<a href="#product" className="landing-nav-link">
+							The product
+						</a>
+						<a href="#how-it-works" className="landing-nav-link">
+							How it works
+						</a>
+						<a href="#questions" className="landing-nav-link">
+							FAQs
+						</a>
+					</div>
+					<div className="flex items-center gap-2 sm:gap-4">
 						<ThemeSwitcher />
-						{!loading && user ? (
-							<Button asChild size="sm">
-								<Link to="/dashboard">
-									Dashboard
-									<ArrowRight className="ml-1 h-4 w-4" />
-								</Link>
-							</Button>
-						) : (
-							<>
-								<Button variant="ghost" size="sm" asChild>
-									<Link to="/login">Log in</Link>
-								</Button>
-								<Button size="sm" asChild>
-									<Link to="/signup">Sign up</Link>
-								</Button>
-							</>
-						)}
+						<Button variant="outline" asChild className="rounded-full px-5">
+							<Link to="/login">
+								Log in <ArrowUpRight aria-hidden="true" className="size-3.5" />
+							</Link>
+						</Button>
 					</div>
-				</div>
-			</nav>
+				</nav>
+			</header>
 
-			{/* Hero */}
-			<section className="relative overflow-hidden">
-				<div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_-20%,var(--color-primary)/0.12,transparent)]" />
-				<div className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-				<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 text-center">
-					<h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
-						Less tracking.
-						<br />
-						<span className="bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
-							More clarity.
-						</span>
-					</h1>
-					<p className="mx-auto mt-6 max-w-2xl text-lg sm:text-xl text-muted-foreground leading-relaxed">
-						Connect your Gmail to automatically track transactions, manage
-						categories, and understand your spending patterns — all in one
-						place.
-					</p>
-					<div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-						{!loading && user ? (
-							<Button size="lg" asChild className="text-base px-8">
-								<Link to="/dashboard">
-									Go to Dashboard
-									<ArrowRight className="ml-2 h-5 w-5" />
-								</Link>
-							</Button>
-						) : (
-							<>
-								<Button size="lg" asChild className="text-base px-8">
-									<Link to="/signup">
-										Get Started Free
-										<ArrowRight className="ml-2 h-5 w-5" />
-									</Link>
-								</Button>
-								<Button
-									size="lg"
-									variant="outline"
-									asChild
-									className="text-base px-8"
-								>
-									<Link to="/login">Log in</Link>
-								</Button>
-							</>
-						)}
+			<main id="home-content">
+				<section className="landing-container landing-hero">
+					<div className="landing-eyebrow">
+						<span className="landing-status" /> GMAIL CONNECTED. FINANCES
+						SORTED.
 					</div>
-				</div>
-			</section>
-
-			{/* Features */}
-			<section className="border-t border-border bg-muted/30">
-				<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-					<div className="text-center mb-14">
-						<h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-							Everything you need to manage your money
-						</h2>
-						<p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
-							Powerful features designed to give you full visibility and control
-							over your personal finances.
-						</p>
-					</div>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-						{FEATURES.map((feature) => (
-							<Card
-								key={feature.title}
-								className="group relative overflow-hidden border border-border/70 shadow-xs hover:shadow-lg hover:border-primary/30 transition-all duration-300"
-							>
-								<CardContent className="p-8">
-									<div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-										<feature.icon className="h-6 w-6" />
-									</div>
-									<h3 className="text-xl font-semibold mb-2">
-										{feature.title}
-									</h3>
-									<p className="text-muted-foreground leading-relaxed">
-										{feature.description}
-									</p>
-								</CardContent>
-							</Card>
-						))}
-					</div>
-				</div>
-			</section>
-
-			{/* How It Works */}
-			<section className="border-t border-border">
-				<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-					<div className="text-center mb-14">
-						<h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-							Up and running in minutes
-						</h2>
-						<p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
-							Three simple steps to gain complete clarity over your spending.
-						</p>
-					</div>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-						{STEPS.map((item) => (
-							<div key={item.step} className="text-center">
-								<div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground text-xl font-bold">
-									{item.step}
-								</div>
-								<div className="mb-3 flex items-center justify-center gap-2">
-									<item.icon className="h-5 w-5 text-primary" />
-									<h3 className="text-lg font-semibold">{item.title}</h3>
-								</div>
-								<p className="text-muted-foreground leading-relaxed max-w-xs mx-auto">
-									{item.description}
-								</p>
+					<div className="landing-hero-copy">
+						<h1>
+							Your finances.
+							<br />
+							<span className="landing-accent">On autopilot.</span>
+						</h1>
+						<div className="landing-hero-aside">
+							<p>Connect Gmail. Let AI handle the tracking.</p>
+							<p className="landing-description">
+								AutoFin syncs your bank alerts, categorizes transactions with
+								AI, and keeps your spending picture up to date. The routine work
+								happens automatically.
+							</p>
+							<div className="landing-hero-actions mt-7 flex flex-wrap items-center gap-5">
+								<AccessButton />
+								<a href="#product" className="landing-text-link">
+									Try it live{" "}
+									<ArrowDown aria-hidden="true" className="size-4" />
+								</a>
 							</div>
+							<p className="mt-4 text-xs text-muted-foreground">
+								Currently in closed beta. Built for everyday money.
+							</p>
+						</div>
+					</div>
+				</section>
+
+				<section
+					id="product"
+					aria-labelledby="product-title"
+					className="landing-container landing-product"
+				>
+					<h2 id="product-title" className="sr-only">
+						A look inside AutoFin
+					</h2>
+
+					<div className="landing-product-tabs">
+						<div className="landing-preview-toolbar">
+							<span className="flex items-center gap-2 text-xs font-medium">
+								<span className="size-2 rounded-full bg-emerald-600" /> Live
+								demo{" "}
+								<span className="font-normal text-muted-foreground">
+									· Sample data
+								</span>
+							</span>
+							<a
+								href="/demo"
+								target="_blank"
+								rel="noreferrer"
+								className="landing-text-link"
+							>
+								Open full demo{" "}
+								<ArrowUpRight aria-hidden="true" className="size-4" />
+							</a>
+						</div>
+						<iframe
+							src="/demo"
+							title="Interactive AutoFin demo with read-only sample data"
+							className="landing-demo-frame"
+							loading="lazy"
+						/>
+					</div>
+					<div className="landing-preview-caption">
+						<span>The real app. Ready to explore.</span>
+						<span>Try the filters, charts, and transaction details.</span>
+					</div>
+
+					<div className="landing-capabilities">
+						<span>
+							<Mail aria-hidden="true" /> Gmail auto-sync
+						</span>
+						<span>
+							<Sparkles aria-hidden="true" /> AI categorization
+						</span>
+						<span>
+							<FolderTree aria-hidden="true" /> Automatic insights
+						</span>
+						<span>
+							<Sparkles aria-hidden="true" /> Cash-flow tracking
+						</span>
+					</div>
+				</section>
+
+				<section
+					id="how-it-works"
+					aria-labelledby="workflow-title"
+					className="landing-container landing-section"
+				>
+					<div className="landing-section-intro">
+						<div>
+							<p className="landing-eyebrow">
+								CONNECT ONCE. KEEP GETTING CLARITY.
+							</p>
+							<h2 id="workflow-title">
+								Less busywork.
+								<br />
+								More big picture.
+							</h2>
+						</div>
+						<p className="landing-description max-w-sm">
+							From a bank email to a categorized transaction to a spending
+							insight. AutoFin connects the steps, so you don’t have to.
+						</p>
+					</div>
+					<div className="landing-steps">
+						{STEPS.map(({ number, icon: Icon, title, description, label }) => (
+							<article key={number} className="landing-step">
+								<div className="mb-8 flex items-center justify-between">
+									<span className="landing-step-number">{number}</span>
+									<Icon
+										aria-hidden="true"
+										className="size-6 text-muted-foreground"
+									/>
+								</div>
+								<h3>{title}</h3>
+								<p className="landing-description mt-3">{description}</p>
+								<p className="landing-step-label">{label}</p>
+							</article>
 						))}
 					</div>
-				</div>
-			</section>
+				</section>
 
-			{/* CTA */}
-			<section className="border-t border-border bg-muted/30">
-				<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28 text-center">
-					<h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-						Ready to take control?
-					</h2>
-					<p className="mt-4 text-muted-foreground text-lg max-w-xl mx-auto">
-						Join AutoFin and start understanding your money better today.
+				<section aria-labelledby="everyday-title" className="landing-everyday">
+					<div className="landing-container landing-everyday-grid">
+						<div className="landing-everyday-copy">
+							<p className="landing-eyebrow">
+								<Sparkles aria-hidden="true" className="size-4" /> AUTOMATION
+								THAT ADDS UP
+							</p>
+							<h2 id="everyday-title">
+								The alerts keep coming.
+								<br />
+								The admin doesn’t.
+							</h2>
+							<p className="landing-description mt-6 max-w-md">
+								Stop copying amounts from emails and sorting them into a
+								spreadsheet. Gmail sync and AI categorization do the repetitive
+								work, while you stay in control.
+							</p>
+							<div className="landing-benefits">
+								<div>
+									<Wallet aria-hidden="true" />
+									<div>
+										<h3>Your cash flow, at a glance.</h3>
+										<p>See what came in, what went out, and what’s left.</p>
+									</div>
+								</div>
+								<div>
+									<FolderTree aria-hidden="true" />
+									<div>
+										<h3>Details when you need them.</h3>
+										<p>
+											Follow a spending category back to the transactions behind
+											it.
+										</p>
+									</div>
+								</div>
+								<div>
+									<MessageSquareText aria-hidden="true" />
+									<div>
+										<h3>A question? Just ask.</h3>
+										<p>Explore your recorded spending with the AI advisor.</p>
+									</div>
+								</div>
+							</div>
+							<a href="#questions" className="landing-text-link">
+								A few things worth knowing{" "}
+								<ArrowRight aria-hidden="true" className="size-4" />
+							</a>
+						</div>
+						<section
+							className="landing-automation-flow"
+							aria-label="Automatic transaction workflow"
+						>
+							<div className="landing-automation-item">
+								<span className="landing-automation-icon">
+									<Mail aria-hidden="true" />
+								</span>
+								<div>
+									<span className="landing-eyebrow">01 · GMAIL SYNC</span>
+									<h3>Your bank sends an alert.</h3>
+									<p>AutoFin imports the transaction details.</p>
+								</div>
+								<Check aria-hidden="true" className="size-4 text-emerald-600" />
+							</div>
+							<div className="landing-flow-connector">
+								<ArrowDown aria-hidden="true" className="size-4" />
+							</div>
+							<div className="landing-automation-item">
+								<span className="landing-automation-icon">
+									<Sparkles aria-hidden="true" />
+								</span>
+								<div>
+									<span className="landing-eyebrow">
+										02 · AI CATEGORIZATION
+									</span>
+									<h3>AI puts it in the right place.</h3>
+									<p>Groceries, dining, transport, and more.</p>
+								</div>
+								<Check aria-hidden="true" className="size-4 text-emerald-600" />
+							</div>
+							<div className="landing-flow-connector">
+								<ArrowDown aria-hidden="true" className="size-4" />
+							</div>
+							<div className="landing-automation-item">
+								<span className="landing-automation-icon">
+									<LayoutDashboard aria-hidden="true" />
+								</span>
+								<div>
+									<span className="landing-eyebrow">03 · YOUR BIG PICTURE</span>
+									<h3>Your overview catches up.</h3>
+									<p>Spending, income, and savings in one view.</p>
+								</div>
+								<Check aria-hidden="true" className="size-4 text-emerald-600" />
+							</div>
+							<p className="mt-6 text-center text-xs text-muted-foreground">
+								From bank alert to insight. Automatically.
+							</p>
+						</section>
+					</div>
+				</section>
+
+				<section
+					id="questions"
+					aria-labelledby="questions-title"
+					className="landing-container landing-section landing-faq-grid"
+				>
+					<div>
+						<p className="landing-eyebrow">GOOD TO KNOW</p>
+						<h2 id="questions-title">
+							A little clarity,
+							<br />
+							before you start.
+						</h2>
+						<p className="landing-description mt-5 max-w-xs">
+							Have something else on your mind?
+						</p>
+						<a href={ACCESS_URL} className="landing-text-link mt-3">
+							Get in touch{" "}
+							<ArrowUpRight aria-hidden="true" className="size-4" />
+						</a>
+					</div>
+					<div>
+						{FAQS.map(({ question, answer }) => (
+							<details key={question} className="landing-faq">
+								<summary>
+									{question}
+									<ChevronDown aria-hidden="true" className="size-5 shrink-0" />
+								</summary>
+								<p>{answer}</p>
+							</details>
+						))}
+					</div>
+				</section>
+
+				<section
+					className="landing-container pb-16 sm:pb-24"
+					aria-labelledby="start-title"
+				>
+					<div className="landing-closing">
+						<div>
+							<p className="landing-eyebrow">
+								<span className="landing-status" /> NOW IN CLOSED BETA
+							</p>
+							<h2 id="start-title">
+								Make room for
+								<br />a clearer picture.
+							</h2>
+							<p className="mt-5 text-muted-foreground">
+								Less time piecing it together. More time getting on with life.
+							</p>
+						</div>
+						<div className="landing-closing-action">
+							<AccessButton />
+							<span className="flex items-center gap-2 text-xs text-muted-foreground">
+								<Check aria-hidden="true" className="size-3.5" /> Already have
+								access?{" "}
+								<Link to="/login" className="underline underline-offset-4">
+									Log in
+								</Link>
+							</span>
+						</div>
+					</div>
+				</section>
+			</main>
+
+			<footer className="landing-footer landing-container">
+				<div>
+					<Logo className="h-7" />
+					<p className="mt-3 text-xs text-muted-foreground">
+						A little more clarity, every day.
 					</p>
-					<div className="mt-8">
-						{!loading && user ? (
-							<Button size="lg" asChild className="text-base px-8">
-								<Link to="/dashboard">
-									Open Dashboard
-									<ArrowRight className="ml-2 h-5 w-5" />
-								</Link>
-							</Button>
-						) : (
-							<Button size="lg" asChild className="text-base px-8">
-								<Link to="/signup">
-									Get Started Free
-									<ArrowRight className="ml-2 h-5 w-5" />
-								</Link>
-							</Button>
-						)}
-					</div>
 				</div>
-			</section>
-
-			{/* Footer */}
-			<footer className="border-t border-border">
-				<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-					<div className="flex items-center gap-2">
-						<Logo className="h-4" />
-						<span>&copy; {new Date().getFullYear()}</span>
-					</div>
-					<div className="flex items-center gap-4">
-						<Link
-							to="/privacy"
-							className="hover:text-foreground transition-colors"
-						>
-							Privacy Policy
-						</Link>
-						<Link
-							to="/terms"
-							className="hover:text-foreground transition-colors"
-						>
-							Terms & Conditions
-						</Link>
-					</div>
+				<div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-muted-foreground">
+					<Link to="/privacy" className="landing-nav-link">
+						Privacy policy
+					</Link>
+					<Link to="/terms" className="landing-nav-link">
+						Terms of use
+					</Link>
+					<span>© {new Date().getFullYear()} AutoFin</span>
 				</div>
 			</footer>
 		</div>

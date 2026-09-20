@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { rpc, unwrap } from "@/lib/api-client";
+import { unwrap } from "@/lib/api-client";
+import { useApiClient } from "@/lib/api-context";
 import { LOANS_QUERY_KEYS } from "./queries";
 import type { CreateLoanInput, Loan } from "./types";
 
@@ -16,6 +17,7 @@ interface UpdateLoanInput {
  * recording a new origin movement).
  */
 export function useCreateLoan() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: CreateLoanInput) => {
@@ -37,6 +39,7 @@ const TRANSACTIONS_ROOT_KEY = ["transactions"] as const;
  * Updates editable loan fields.
  */
 export function useUpdateLoan() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: Omit<UpdateLoanInput, "id"> & { id: string }) => {
@@ -60,6 +63,7 @@ export function useUpdateLoan() {
  * Deletes a loan. Linked transactions are kept as normal transactions.
  */
 export function useDeleteLoan() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: { id: string }) => {
@@ -88,6 +92,7 @@ export interface SettleLoanInput {
  * Records a repayment transaction against the loan.
  */
 export function useSettleLoan() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: SettleLoanInput) => {

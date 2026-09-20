@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { rpc, unwrap } from "@/lib/api-client";
+import { unwrap } from "@/lib/api-client";
+import { useApiClient } from "@/lib/api-context";
 import { TRANSACTIONS_QUERY_KEYS } from "./queries";
 import type {
 	CreateTransactionBody,
@@ -12,6 +13,7 @@ import type {
  * Creates a manual transaction.
  */
 export function useCreateTransaction() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: CreateTransactionBody) => {
@@ -34,6 +36,7 @@ export function useCreateTransaction() {
  * Creates a transaction from an SMS message using AI extraction.
  */
 export function useCreateTransactionFromSms() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: { smsBody: string; sender?: string }) => {
@@ -54,6 +57,7 @@ export function useCreateTransactionFromSms() {
  * Updates transaction details.
  */
 export function useUpdateTransaction() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: UpdateTransactionBody & { id: string }) => {
@@ -75,6 +79,7 @@ export function useUpdateTransaction() {
  * Deletes a transaction by ID.
  */
 export function useDeleteTransaction() {
+	const rpc = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (input: { id: string }) => {
