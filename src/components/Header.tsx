@@ -1,326 +1,381 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
+	ArrowUpRight,
 	CreditCard,
 	FolderTree,
-	Home,
+	LayoutDashboard,
 	LogOut,
 	Menu,
 	PanelLeftClose,
 	PanelLeftOpen,
 	Settings,
+	Sparkles,
+	Upload,
 	Wallet,
 	X,
 } from "lucide-react";
-import { motion, useMotionValueEvent, useScroll } from "motion/react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { cn } from "@/lib/utils";
+import { useAdvisorChat } from "./ai-chat/advisor-chat-context";
 import { Logo } from "./Logo";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Button } from "./ui/button";
+import {
+	Drawer,
+	DrawerClose,
+	DrawerContent,
+	DrawerDescription,
+	DrawerTitle,
+} from "./ui/drawer";
 
 const NAV_ITEMS = [
-	{ to: "/dashboard", icon: Home, label: "Home", exact: true },
-	{
-		to: "/transactions",
-		icon: CreditCard,
-		label: "Transactions",
-		exact: false,
-	},
-	{
-		to: "/categories",
-		icon: FolderTree,
-		label: "Categories",
-		exact: false,
-	},
-	{ to: "/loans", icon: Wallet, label: "Loans", exact: true },
-	{ to: "/settings", icon: Settings, label: "Settings", exact: false },
+	{ to: "/dashboard", icon: LayoutDashboard, label: "Overview" },
+	{ to: "/transactions", icon: CreditCard, label: "Transactions" },
+	{ to: "/categories", icon: FolderTree, label: "Categories" },
+	{ to: "/loans", icon: Wallet, label: "Loans" },
+	{ to: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function Header() {
-	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const [mobileOpen, setMobileOpen] = useState(false);
 	const { collapsed, toggle } = useSidebar();
 	const { user, signOut } = useAuth();
+	const { openChat } = useAdvisorChat();
 	const navigate = useNavigate();
-	const routerState = useRouterState();
-	const currentPath = routerState.location.pathname;
-
-	const [hidden, setHidden] = useState(false);
-	const lastY = useRef(0);
-	const { scrollY } = useScroll();
-	useMotionValueEvent(scrollY, "change", (y) => {
-		const previous = lastY.current;
-		lastY.current = y;
-		if (y > previous && y > 96) {
-			setHidden(true);
-		} else if (y < previous) {
-			setHidden(false);
-		}
+	const currentPath = useRouterState({
+		select: (state) => state.location.pathname,
 	});
-
+	const active = (to: string) =>
+		currentPath === to || currentPath.startsWith(`${to}/`);
 	const handleSignOut = async () => {
 		await signOut();
 		navigate({ to: "/login" });
 	};
-
-	const isActive = (to: string, exact: boolean) => {
-		if (exact) {
-			return currentPath === to;
-		}
-		return currentPath.startsWith(to);
-	};
-
-	return (
-		<>
-			{/* Desktop Sidebar */}
-			<aside
+	const navigation = (compact = false, mobile = false) =>
+		NAV_ITEMS.map((item) => (
+			<Link
+				key={item.to}
+				to={item.to}
+				onClick={() => setMobileOpen(false)}
+				aria-label={item.label}
+				aria-current={active(item.to) ? "page" : undefined}
+				title={compact ? item.label : undefined}
 				className={cn(
-					"hidden md:flex fixed left-0 top-0 h-full flex-col bg-background/80 backdrop-blur-xl border-r border-border z-40 transition-[width] duration-200 ease-in-out",
-					collapsed ? "w-20" : "w-64 xl:w-72",
+					"group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition-colors",
+					compact && "justify-center px-0",
+					mobile && "w-full min-h-12 rounded-xl px-3.5",
+					active(item.to)
+						? "bg-primary/10 text-primary"
+						: "text-muted-foreground hover:bg-muted hover:text-foreground",
 				)}
 			>
-				{/* Logo + collapse toggle */}
+				<item.icon className="size-[18px] shrink-0" />
+				{!compact && (
+					<>
+						<span className="flex-1">{item.label}</span>
+						{!mobile && active(item.to) ? (
+							<span className="size-1.5 rounded-full bg-primary" />
+						) : null}
+					</>
+				)}
+			</Link>
+		));
+	return (
+		<>
+			<a
+				href="#main-content"
+				className="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only"
+			>
+				Skip to content
+			</a>
+			<aside
+				className={cn(
+					"fixed inset-y-0 left-0 z-40 hidden flex-col border-r bg-sidebar md:flex transition-[width] duration-200",
+					collapsed ? "w-20" : "w-60",
+				)}
+			>
 				<div
 					className={cn(
-						"flex items-center border-b border-border/60 py-5",
-						collapsed ? "flex-col gap-3 px-2" : "justify-between px-6",
+						"flex min-h-20 items-center px-5",
+						collapsed
+							? "flex-col justify-center gap-2 py-4"
+							: "justify-between gap-2",
 					)}
 				>
-					<Link
-						to="/dashboard"
-						className="flex items-center gap-3 min-w-0"
-						aria-label="AutoFin home"
-					>
+					<Link to="/dashboard" aria-label="AutoFin home">
 						{collapsed ? (
-							<img src="/mini-logo-192.png" alt="AutoFin" className="h-8 w-8" />
+							<img
+								src="/mini-logo-192.png"
+								alt="AutoFin"
+								className="size-9 rounded-lg"
+							/>
 						) : (
-							<Logo className="h-8" />
+							<Logo className="h-9" />
 						)}
 					</Link>
-					<button
-						type="button"
+					<Button
+						variant="ghost"
+						size="icon-sm"
 						onClick={toggle}
 						aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
 						aria-expanded={!collapsed}
-						className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
 					>
-						{collapsed ? (
-							<PanelLeftOpen className="h-4 w-4" />
-						) : (
-							<PanelLeftClose className="h-4 w-4" />
-						)}
-					</button>
+						{collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+					</Button>
 				</div>
-
-				{/* Navigation Links */}
-				<nav className="flex-1 px-3 py-4 space-y-1">
-					{NAV_ITEMS.map((item) => {
-						const active = isActive(item.to, item.exact);
-						return (
-							<Link
-								key={item.to}
-								to={item.to}
-								title={collapsed ? item.label : undefined}
-								aria-label={item.label}
-								className={cn(
-									"flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors",
-									collapsed && "justify-center px-0",
-									active
-										? "bg-primary/10 text-primary font-semibold"
-										: "text-muted-foreground hover:bg-muted hover:text-foreground font-medium",
-								)}
-							>
-								<item.icon
-									className={`h-4 w-4 shrink-0 ${active ? "stroke-[2.25]" : ""}`}
-								/>
-								{!collapsed && <span className="truncate">{item.label}</span>}
-							</Link>
-						);
-					})}
-				</nav>
-
-				{/* User Section */}
-				<div className="p-4 border-t border-border/60">
-					{collapsed ? (
-						<div className="flex flex-col items-center gap-2">
-							<Link
-								to="/settings"
-								className="rounded-full hover:opacity-80 transition-opacity"
-								aria-label="Settings"
-								title={user?.email ?? "Settings"}
-							>
-								<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-									<span className="text-sm font-semibold text-primary">
-										{user?.email?.charAt(0).toUpperCase() || "U"}
-									</span>
-								</div>
-							</Link>
-							<ThemeSwitcher />
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={handleSignOut}
-								aria-label="Sign out"
-							>
-								<LogOut className="h-4 w-4" />
-							</Button>
-						</div>
-					) : (
-						<div className="flex items-center gap-3">
-							<Link
-								to="/settings"
-								className="flex items-center gap-3 flex-1 min-w-0 rounded-lg hover:bg-muted px-1 py-1 transition-colors"
-								aria-label="Settings"
-							>
-								<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-									<span className="text-sm font-semibold text-primary">
-										{user?.email?.charAt(0).toUpperCase() || "U"}
-									</span>
-								</div>
-								<div className="flex-1 min-w-0">
-									<p className="text-sm font-medium truncate">{user?.email}</p>
-								</div>
-							</Link>
-							<div className="flex items-center gap-1 shrink-0">
-								<ThemeSwitcher />
-								<Button
-									variant="ghost"
-									size="icon"
-									onClick={handleSignOut}
-									aria-label="Sign out"
-								>
-									<LogOut className="h-4 w-4" />
-								</Button>
-							</div>
-						</div>
+				<div className="flex-1 overflow-y-auto px-3 py-5">
+					{!collapsed && (
+						<p className="mb-3 px-3.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+							Your workspace
+						</p>
 					)}
+					<nav aria-label="Main navigation" className="space-y-1.5">
+						{navigation(collapsed)}
+					</nav>
+					<div className="my-5 border-t" />
+					<Button
+						variant="ghost"
+						className={cn(
+							"w-full justify-start text-muted-foreground",
+							collapsed && "justify-center px-0",
+						)}
+						onClick={openChat}
+						aria-label="Ask AI advisor"
+						title={collapsed ? "AI advisor" : undefined}
+					>
+						<Sparkles className="size-[18px]" />
+						{!collapsed && "AI advisor"}
+					</Button>
+				</div>
+				{!collapsed && (
+					<div className="mx-4 mb-5 rounded-2xl border bg-card p-4">
+						<div className="mb-3 flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+							<Upload className="size-4" />
+						</div>
+						<p className="text-sm font-semibold">Less manual entry.</p>
+						<p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+							Turn a bank statement into organized transactions.
+						</p>
+						<Link
+							to="/transactions/import"
+							className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+						>
+							Import a statement <ArrowUpRight className="size-3.5" />
+						</Link>
+					</div>
+				)}
+				<div
+					className={cn(
+						"border-t p-3",
+						collapsed && "flex flex-col items-center",
+					)}
+				>
+					<Link
+						to="/settings"
+						aria-label="Account settings"
+						className={cn(
+							"flex min-w-0 items-center gap-3 rounded-xl p-2 hover:bg-muted",
+							collapsed && "justify-center",
+						)}
+					>
+						<span className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-sm font-semibold">
+							{user?.email?.charAt(0).toUpperCase() || "A"}
+						</span>
+						{!collapsed && (
+							<span className="min-w-0">
+								<span className="block text-sm font-medium">
+									Personal account
+								</span>
+								<span className="block truncate text-xs text-muted-foreground">
+									{user?.email}
+								</span>
+							</span>
+						)}
+					</Link>
+					<div
+						className={cn(
+							"mt-2 flex items-center justify-between gap-1 px-1",
+							collapsed && "flex-col",
+						)}
+					>
+						<ThemeSwitcher />
+						<Button
+							variant="ghost"
+							size={collapsed ? "icon-sm" : "sm"}
+							onClick={handleSignOut}
+							aria-label="Sign out"
+							className="text-muted-foreground"
+						>
+							<LogOut />
+							{!collapsed && "Sign out"}
+						</Button>
+					</div>
 				</div>
 			</aside>
-
-			{/* Mobile Header */}
-			<motion.header
-				initial={false}
-				animate={hidden ? { y: -64 } : { y: 0 }}
-				transition={{ type: "spring", stiffness: 300, damping: 30 }}
-				className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background/80 backdrop-blur-xl border-b border-border z-50 flex items-center justify-between px-4"
-			>
-				<Link to="/dashboard">
-					<Logo className="h-7" />
+			<header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b bg-card/95 px-4 backdrop-blur-xl md:hidden">
+				<Link to="/dashboard" aria-label="AutoFin home">
+					<Logo className="h-8" />
 				</Link>
 				<div className="flex items-center gap-2">
 					<ThemeSwitcher />
-					<button
-						onClick={() => setIsMobileMenuOpen(true)}
-						className="p-2 hover:bg-accent rounded-lg transition-colors"
-						aria-label="Open menu"
-						type="button"
+					<Drawer
+						open={mobileOpen}
+						onOpenChange={setMobileOpen}
+						direction="right"
 					>
-						<Menu size={24} />
-					</button>
-				</div>
-			</motion.header>
-
-			{/* Mobile Slide-in Menu */}
-			{isMobileMenuOpen && (
-				<div
-					className="md:hidden fixed inset-0 bg-black/50 z-50"
-					onClick={() => setIsMobileMenuOpen(false)}
-				>
-					<aside
-						className="fixed top-0 right-0 h-full w-72 bg-background border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
-						onClick={(e) => e.stopPropagation()}
-					>
-						<div className="flex items-center justify-between p-4 border-b border-border">
-							<h2 className="text-lg font-bold">Menu</h2>
-							<button
-								onClick={() => setIsMobileMenuOpen(false)}
-								className="p-2 hover:bg-accent rounded-lg transition-colors"
-								aria-label="Close menu"
-								type="button"
-							>
-								<X size={24} />
-							</button>
-						</div>
-
-						<nav className="flex-1 p-4 space-y-1">
-							{NAV_ITEMS.map((item) => {
-								const active = isActive(item.to, item.exact);
-								return (
-									<Link
-										key={item.to}
-										to={item.to}
-										onClick={() => setIsMobileMenuOpen(false)}
-										className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-											active
-												? "bg-primary text-primary-foreground"
-												: "hover:bg-accent text-foreground"
-										}`}
+						<DrawerContent className="h-dvh overflow-hidden bg-card pt-[env(safe-area-inset-top)] shadow-2xl data-[vaul-drawer-direction=right]:w-[min(88vw,24rem)] data-[vaul-drawer-direction=right]:max-w-[24rem]">
+							<div className="flex shrink-0 items-center justify-between gap-4 px-5 py-6">
+								<div>
+									<DrawerTitle className="text-xl font-semibold tracking-tight">
+										Your workspace
+									</DrawerTitle>
+									<DrawerDescription className="mt-1 text-xs">
+										Everything you need, in one place.
+									</DrawerDescription>
+								</div>
+							</div>
+							<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-5">
+								<p className="px-3.5 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+									Navigate
+								</p>
+								<nav
+									aria-label="Mobile navigation"
+									className="w-full space-y-1"
+								>
+									{navigation(false, true)}
+									<Button
+										variant="ghost"
+										onClick={() => {
+											setMobileOpen(false);
+											void handleSignOut();
+										}}
+										className="min-h-12 w-full justify-start gap-3 rounded-xl px-3.5 text-sm font-medium text-muted-foreground"
 									>
-										<item.icon className="h-5 w-5" />
-										<span>{item.label}</span>
-									</Link>
-								);
-							})}
-						</nav>
-
-						{user && (
-							<div className="p-4 border-t border-border">
+										<LogOut className="size-[18px] shrink-0" />
+										Sign out
+									</Button>
+								</nav>
+								<div className="mt-6 space-y-2 border-t px-1 pt-5">
+									<p className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+										Tools
+									</p>
+									<Button
+										variant="outline"
+										className="h-auto min-h-16 w-full justify-start gap-3 rounded-xl border-primary/15 bg-primary/5 px-3 py-3 text-left whitespace-normal hover:bg-primary/10"
+										onClick={() => {
+											setMobileOpen(false);
+											openChat();
+										}}
+									>
+										<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+											<Sparkles className="size-4" />
+										</span>
+										<span className="min-w-0 flex-1">
+											<span className="block text-sm font-medium">
+												AI advisor
+											</span>
+											<span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+												Make sense of your spending
+											</span>
+										</span>
+									</Button>
+									<Button
+										variant="ghost"
+										className="h-auto min-h-16 w-full justify-start gap-3 rounded-xl px-3 py-3 text-left whitespace-normal"
+										asChild
+									>
+										<Link
+											to="/transactions/import"
+											onClick={() => setMobileOpen(false)}
+										>
+											<span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background">
+												<Upload className="size-4" />
+											</span>
+											<span className="min-w-0 flex-1">
+												<span className="block text-sm font-medium">
+													Import statement
+												</span>
+												<span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+													Add transactions from a file
+												</span>
+											</span>
+										</Link>
+									</Button>
+								</div>
+							</div>
+							<div className="flex shrink-0 items-center gap-3 border-t bg-muted/20 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
 								<Link
 									to="/settings"
-									onClick={() => setIsMobileMenuOpen(false)}
-									className="flex items-center gap-3 mb-3 rounded-lg hover:bg-accent px-1 py-1 transition-colors"
+									onClick={() => setMobileOpen(false)}
+									aria-label="Account settings"
+									className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 transition-colors hover:bg-muted"
 								>
-									<div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-										<span className="text-sm font-semibold text-primary">
-											{user?.email?.charAt(0).toUpperCase() || "U"}
+									<span className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-sm font-semibold">
+										{user?.email?.charAt(0).toUpperCase() || "A"}
+									</span>
+									<span className="min-w-0">
+										<span className="block text-xs font-semibold">
+											Personal account
 										</span>
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium truncate">
+										<span className="mt-0.5 block break-all text-xs text-muted-foreground">
 											{user?.email}
-										</p>
-									</div>
+										</span>
+									</span>
 								</Link>
-								<Button
-									variant="outline"
-									className="w-full"
-									onClick={handleSignOut}
-								>
-									<LogOut className="mr-2 h-4 w-4" />
-									Sign Out
-								</Button>
+								<DrawerClose asChild>
+									<Button
+										variant="ghost"
+										size="icon"
+										aria-label="Close menu"
+										className="size-11 shrink-0 rounded-full border bg-background text-muted-foreground"
+									>
+										<X className="size-5" />
+									</Button>
+								</DrawerClose>
 							</div>
-						)}
-					</aside>
+						</DrawerContent>
+					</Drawer>
 				</div>
-			)}
-
-			{/* Mobile Bottom Navigation */}
-			<nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/90 backdrop-blur-xl border-t border-border z-40 flex items-center justify-around px-2 safe-area-inset-bottom">
-				{NAV_ITEMS.slice(0, 4).map((item) => {
-					const active = isActive(item.to, item.exact);
-					return (
-						<Link
-							key={item.to}
-							to={item.to}
-							className={`flex flex-col items-center justify-center py-2 px-3 rounded-lg transition-colors ${
-								active
-									? "text-primary"
-									: "text-muted-foreground hover:text-foreground"
-							}`}
+			</header>
+			<nav
+				aria-label="Quick navigation"
+				className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t bg-card/95 px-2 backdrop-blur-xl md:hidden"
+			>
+				{[NAV_ITEMS[0], NAV_ITEMS[1], NAV_ITEMS[3]].map((item) => (
+					<Link
+						key={item.to}
+						to={item.to}
+						aria-current={active(item.to) ? "page" : undefined}
+						className={cn(
+							"flex min-h-16 min-w-16 flex-col items-center justify-center gap-1 text-[10px] font-medium",
+							active(item.to) ? "text-primary" : "text-muted-foreground",
+						)}
+					>
+						<span
+							className={cn(
+								"rounded-xl px-4 py-1",
+								active(item.to) && "bg-primary/10",
+							)}
 						>
-							<item.icon
-								className={`h-5 w-5 ${active ? "stroke-[2.5]" : ""}`}
-							/>
-							<span className="text-xs mt-1">{item.label}</span>
-						</Link>
-					);
-				})}
+							<item.icon className="size-[18px]" />
+						</span>
+						{item.label}
+					</Link>
+				))}
+				<Button
+					variant="ghost"
+					onClick={() => setMobileOpen(true)}
+					aria-label="Open menu"
+					className="flex min-h-16 min-w-16 flex-col items-center justify-center gap-1 rounded-none px-2 text-[10px] font-medium text-muted-foreground"
+				>
+					<span className="rounded-xl px-4 py-1">
+						<Menu className="size-[18px]" />
+					</span>
+					More
+				</Button>
 			</nav>
-
-			{/* Spacer for fixed header on mobile */}
-			<div className="md:hidden h-14" />
 		</>
 	);
 }

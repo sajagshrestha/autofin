@@ -1,6 +1,5 @@
 /**
- * Fixed chart palette — Geist design system colors (vercel.com/geist/colors).
- * Mid-tones (600–700) chosen to read well in light & dark themes.
+ * Shared chart palette with a blue accent and consistent income/expense colors.
  */
 export const CHART_COLORS = [
 	"#0072f5", // blue-700

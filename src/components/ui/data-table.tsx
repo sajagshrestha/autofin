@@ -108,13 +108,13 @@ export function DataTable<TData, TValue>({
 			...(expanding && { expanded: expanding.state }),
 			...(search && { globalFilter: search.value }),
 		},
-		manualPagination: !!pagination,
+		manualPagination: false,
 		manualSorting: sorting?.manualSorting ?? false,
 		manualExpanding: expanding?.manualExpanding || false,
 		enableColumnPinning: !!columnPinning,
 		// Pagination options
 		...(pagination && {
-			...pagination.options,
+			onPaginationChange: pagination.options.onPaginationChange,
 		}),
 		// Sorting options
 		...(sorting && {
@@ -145,7 +145,7 @@ export function DataTable<TData, TValue>({
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getExpandedRowModel: getExpandedRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
+		getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
 		getFilteredRowModel: getFilteredRowModel(),
 	};
 
@@ -173,7 +173,7 @@ export function DataTable<TData, TValue>({
 						title={noData?.title || "No data found"}
 						description={noData?.description || ""}
 						isSearchResults={!!search?.value}
-						className="min-h-[50vh]"
+						className="min-h-64 whitespace-normal"
 					>
 						{noData?.actionButtons && noData.actionButtons}
 					</NoData>
@@ -200,7 +200,11 @@ export function DataTable<TData, TValue>({
 						)}
 						onClick={() => onRowClick?.(row)}
 						onKeyDown={(e) => {
-							if ((e.key === "Enter" || e.key === " ") && onRowClick) {
+							if (
+								e.target === e.currentTarget &&
+								(e.key === "Enter" || e.key === " ") &&
+								onRowClick
+							) {
 								e.preventDefault();
 								onRowClick(row);
 							}
@@ -284,7 +288,7 @@ export function DataTable<TData, TValue>({
 				</Button>
 				<span className="flex-1 text-center text-sm font-semibold text-muted-foreground">
 					Page {table.getState().pagination.pageIndex + 1} of{" "}
-					{table.getPageCount().toLocaleString()}
+					{Math.max(1, table.getPageCount()).toLocaleString()}
 				</span>
 				<Button
 					variant="outline"
@@ -299,7 +303,7 @@ export function DataTable<TData, TValue>({
 	};
 
 	return (
-		<Card className="w-full overflow-hidden rounded-xl border p-0 shadow min-w-0">
+		<Card className="w-full overflow-hidden rounded-2xl border p-0 min-w-0">
 			{(title || search || headerButtons || tabNavs) && (
 				<div className="flex flex-col px-4 py-4 sm:px-6">
 					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -307,7 +311,7 @@ export function DataTable<TData, TValue>({
 						{tabNavs && <div className="mt-4">{tabNavs}</div>}
 						<div
 							className={cn(
-								"flex items-center gap-2 sm:gap-4 w-full sm:w-auto",
+								"flex flex-wrap items-center gap-3 w-full",
 								headerClassName,
 							)}
 						>
@@ -315,7 +319,7 @@ export function DataTable<TData, TValue>({
 								<Search
 									value={search.value}
 									onChange={(e) => search.onChange(e.target.value)}
-									className="flex-1 sm:flex-none sm:w-[20rem]"
+									className="flex-1 min-w-40 max-w-sm"
 									placeholder="Search..."
 								/>
 							)}
@@ -325,7 +329,7 @@ export function DataTable<TData, TValue>({
 				</div>
 			)}
 			<div className="relative">
-				<div className="max-h-[calc(100vh-264px)] min-h-[calc(100vh-264px)] overflow-auto">
+				<div className="max-h-[65vh] min-h-64 overflow-auto">
 					<Table>
 						<TableHeader className="sticky top-0 z-20 bg-muted">
 							{table.getHeaderGroups().map((headerGroup) => (
@@ -336,6 +340,13 @@ export function DataTable<TData, TValue>({
 										return (
 											<TableHead
 												key={header.id}
+												aria-sort={
+													header.column.getIsSorted() === "asc"
+														? "ascending"
+														: header.column.getIsSorted() === "desc"
+															? "descending"
+															: undefined
+												}
 												className={cn(
 													"space-x-2 sticky top-0 z-30 bg-muted border-b border-border",
 													isPinned && "shadow-sm",
@@ -355,6 +366,23 @@ export function DataTable<TData, TValue>({
 												{header.isPlaceholder ? null : (
 													<div className="flex items-center justify-between">
 														<div
+															role={
+																header.column.getCanSort()
+																	? "button"
+																	: undefined
+															}
+															tabIndex={
+																header.column.getCanSort() ? 0 : undefined
+															}
+															onKeyDown={(event) => {
+																if (
+																	header.column.getCanSort() &&
+																	(event.key === "Enter" || event.key === " ")
+																) {
+																	event.preventDefault();
+																	header.column.toggleSorting();
+																}
+															}}
 															onClick={header.column.getToggleSortingHandler()}
 															className={cn(
 																"inline-flex items-center gap-2",

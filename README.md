@@ -103,10 +103,59 @@ Server:
 - `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`,
   `GMAIL_OAUTH_REDIRECT_URI` — must be `<origin>/api/gmail/oauth/callback`
 - `GOOGLE_GENERATIVE_AI_API_KEY` (+ optional `AI_PROVIDER=google|openai|anthropic`)
+- `TYPESAFE_API_KEY` — JEV category selection for email/SMS transactions
+- `TYPESAFE_MODEL` — optional JEV model override (default: `jev-latest`)
 - `DISCORD_WEBHOOK_URL` — optional transaction notifications
 - `GMAIL_PUBSUB_TOPIC` — Pub/Sub topic for watch (has a default)
 - `GMAIL_PUBSUB_VERIFICATION_TOKEN` — optional shared secret for the webhook
 - `GMAIL_WATCH_RESYNC_INTERVAL` — watch renewal cadence for the Inngest loop
+
+Email/SMS extraction uses the configured LLM to extract transaction facts, then
+JEV checks whether the remarks contain enough evidence to identify a category.
+Ineligible or ambiguous remarks go straight to uncategorized, skipping category
+selection and the LLM. Blank remarks skip all categorization API calls.
+For eligible remarks, [JEV Choice](https://docs.typesafe.ai/primitives/choice)
+selects an existing category. Only its internal `uncategorized` result triggers
+an LLM category proposal; the existing save flow reuses or creates that category.
+Custom mapping rules apply to selection, eligibility, and category proposals.
+JEV errors are logged and leave the extracted transaction
+intact without invoking category creation. The internal option is never saved as
+a category. JEV supports up to 254 existing categories plus the internal option.
+
+## Live extraction integration tests
+
+Run `pnpm test:integration` to exercise the real configured LLM and JEV APIs
+using synthetic transaction messages. This suite is separate from `pnpm test`,
+which stays offline. It loads `.env.local`, then `.env`, without overriding shell
+or CI variables. Set `TYPESAFE_API_KEY` and the key for `AI_PROVIDER` (defaults to
+`openai` / `OPENAI_API_KEY`; also supports `anthropic` / `ANTHROPIC_API_KEY` and
+`google` / `GOOGLE_GENERATIVE_AI_API_KEY`). Missing keys fail the suite explicitly.
+
+The four cases cover an existing category, a new Fitness category proposal after
+JEV returns uncategorized, a promotional message, and an unclear transaction.
+Each case prints milliseconds and success/error/skipped status for LLM extraction,
+remarks eligibility, JEV classification, LLM category proposal, and total elapsed time. Step timings
+include SDK retries and response parsing; total time also includes local work.
+Real API calls incur provider usage and require network access. Tests run serially
+with no test retries and a 180-second timeout per case. Model or network failures
+fail the tests, including errors that the extractor normally catches.
+
+No database writes or Discord messages are made. New-category tests verify the
+real LLM proposal, not persistence. Model outputs and timings may vary between runs.
+
+Run `pnpm test:comparison` for a live JEV-versus-LLM categorization benchmark.
+It gives both providers identical synthetic transactions, categories, and guidance,
+without extraction or category creation. Three fixtures run twice each by default
+(12 API calls), alternating provider order. Set `CATEGORIZATION_BENCHMARK_ROUNDS`
+to an integer from 1 to 10 to change the sample size. The comparison also runs as
+part of `pnpm test:integration`.
+
+Output includes requested and returned model IDs, each category decision and its
+correctness, milliseconds per request, and mean/median latency for successful
+responses. Network time and cold requests are included; retries are disabled for
+both providers. Errors fail the test and are excluded from latency aggregates.
+This small live sample is diagnostic, not a performance guarantee; tests assert
+correctness rather than requiring either provider to be faster.
 
 ## MCP server
 

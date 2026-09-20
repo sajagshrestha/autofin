@@ -9,9 +9,9 @@ interface SearchProps extends React.ComponentProps<typeof Input> {
 
 export function Search({ className, ...props }: SearchProps) {
 	return (
-		<div className="relative">
-			<SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-			<Input className={cn("pl-8", className)} {...props} />
+		<div className={cn("relative min-w-0", className)}>
+			<SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+			<Input aria-label="Search records" className="pl-9" {...props} />
 		</div>
 	);
 }

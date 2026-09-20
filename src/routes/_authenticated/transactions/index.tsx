@@ -691,13 +691,13 @@ function TransactionsPage() {
 		<>
 			<div className="max-w-6xl mx-auto space-y-8 min-w-0 overflow-hidden">
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+					<div className="flex flex-wrap justify-between items-center gap-4">
 						<div>
-							<h1 className="text-3xl font-bold tracking-tight">
+							<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
 								Transactions
 							</h1>
-							<p className="text-muted-foreground mt-1">
-								View and manage your tracked expenses.
+							<p className="text-sm text-muted-foreground mt-2">
+								Every transaction, organized in one place.
 							</p>
 						</div>
 						<DateFilter
@@ -761,14 +761,18 @@ function TransactionsPage() {
 						}}
 						headerClassName="w-full sm:w-full justify-between"
 						headerButtons={
-							<div className="flex items-center gap-2">
+							<div className="flex flex-wrap items-center gap-2">
 								<Select
 									value={typeFilter}
 									onValueChange={(value) =>
 										handleTypeFilterChange(value as "all" | "debit" | "credit")
 									}
 								>
-									<SelectTrigger size="sm" className="w-32">
+									<SelectTrigger
+										aria-label="Transaction type"
+										size="sm"
+										className="w-32"
+									>
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -802,7 +806,7 @@ function TransactionsPage() {
 									Import
 								</Button>
 								<Button
-									variant="outline"
+									variant="default"
 									size="sm"
 									onClick={() => setCreateOptionsOpen(true)}
 								>
@@ -833,7 +837,7 @@ function TransactionsPage() {
 								value={globalFilter}
 								onChange={(event) => handleSearchChange(event.target.value)}
 								placeholder="Search..."
-								className="h-9 w-full"
+								className="w-full"
 							/>
 							<div className="grid grid-cols-2 gap-2">
 								<Button

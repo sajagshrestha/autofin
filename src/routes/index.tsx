@@ -83,7 +83,7 @@ function LandingPage() {
 		<div className="min-h-screen flex flex-col bg-background text-foreground">
 			{/* Closed beta banner */}
 			<div className="bg-primary text-primary-foreground text-center text-sm font-medium px-4 py-2">
-				🚀 We're currently in closed beta — thanks for being an early tester! 🎉
+				AutoFin is in closed beta. A clearer picture of your money starts here.
 			</div>
 
 			{/* Navbar */}
@@ -122,16 +122,16 @@ function LandingPage() {
 				<div className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 				<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 text-center">
 					<h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
-						Take Control of
+						Less tracking.
 						<br />
 						<span className="bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
-							Your Finances
+							More clarity.
 						</span>
 					</h1>
 					<p className="mx-auto mt-6 max-w-2xl text-lg sm:text-xl text-muted-foreground leading-relaxed">
 						Connect your Gmail to automatically track transactions, manage
 						categories, and understand your spending patterns — all in one
-						beautiful, intuitive dashboard.
+						place.
 					</p>
 					<div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
 						{!loading && user ? (

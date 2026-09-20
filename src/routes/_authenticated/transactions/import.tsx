@@ -273,15 +273,35 @@ function ImportStatementPage() {
 					Back to Transactions
 				</BackButton>
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">
+					<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
 						Import from statement
 					</h1>
-					<p className="text-muted-foreground mt-1">
+					<p className="text-sm text-muted-foreground mt-2">
 						Upload a bank statement (PDF or photo). AI reads it, you review and
 						edit, then import everything at once.
 					</p>
 				</div>
 			</div>
+
+			<ol
+				aria-label="Import progress"
+				className="grid grid-cols-3 gap-2 rounded-xl border bg-card p-3 text-xs sm:text-sm"
+			>
+				{["Upload statement", "Review transactions", "Import"].map(
+					(label, index) => (
+						<li
+							key={label}
+							aria-current={index === (extraction ? 1 : 0) ? "step" : undefined}
+							className="flex items-center gap-2 rounded-lg px-2 py-2 text-muted-foreground aria-[current=step]:bg-primary/10 aria-[current=step]:text-primary"
+						>
+							<span className="flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold">
+								{index + 1}
+							</span>
+							<span>{label}</span>
+						</li>
+					),
+				)}
+			</ol>
 
 			{!extraction ? (
 				<Card>
@@ -311,7 +331,7 @@ function ImportStatementPage() {
 							</div>
 						) : (
 							<label
-								className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-colors sm:p-12 ${
+								className={`focus-within:ring-2 focus-within:ring-ring flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-colors sm:p-12 ${
 									dragActive
 										? "border-primary bg-primary/5"
 										: "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/40 cursor-pointer"

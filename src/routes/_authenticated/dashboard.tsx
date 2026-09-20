@@ -498,14 +498,16 @@ function AnalyticsDashboard() {
 	}, [period, startDate, endDate]);
 
 	return (
-		<div className="space-y-8 min-w-0 overflow-hidden">
-			<div className="space-y-8 min-w-0">
+		<div className="space-y-6 min-w-0 overflow-hidden">
+			<div className="space-y-6 min-w-0">
 				{/* Header - always visible */}
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<div className="flex flex-wrap items-center justify-between gap-4">
 					<div>
-						<h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-						<p className="text-muted-foreground mt-1">
-							Overview of your spending patterns and transactions.
+						<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+							Your money, at a glance
+						</h1>
+						<p className="text-sm text-muted-foreground mt-2">
+							Track your cash flow and see where your money goes.
 						</p>
 					</div>
 					<DateFilter
@@ -520,7 +522,7 @@ function AnalyticsDashboard() {
 				{isLoading ? (
 					<>
 						{/* Summary cards skeleton */}
-						<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+						<div className="grid grid-cols-1 min-[380px]:grid-cols-2 xl:grid-cols-4 gap-4">
 							{Array.from({ length: 4 }).map((_, i) => (
 								<Card key={i} className="hover:shadow-md transition-shadow">
 									<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -595,9 +597,17 @@ function AnalyticsDashboard() {
 				) : (
 					<>
 						{/* Summary Cards */}
-						<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+						<div className="grid grid-cols-1 min-[380px]:grid-cols-2 xl:grid-cols-4 gap-4">
 							<Card
-								className="hover:shadow-md transition-shadow cursor-pointer min-w-0"
+								className="summary-card [--summary-accent:var(--ds-red-700)] hover:border-primary/40 transition-colors cursor-pointer min-w-0 focus-visible:ring-2 focus-visible:ring-ring"
+								role="button"
+								tabIndex={0}
+								onKeyDown={(event) => {
+									if (event.key === "Enter" || event.key === " ") {
+										event.preventDefault();
+										event.currentTarget.click();
+									}
+								}}
 								onClick={() => goToTransactions({ type: "debit" })}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -619,7 +629,15 @@ function AnalyticsDashboard() {
 							</Card>
 
 							<Card
-								className="hover:shadow-md transition-shadow cursor-pointer min-w-0"
+								className="summary-card [--summary-accent:var(--ds-green-700)] hover:border-primary/40 transition-colors cursor-pointer min-w-0 focus-visible:ring-2 focus-visible:ring-ring"
+								role="button"
+								tabIndex={0}
+								onKeyDown={(event) => {
+									if (event.key === "Enter" || event.key === " ") {
+										event.preventDefault();
+										event.currentTarget.click();
+									}
+								}}
 								onClick={() => goToTransactions({ type: "credit" })}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -641,7 +659,15 @@ function AnalyticsDashboard() {
 							</Card>
 
 							<Card
-								className="hover:shadow-md transition-shadow cursor-pointer min-w-0"
+								className={`summary-card ${stats.savings >= 0 ? "[--summary-accent:var(--ds-green-700)]" : "[--summary-accent:var(--ds-red-700)]"} hover:border-primary/40 transition-colors cursor-pointer min-w-0 focus-visible:ring-2 focus-visible:ring-ring`}
+								role="button"
+								tabIndex={0}
+								onKeyDown={(event) => {
+									if (event.key === "Enter" || event.key === " ") {
+										event.preventDefault();
+										event.currentTarget.click();
+									}
+								}}
 								onClick={() => goToTransactions()}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -667,7 +693,15 @@ function AnalyticsDashboard() {
 							</Card>
 
 							<Card
-								className="hover:shadow-md transition-shadow cursor-pointer min-w-0"
+								className="summary-card [--summary-accent:var(--ds-blue-700)] hover:border-primary/40 transition-colors cursor-pointer min-w-0 focus-visible:ring-2 focus-visible:ring-ring"
+								role="button"
+								tabIndex={0}
+								onKeyDown={(event) => {
+									if (event.key === "Enter" || event.key === " ") {
+										event.preventDefault();
+										event.currentTarget.click();
+									}
+								}}
 								onClick={() => goToTransactions()}
 							>
 								<CardHeader className="flex flex-row items-center justify-between pb-2">

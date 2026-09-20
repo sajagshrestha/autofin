@@ -1,4 +1,10 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import {
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useState,
+} from "react";
 
 const STORAGE_KEY = "autofin:sidebar-collapsed";
 
@@ -27,7 +33,12 @@ function getInitialCollapsed(): boolean {
  * app-shell content margin. Persisted so the preference survives reloads.
  */
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-	const [collapsed, setCollapsedState] = useState(getInitialCollapsed);
+	const [collapsed, setCollapsedState] = useState(false);
+
+	// The first client render must match the server before reading browser preferences.
+	useEffect(() => {
+		setCollapsedState(getInitialCollapsed());
+	}, []);
 
 	const setCollapsed = useCallback((value: boolean) => {
 		setCollapsedState(value);

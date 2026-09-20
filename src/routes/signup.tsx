@@ -85,7 +85,7 @@ function SignupPage() {
 	if (success) {
 		return (
 			<div className="flex min-h-screen items-center justify-center p-4">
-				<Card className="w-full max-w-md">
+				<Card className="w-full max-w-md border-border/80 shadow-xl shadow-black/5">
 					<CardHeader>
 						<CardTitle>Check your email</CardTitle>
 						<CardDescription>
@@ -107,11 +107,13 @@ function SignupPage() {
 	}
 
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
+		<div className="auth-page flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-12">
 			<Logo className="h-12" />
-			<Card className="w-full max-w-md">
-				<CardHeader className="items-center text-center">
-					<CardTitle>Sign Up</CardTitle>
+			<Card className="w-full max-w-md border-border/80 shadow-xl shadow-black/5">
+				<CardHeader className="items-center text-center pb-8 pt-8">
+					<h1 className="text-2xl font-semibold tracking-tight">
+						Start with clarity
+					</h1>
 					<CardDescription>
 						Closed beta. Contact the developer at{" "}
 						<a

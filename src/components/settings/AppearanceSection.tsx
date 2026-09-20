@@ -59,6 +59,7 @@ export function AppearanceSection() {
 							<button
 								key={name}
 								type="button"
+								aria-pressed={theme === name}
 								onClick={() => setTheme(name)}
 								className={`group relative flex flex-col gap-3 rounded-lg border p-4 text-left transition-colors ${
 									theme === name

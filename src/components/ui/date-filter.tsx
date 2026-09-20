@@ -190,9 +190,13 @@ export function DateFilter({
 	}, [isAllTime, endDate]);
 
 	return (
-		<div className="flex flex-wrap items-center gap-2">
+		<div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-1.5 shadow-xs">
 			<Select value={period} onValueChange={handlePeriodChange}>
-				<SelectTrigger size="sm">
+				<SelectTrigger
+					aria-label="Date period"
+					size="sm"
+					className="border-0 bg-transparent shadow-none"
+				>
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent position="popper">

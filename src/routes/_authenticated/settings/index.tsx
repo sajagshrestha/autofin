@@ -42,11 +42,13 @@ function SettingsIndexPage() {
 	}, [gmailCallbackStatus, gmailCallbackDetail]);
 
 	return (
-		<div className="mx-auto max-w-2xl space-y-8">
-			<div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+		<div className="mx-auto max-w-6xl space-y-8">
+			<div className="flex flex-wrap justify-between gap-4 items-center">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-					<p className="mt-1 text-muted-foreground">
+					<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+						Settings
+					</h1>
+					<p className="mt-2 text-sm text-muted-foreground">
 						Manage your account, integrations, and preferences.
 					</p>
 				</div>
@@ -57,29 +59,43 @@ function SettingsIndexPage() {
 
 			{/* Desktop: tabbed interface */}
 			<div className="hidden md:block">
-				<Tabs defaultValue="gmail" className="w-full">
-					<TabsList className="grid w-full grid-cols-5">
-						<TabsTrigger value="gmail">Gmail</TabsTrigger>
-						<TabsTrigger value="ai">AI Preferences</TabsTrigger>
-						<TabsTrigger value="mcp">MCP</TabsTrigger>
-						<TabsTrigger value="appearance">Appearance</TabsTrigger>
-						<TabsTrigger value="notifications">Notifications</TabsTrigger>
+				<Tabs
+					defaultValue="gmail"
+					orientation="vertical"
+					className="grid items-start gap-6 md:grid-cols-[160px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)]"
+				>
+					<TabsList
+						aria-label="Settings sections"
+						className="h-auto flex-col items-stretch justify-start gap-1 border bg-card p-2"
+					>
+						{SETTINGS_SECTIONS.map(({ to, label, icon: Icon }) => (
+							<TabsTrigger
+								key={to}
+								value={to.split("/").pop() || "gmail"}
+								className="justify-start whitespace-normal text-left px-3 py-3"
+							>
+								<Icon className="size-4 shrink-0" />
+								{label}
+							</TabsTrigger>
+						))}
 					</TabsList>
-					<TabsContent value="gmail" className="mt-6">
-						<GmailSection />
-					</TabsContent>
-					<TabsContent value="ai" className="mt-6">
-						<AiPreferencesSection />
-					</TabsContent>
-					<TabsContent value="mcp" className="mt-6">
-						<McpSection />
-					</TabsContent>
-					<TabsContent value="appearance" className="mt-6">
-						<AppearanceSection />
-					</TabsContent>
-					<TabsContent value="notifications" className="mt-6">
-						<NotificationsSection />
-					</TabsContent>
+					<div className="min-w-0">
+						<TabsContent value="gmail" className="mt-0">
+							<GmailSection />
+						</TabsContent>
+						<TabsContent value="ai" className="mt-0">
+							<AiPreferencesSection />
+						</TabsContent>
+						<TabsContent value="mcp" className="mt-0">
+							<McpSection />
+						</TabsContent>
+						<TabsContent value="appearance" className="mt-0">
+							<AppearanceSection />
+						</TabsContent>
+						<TabsContent value="notifications" className="mt-0">
+							<NotificationsSection />
+						</TabsContent>
+					</div>
 				</Tabs>
 			</div>
 

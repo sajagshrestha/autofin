@@ -129,11 +129,11 @@ function LoansPage() {
 		<div className="max-w-5xl mx-auto space-y-6 min-w-0 overflow-hidden">
 			<div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
 				<div>
-					<h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
+					<h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-semibold tracking-tight">
 						<Wallet className="h-6 w-6 text-primary" />
 						Loans
 					</h1>
-					<p className="mt-1 text-muted-foreground">
+					<p className="mt-2 text-sm text-muted-foreground">
 						Track money you've lent or borrowed — settle via transactions.
 					</p>
 				</div>

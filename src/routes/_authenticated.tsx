@@ -1,4 +1,11 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	Outlet,
+	redirect,
+	useRouterState,
+} from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
 import { AdvisorChatWidget } from "@/components/ai-chat/AdvisorChatWidget";
 import { AdvisorChatProvider } from "@/components/ai-chat/advisor-chat-context";
 import Header from "@/components/Header";
@@ -12,14 +19,32 @@ import { getSessionUserFn } from "@/server/functions/session.fns";
  */
 function AuthenticatedMain() {
 	const { collapsed } = useSidebar();
+	const section = useRouterState({
+		select: (state) => state.location.pathname.split("/")[1] || "dashboard",
+	});
 	return (
 		<main
 			className={cn(
-				"flex-1 min-w-0 pt-16 sm:pt-0 pb-16 md:pb-0 overflow-auto transition-[margin] duration-200 ease-in-out",
-				collapsed ? "md:ml-20" : "md:ml-64 xl:ml-72",
+				"app-main flex-1 min-w-0 pt-16 md:pt-0 pb-24 md:pb-10 transition-[margin] duration-200 ease-in-out",
+				collapsed ? "md:ml-20" : "md:ml-60",
 			)}
 		>
-			<div className="p-4 md:p-8 max-w-[1600px] mx-auto">
+			<div className="hidden h-16 items-center justify-between border-b bg-card/60 px-8 md:flex">
+				<div className="flex items-center gap-2 text-xs text-muted-foreground">
+					<Link to="/dashboard" className="hover:text-foreground">
+						Workspace
+					</Link>
+					<ChevronRight className="size-3" />
+					<span className="capitalize text-foreground">
+						{section === "dashboard" ? "Overview" : section}
+					</span>
+				</div>
+			</div>
+			<div
+				id="main-content"
+				tabIndex={-1}
+				className="page-content p-4 py-6 md:p-8 lg:p-10 max-w-[1600px] mx-auto outline-none"
+			>
 				<Outlet />
 			</div>
 		</main>
@@ -45,7 +70,7 @@ export const Route = createFileRoute("/_authenticated")({
 	component: () => (
 		<AdvisorChatProvider>
 			<SidebarProvider>
-				<div className="flex min-h-screen bg-gradient-to-b from-muted/40 via-background to-background">
+				<div className="flex min-h-screen bg-background">
 					<Header />
 					<AuthenticatedMain />
 				</div>

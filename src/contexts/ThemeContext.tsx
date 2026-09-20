@@ -11,7 +11,7 @@ export const THEME_NAMES: ReadonlyArray<{
 	{
 		name: "default",
 		label: "Default",
-		description: "Geist neutral with a blue accent.",
+		description: "Slate neutrals with a blue accent.",
 	},
 	{
 		name: "midnight",

@@ -9,3 +9,4 @@ backups/
 .tanstack/
 .vercel/
 .vercel
+.env*

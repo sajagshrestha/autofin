@@ -1,3 +1,4 @@
+import { Inbox, SearchX } from "lucide-react";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,14 @@ export function NoData({
 				className,
 			)}
 		>
-			<div className="text-center space-y-2">
+			<div className="mb-4 flex size-12 items-center justify-center rounded-2xl border bg-muted/60 text-muted-foreground">
+				{isSearchResults ? (
+					<SearchX className="size-5" />
+				) : (
+					<Inbox className="size-5" />
+				)}
+			</div>
+			<div className="max-w-sm text-center space-y-2">
 				<h3 className="text-lg font-semibold">{title}</h3>
 				{description && (
 					<p className="text-sm text-muted-foreground">{description}</p>

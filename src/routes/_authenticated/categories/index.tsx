@@ -222,12 +222,12 @@ function CategoriesPage() {
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
 							<div>
-								<h1 className="text-3xl font-bold tracking-tight">
+								<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
 									Categories
 								</h1>
-								<p className="text-muted-foreground mt-1">
-									Manage your spending categories. Default and AI categories
-									cannot be edited or deleted.
+								<p className="text-sm text-muted-foreground mt-2">
+									Give every expense a place. Organize and find your spending
+									categories.
 								</p>
 							</div>
 							<Button onClick={() => setCreateOpen(true)} className="gap-2">

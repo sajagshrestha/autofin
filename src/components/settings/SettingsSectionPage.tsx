@@ -21,8 +21,12 @@ export function SettingsSectionPage({
 			/>
 			<div className="flex items-center justify-between gap-4">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">{section.label}</h1>
-					<p className="mt-1 text-muted-foreground">{section.description}</p>
+					<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+						{section.label}
+					</h1>
+					<p className="mt-2 text-sm text-muted-foreground">
+						{section.description}
+					</p>
 				</div>
 			</div>
 			{children}

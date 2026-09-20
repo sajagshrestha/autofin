@@ -11,7 +11,6 @@ import {
 	CardDescription,
 	CardFooter,
 	CardHeader,
-	CardTitle,
 } from "@/components/ui/card";
 import {
 	Field,
@@ -72,13 +71,15 @@ function LoginPage() {
 	});
 
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
+		<div className="auth-page flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-12">
 			<Logo className="h-12" />
-			<Card className="w-full max-w-md">
-				<CardHeader className="items-center text-center">
-					<CardTitle>Login</CardTitle>
+			<Card className="w-full max-w-md border-border/80 shadow-xl shadow-black/5">
+				<CardHeader className="items-center text-center pb-8 pt-8">
+					<h1 className="text-2xl font-semibold tracking-tight">
+						Welcome back
+					</h1>
 					<CardDescription>
-						Enter your email and password to sign in
+						Sign in to get a clear view of your finances.
 					</CardDescription>
 				</CardHeader>
 				<form
