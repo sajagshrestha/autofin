@@ -1,4 +1,4 @@
-import type { Session, User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
 
@@ -39,20 +39,24 @@ export function AuthProvider({
 		}
 		let active = true;
 		const supabase = getSupabase();
-		supabase.auth.getSession().then(({ data: { session } }) => {
-			if (!active) return;
-			setSession(session);
-			setUser(session?.user ?? null);
-			setLoading(false);
-		});
+		supabase.auth
+			.getSession()
+			.then(({ data: { session } }: { data: { session: Session | null } }) => {
+				if (!active) return;
+				setSession(session);
+				setUser(session?.user ?? null);
+				setLoading(false);
+			});
 
 		const {
 			data: { subscription },
-		} = supabase.auth.onAuthStateChange((_event, session) => {
-			setSession(session);
-			setUser(session?.user ?? null);
-			setLoading(false);
-		});
+		} = supabase.auth.onAuthStateChange(
+			(_event: AuthChangeEvent, session: Session | null) => {
+				setSession(session);
+				setUser(session?.user ?? null);
+				setLoading(false);
+			},
+		);
 
 		return () => {
 			active = false;
