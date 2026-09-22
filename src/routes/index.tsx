@@ -402,7 +402,7 @@ function RollingNumber({ current }: { current: number }) {
 			aria-hidden="true"
 		>
 			<span className="shrink-0 leading-none">0</span>
-			<span className="h-screen shrink-0 overflow-hidden leading-none max-[900px]:h-[1em]">
+			<span className="h-screen shrink-0 leading-none max-[900px]:h-[1em]">
 				<motion.span
 					className="block will-change-transform"
 					animate={{ y: `-${(current - 1) * 25}%` }}
