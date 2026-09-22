@@ -6,7 +6,7 @@ import {
 	type SpendingDataPoint,
 	SpendingLineChart,
 } from "@/components/charts";
-import { pickChartColor } from "@/components/charts/chart-theme";
+import { pickChartColor, useChartTheme } from "@/components/charts/chart-theme";
 
 type ChartOutput = {
 	type: string;
@@ -24,6 +24,7 @@ function toNumber(value: unknown): number {
  */
 export function ChatChart({ output }: { output: ChartOutput }) {
 	const data = output.data ?? [];
+	const theme = useChartTheme();
 
 	switch (output.type) {
 		case "monthlyTrend":
@@ -43,7 +44,7 @@ export function ChatChart({ output }: { output: ChartOutput }) {
 					data={data.map((row, index) => ({
 						name: String(row.name ?? ""),
 						value: toNumber(row.value),
-						fill: pickChartColor(index),
+						fill: pickChartColor(theme.categorical, index),
 					}))}
 				/>
 			);
@@ -54,7 +55,7 @@ export function ChatChart({ output }: { output: ChartOutput }) {
 					data={data.map((row, index) => ({
 						name: String(row.name ?? ""),
 						value: toNumber(row.value),
-						fill: pickChartColor(index),
+						fill: pickChartColor(theme.categorical, index),
 					}))}
 				/>
 			);
@@ -72,11 +73,13 @@ export function ChatChart({ output }: { output: ChartOutput }) {
 		case "spending":
 			return (
 				<SpendingLineChart
-					data={data.map((row) => ({
-						label: String(row.label ?? ""),
-						spending: toNumber(row.spending),
-						day: 0,
-					})) as SpendingDataPoint[]}
+					data={
+						data.map((row) => ({
+							label: String(row.label ?? ""),
+							spending: toNumber(row.spending),
+							day: 0,
+						})) as SpendingDataPoint[]
+					}
 				/>
 			);
 

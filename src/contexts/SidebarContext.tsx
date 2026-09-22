@@ -1,10 +1,4 @@
-import {
-	createContext,
-	useCallback,
-	useContext,
-	useEffect,
-	useState,
-} from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 
 const STORAGE_KEY = "autofin:sidebar-collapsed";
 
@@ -33,12 +27,12 @@ function getInitialCollapsed(): boolean {
  * app-shell content margin. Persisted so the preference survives reloads.
  */
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-	const [collapsed, setCollapsedState] = useState(false);
-
-	// The first client render must match the server before reading browser preferences.
-	useEffect(() => {
-		setCollapsedState(getInitialCollapsed());
-	}, []);
+	// Lazy initializer so the first client render already has the stored
+	// preference — no post-mount state change, so motion has nothing to
+	// animate on load. Safe for hydration: on the server this returns false,
+	// and the motion-driven width leaves no trace in the SSR HTML either way,
+	// so client and server markup still match.
+	const [collapsed, setCollapsedState] = useState(getInitialCollapsed);
 
 	const setCollapsed = useCallback((value: boolean) => {
 		setCollapsedState(value);

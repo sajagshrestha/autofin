@@ -13,6 +13,7 @@ import {
 	Wallet,
 	X,
 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDemo } from "@/contexts/DemoContext";
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
 export default function Header() {
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const { collapsed, toggle } = useSidebar();
+	const reduceMotion = useReducedMotion();
 	const { user, signOut } = useAuth();
 	const demo = useDemo();
 	const accountEmail = demo ? "demo@autofin.app" : user?.email;
@@ -97,11 +99,15 @@ export default function Header() {
 			>
 				Skip to content
 			</a>
-			<aside
-				className={cn(
-					"fixed inset-y-0 left-0 z-40 hidden flex-col border-r bg-sidebar md:flex transition-[width] duration-200",
-					collapsed ? "w-20" : "w-60",
-				)}
+			<motion.aside
+				initial={false}
+				animate={{ width: collapsed ? 80 : 240 }}
+				transition={
+					reduceMotion
+						? { duration: 0 }
+						: { duration: 0.25, ease: [0.22, 1, 0.36, 1] }
+				}
+				className="fixed inset-y-0 left-0 z-40 hidden flex-col border-r bg-sidebar md:flex"
 			>
 				<div
 					className={cn(
@@ -205,7 +211,7 @@ export default function Header() {
 						</Button>
 					</div>
 				</div>
-			</aside>
+			</motion.aside>
 			<header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b bg-card/95 px-4 backdrop-blur-xl md:hidden">
 				<Link to="/dashboard" aria-label="AutoFin home">
 					<Logo className="h-8" />

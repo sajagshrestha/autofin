@@ -7,7 +7,7 @@ import { TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatCurrencyShort } from "@/lib/formatCurrency";
-import { EXPENSES_COLOR, INCOME_COLOR } from "./chart-theme";
+import { useChartTheme } from "./chart-theme";
 
 export type MonthlyTrendsDataPoint = {
 	month: string;
@@ -38,6 +38,7 @@ export function MonthlyTrendsChart({
 	data,
 	onDataPointClick,
 }: MonthlyTrendsChartProps) {
+	const theme = useChartTheme();
 	const definition = useMemo(() => {
 		// Long format lets both series share one scale while explicit y1/y2 keep
 		// them overlapping (not stacked), matching the previous chart semantics.
@@ -73,7 +74,7 @@ export function MonthlyTrendsChart({
 			},
 			color: {
 				domain: ["Expenses", "Income"],
-				range: [EXPENSES_COLOR, INCOME_COLOR],
+				range: [theme.expenses, theme.income],
 			},
 			focus: "group-x",
 			tooltip: {
@@ -87,7 +88,7 @@ export function MonthlyTrendsChart({
 				],
 			},
 		});
-	}, [data]);
+	}, [data, theme]);
 
 	return (
 		<Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">

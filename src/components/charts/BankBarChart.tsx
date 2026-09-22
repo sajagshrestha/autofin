@@ -6,7 +6,7 @@ import { tooltip } from "@tanstack/charts/tooltip";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatCurrencyShort } from "@/lib/formatCurrency";
-import { BAR_PRIMARY } from "./chart-theme";
+import { useChartTheme } from "./chart-theme";
 
 export type BankBarDataPoint = {
 	name: string;
@@ -22,13 +22,14 @@ type BankBarChartProps = {
 };
 
 export function BankBarChart({ data, onDataPointClick }: BankBarChartProps) {
+	const theme = useChartTheme();
 	const definition = useMemo(() => {
 		return defineChart({
 			marks: [
 				barX(data, {
 					x: "amount",
 					y: "name",
-					fill: BAR_PRIMARY,
+					fill: theme.accent,
 					radius: 4,
 					maxThickness: 26,
 				}),
@@ -55,7 +56,7 @@ export function BankBarChart({ data, onDataPointClick }: BankBarChartProps) {
 				],
 			},
 		});
-	}, [data]);
+	}, [data, theme]);
 
 	return (
 		<Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">

@@ -6,7 +6,7 @@ import { tooltip } from "@tanstack/charts/tooltip";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatCurrencyShort } from "@/lib/formatCurrency";
-import { BAR_SECONDARY } from "./chart-theme";
+import { useChartTheme } from "./chart-theme";
 
 export type CategoryBarDataPoint = {
 	name: string;
@@ -33,13 +33,14 @@ export function CategoryBarChartContent({
 	onDataPointClick,
 	height,
 }: CategoryBarChartContentProps) {
+	const theme = useChartTheme();
 	const definition = useMemo(() => {
 		return defineChart({
 			marks: [
 				barX(data, {
 					x: "value",
 					y: "name",
-					fill: BAR_SECONDARY,
+					fill: theme.accent,
 					radius: 4,
 					maxThickness: 26,
 				}),
@@ -66,7 +67,7 @@ export function CategoryBarChartContent({
 				],
 			},
 		});
-	}, [data]);
+	}, [data, theme]);
 
 	const chartHeight = height ?? Math.max(300, data.length * 44);
 

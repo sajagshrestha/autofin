@@ -11,7 +11,7 @@ import {
 	type CategoryComboboxOption,
 } from "@/components/ui/category-combobox";
 import { formatCurrency, formatCurrencyShort } from "@/lib/formatCurrency";
-import { LINE_COLOR } from "./chart-theme";
+import { useChartTheme } from "./chart-theme";
 
 export type SpendingDataPoint = {
 	day: number;
@@ -55,13 +55,14 @@ export function SpendingLineChart({
 	onCategoryChange,
 	onDataPointClick,
 }: SpendingLineChartProps) {
+	const theme = useChartTheme();
 	const definition = useMemo(() => {
 		return defineChart({
 			marks: [
 				lineY(data, {
 					x: "label",
 					y: "spending",
-					stroke: LINE_COLOR,
+					stroke: theme.accent,
 					strokeWidth: 2,
 				}),
 			],
@@ -87,7 +88,7 @@ export function SpendingLineChart({
 				],
 			},
 		});
-	}, [data]);
+	}, [data, theme]);
 
 	const perLabel = granularity === "month" ? "per month" : "per day";
 	const categoryName = categories?.find(

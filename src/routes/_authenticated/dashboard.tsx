@@ -31,7 +31,7 @@ import {
 	type SpendingDataPoint,
 	SpendingLineChart,
 } from "@/components/charts";
-import { pickChartColor } from "@/components/charts/chart-theme";
+import { pickChartColor, useChartTheme } from "@/components/charts/chart-theme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	DateFilter,
@@ -78,6 +78,8 @@ export function AnalyticsDashboard() {
 		startDate,
 		endDate,
 	});
+	// Live palette from the active theme context (light/dark + named theme).
+	const chartTheme = useChartTheme();
 
 	// Savings-per-month ignores the dashboard date filter and always shows the
 	// current calendar year, so it needs its own year-scoped fetch.
@@ -335,10 +337,10 @@ export function AnalyticsDashboard() {
 				name,
 				value: data.amount,
 				icon: data.icon,
-				fill: pickChartColor(index),
+				fill: pickChartColor(chartTheme.categorical, index),
 				id: data.id,
 			}));
-	}, [regularTransactions]);
+	}, [regularTransactions, chartTheme]);
 
 	// Available categories for the spending line chart filter
 	const spendingCategories = useMemo(
@@ -693,7 +695,7 @@ export function AnalyticsDashboard() {
 							</Card>
 
 							<Card
-								className="summary-card [--summary-accent:var(--ds-blue-700)] hover:border-primary/40 transition-colors cursor-pointer min-w-0 focus-visible:ring-2 focus-visible:ring-ring"
+								className="summary-card [--summary-accent:var(--chart-1)] hover:border-primary/40 transition-colors cursor-pointer min-w-0 focus-visible:ring-2 focus-visible:ring-ring"
 								role="button"
 								tabIndex={0}
 								onKeyDown={(event) => {
@@ -708,8 +710,8 @@ export function AnalyticsDashboard() {
 									<CardTitle className="text-sm font-medium text-muted-foreground">
 										Transactions
 									</CardTitle>
-									<div className="rounded-full bg-ds-blue-500/10 p-1.5">
-										<CreditCard className="h-4 w-4 text-ds-blue-700" />
+									<div className="rounded-full bg-chart-1/10 p-1.5">
+										<CreditCard className="h-4 w-4 text-chart-1" />
 									</div>
 								</CardHeader>
 								<CardContent>

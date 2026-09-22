@@ -7,7 +7,7 @@ import { TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatCurrencyShort } from "@/lib/formatCurrency";
-import { EXPENSES_COLOR, INCOME_COLOR } from "./chart-theme";
+import { useChartTheme } from "./chart-theme";
 
 export type IncomeVsExpensesDataPoint = {
 	month: string;
@@ -34,6 +34,7 @@ export function IncomeVsExpensesChart({
 	data,
 	onDataPointClick,
 }: IncomeVsExpensesChartProps) {
+	const theme = useChartTheme();
 	const definition = useMemo(() => {
 		// Long format + group layout renders income and expenses side by side
 		// within each month band.
@@ -64,7 +65,7 @@ export function IncomeVsExpensesChart({
 			},
 			color: {
 				domain: ["Income", "Expenses"],
-				range: [INCOME_COLOR, EXPENSES_COLOR],
+				range: [theme.income, theme.expenses],
 				legend: colorLegend({ label: "Cash flow" }),
 			},
 			focus: "group-x",
@@ -80,7 +81,7 @@ export function IncomeVsExpensesChart({
 				],
 			},
 		});
-	}, [data]);
+	}, [data, theme]);
 
 	return (
 		<Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">

@@ -6,7 +6,7 @@ import { PiggyBank } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatCurrencyShort } from "@/lib/formatCurrency";
-import { EXPENSES_COLOR, INCOME_COLOR } from "./chart-theme";
+import { useChartTheme } from "./chart-theme";
 
 export type SavingsPerMonthDataPoint = {
 	month: string;
@@ -85,6 +85,7 @@ export function SavingsPerMonthChart({
 	data,
 	onDataPointClick,
 }: SavingsPerMonthChartProps) {
+	const theme = useChartTheme();
 	const definition = useMemo(() => {
 		const rows = buildSegments(data);
 		const points: SavingsPoint[] = data.map((d, index) => ({
@@ -102,7 +103,7 @@ export function SavingsPerMonthChart({
 					y2: "savings",
 					z: "segment",
 					fill: (datum) =>
-						datum.sign === "positive" ? INCOME_COLOR : EXPENSES_COLOR,
+						datum.sign === "positive" ? theme.income : theme.expenses,
 					fillOpacity: 0.15,
 				}),
 				lineY(rows, {
@@ -110,16 +111,16 @@ export function SavingsPerMonthChart({
 					y: "savings",
 					z: "segment",
 					stroke: (datum) =>
-						datum.sign === "positive" ? INCOME_COLOR : EXPENSES_COLOR,
+						datum.sign === "positive" ? theme.income : theme.expenses,
 					strokeWidth: 2,
 				}),
 				dot(
 					points.filter((p) => p.sign === "positive"),
-					{ x: "index", y: "savings", fill: INCOME_COLOR, r: 3 },
+					{ x: "index", y: "savings", fill: theme.income, r: 3 },
 				),
 				dot(
 					points.filter((p) => p.sign === "negative"),
-					{ x: "index", y: "savings", fill: EXPENSES_COLOR, r: 3 },
+					{ x: "index", y: "savings", fill: theme.expenses, r: 3 },
 				),
 			],
 			x: {
@@ -156,7 +157,7 @@ export function SavingsPerMonthChart({
 				],
 			},
 		});
-	}, [data]);
+	}, [data, theme]);
 
 	return (
 		<Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">
