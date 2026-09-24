@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import {
 	categories,
 	type NewTransaction,
@@ -275,8 +275,8 @@ export class TransactionRepository extends BaseRepository {
 
 		const result = await this.db
 			.select({
-				totalDebit: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' AND ${transactions.loanId} IS NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
-				totalCredit: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' AND ${transactions.loanId} IS NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
+				totalDebit: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' THEN ${transactions.amount} ELSE 0 END), 0)`,
+				totalCredit: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' THEN ${transactions.amount} ELSE 0 END), 0)`,
 				loanOutflow: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' AND ${transactions.loanId} IS NOT NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
 				loanInflow: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' AND ${transactions.loanId} IS NOT NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
 				transactionCount: sql<number>`COUNT(*)::int`,
@@ -285,7 +285,7 @@ export class TransactionRepository extends BaseRepository {
 			.where(and(...conditions));
 
 		return {
-			// Loan-linked transfers excluded — they are balance movements, not income/expenses.
+			// Totals include loan-linked transfers; loanOutflow/loanInflow break them out.
 			totalDebit: Number.parseFloat(result[0]?.totalDebit || "0"),
 			totalCredit: Number.parseFloat(result[0]?.totalCredit || "0"),
 			loanOutflow: Number.parseFloat(result[0]?.loanOutflow || "0"),
@@ -313,8 +313,6 @@ export class TransactionRepository extends BaseRepository {
 		const conditions = [
 			eq(transactions.userId, userId),
 			eq(transactions.type, "debit"),
-			// Loan transfers are balance movements, not spending.
-			isNull(transactions.loanId),
 		];
 		if (startDate)
 			conditions.push(gte(transactions.transactionDate, startDate));
@@ -352,8 +350,8 @@ export class TransactionRepository extends BaseRepository {
 		const rows = await this.db
 			.select({
 				month: sql<string>`to_char(date_trunc('month', ${transactions.transactionDate}), 'YYYY-MM')`,
-				income: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' AND ${transactions.loanId} IS NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
-				expenses: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' AND ${transactions.loanId} IS NULL THEN ${transactions.amount} ELSE 0 END), 0)`,
+				income: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'credit' THEN ${transactions.amount} ELSE 0 END), 0)`,
+				expenses: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'debit' THEN ${transactions.amount} ELSE 0 END), 0)`,
 			})
 			.from(transactions)
 			.where(

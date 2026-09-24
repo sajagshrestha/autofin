@@ -192,36 +192,32 @@ export function AnalyticsDashboard() {
 		[transactionsData],
 	);
 
-	// Loan-linked entries are tracked separately — they are transfers, not
-	// income/expenses.
-	const { regularTransactions, loanFlows } = useMemo(() => {
-		const regularTransactions: typeof transactions = [];
-		const loanTransactions: Array<{ amount: string; type: string }> = [];
+	// Loan-linked entries are included in income/expenses; loanFlows is kept
+	// as a breakdown for the loan activity card.
+	const { loanFlows } = useMemo(() => {
 		let lent = 0;
 		let received = 0;
+		let count = 0;
 
 		for (const t of transactions) {
 			if (t.loanId) {
-				loanTransactions.push(t);
+				count += 1;
 				if (t.type === "debit") lent += parseFloat(t.amount || "0");
 				else received += parseFloat(t.amount || "0");
-			} else {
-				regularTransactions.push(t);
 			}
 		}
 
 		return {
-			regularTransactions,
-			loanFlows: { lent, received, count: loanTransactions.length },
+			loanFlows: { lent, received, count },
 		};
 	}, [transactions]);
 
-	// Calculate summary stats (loan transfers excluded)
+	// Calculate summary stats (loan transfers included)
 	const stats = useMemo(() => {
 		let totalExpenses = 0;
 		let totalIncome = 0;
 
-		regularTransactions.forEach((t) => {
+		transactions.forEach((t) => {
 			const amount = parseFloat(t.amount || "0");
 			if (t.type === "credit") {
 				totalIncome += amount;
@@ -234,17 +230,17 @@ export function AnalyticsDashboard() {
 			totalExpenses,
 			totalIncome,
 			savings: totalIncome - totalExpenses,
-			transactionCount: regularTransactions.length,
+			transactionCount: transactions.length,
 		};
-	}, [regularTransactions]);
+	}, [transactions]);
 
 	// Monthly spending data for area chart
 	const monthlyData = useMemo(() => {
-		if (!regularTransactions.length) return [];
+		if (!transactions.length) return [];
 
 		const monthMap = new Map<string, { expenses: number; income: number }>();
 
-		regularTransactions.forEach((t) => {
+		transactions.forEach((t) => {
 			const date = t.transactionDate ? new Date(t.transactionDate) : new Date();
 			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 
@@ -271,10 +267,10 @@ export function AnalyticsDashboard() {
 				income: data.income,
 				key: month,
 			}));
-	}, [regularTransactions]);
+	}, [transactions]);
 
 	// Net savings per month for the current calendar year (Jan through the
-	// current month). Loan transfers are excluded, matching the summary cards.
+	// current month). Loan transfers are included, matching the summary cards.
 	const savingsData = useMemo(() => {
 		const transactions = yearTransactionsData?.transactions ?? [];
 		const year = new Date().getFullYear();
@@ -286,7 +282,6 @@ export function AnalyticsDashboard() {
 
 		const savingsByMonth = new Map<string, number>();
 		for (const t of transactions) {
-			if (t.loanId) continue;
 			const date = t.transactionDate ? new Date(t.transactionDate) : null;
 			if (!date || date.getFullYear() !== year) continue;
 			const amount = parseFloat(t.amount || "0");
@@ -306,14 +301,14 @@ export function AnalyticsDashboard() {
 	}, [yearTransactionsData]);
 
 	const categoryData = useMemo(() => {
-		if (!regularTransactions.length) return [];
+		if (!transactions.length) return [];
 
 		const categoryMap = new Map<
 			string,
 			{ amount: number; icon?: string | null; id: string | null }
 		>();
 
-		regularTransactions.forEach((t) => {
+		transactions.forEach((t) => {
 			if (t.type === "credit") return;
 			const categoryName = t.category?.name || "Uncategorized";
 			const categoryIcon = t.category?.icon || null;
@@ -340,7 +335,7 @@ export function AnalyticsDashboard() {
 				fill: pickChartColor(chartTheme.categorical, index),
 				id: data.id,
 			}));
-	}, [regularTransactions, chartTheme]);
+	}, [transactions, chartTheme]);
 
 	// Available categories for the spending line chart filter
 	const spendingCategories = useMemo(
@@ -354,11 +349,11 @@ export function AnalyticsDashboard() {
 
 	// Transactions restricted to the selected category (line chart filter)
 	const spendingSource = useMemo(() => {
-		if (!category) return regularTransactions;
-		return regularTransactions.filter(
+		if (!category) return transactions;
+		return transactions.filter(
 			(t) => (t.category?.name || "Uncategorized") === category,
 		);
-	}, [regularTransactions, category]);
+	}, [transactions, category]);
 
 	// Spending data for line chart: buckets based on date filter (period + start/end)
 	const spendingData = useMemo(() => {
@@ -625,7 +620,7 @@ export function AnalyticsDashboard() {
 										{formatCurrency(stats.totalExpenses)}
 									</div>
 									<p className="text-xs text-muted-foreground">
-										Excludes loan transfers
+										Includes loan transfers
 									</p>
 								</CardContent>
 							</Card>
@@ -655,7 +650,7 @@ export function AnalyticsDashboard() {
 										{formatCurrency(stats.totalIncome)}
 									</div>
 									<p className="text-xs text-muted-foreground">
-										Excludes loan transfers
+										Includes loan transfers
 									</p>
 								</CardContent>
 							</Card>
@@ -720,7 +715,7 @@ export function AnalyticsDashboard() {
 									</div>
 									<p className="text-xs text-muted-foreground">
 										{loanFlows.count > 0
-											? `+ ${loanFlows.count} loan transfer${loanFlows.count !== 1 ? "s" : ""} tracked separately`
+											? `Includes ${loanFlows.count} loan transfer${loanFlows.count !== 1 ? "s" : ""}`
 											: "Total tracked"}
 									</p>
 								</CardContent>

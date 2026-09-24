@@ -112,7 +112,7 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 			name: "getSpendingSummary",
 			title: "Get spending summary",
 			description:
-				"Totals for a period: expenses and income EXCLUDING loan transfers (loanOutflow/loanInflow reported separately), plus net and transaction count. Omit dates for all-time.",
+				"Totals for a period: expenses and income INCLUDING loan transfers (loanOutflow/loanInflow reported separately as a breakdown), plus net and transaction count. Omit dates for all-time.",
 			inputSchema: z.object({
 				startDate: dateSchema.optional().describe("Range start (inclusive)"),
 				endDate: dateSchema.optional().describe("Range end (inclusive)"),
@@ -140,7 +140,7 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 			name: "getSpendingByCategory",
 			title: "Get spending by category",
 			description:
-				"Spending (debits) grouped by category, largest first, for a period. Excludes loan transfers. Omit dates for all-time.",
+				"Spending (debits) grouped by category, largest first, for a period. Includes loan transfers. Omit dates for all-time.",
 			inputSchema: z.object({
 				startDate: dateSchema.optional(),
 				endDate: dateSchema.optional(),
@@ -175,7 +175,7 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 			name: "getMonthlyTrend",
 			title: "Get monthly trend",
 			description:
-				"Monthly income vs expenses (loan transfers excluded) for the trailing N months (default 6, max 12), oldest first. Use for trends and month-over-month comparisons.",
+				"Monthly income vs expenses (loan transfers included) for the trailing N months (default 6, max 12), oldest first. Use for trends and month-over-month comparisons.",
 			inputSchema: z.object({
 				months: z.number().int().min(1).max(12).default(6),
 			}),
