@@ -1,5 +1,8 @@
 import type { Database } from "@/server/db/connection";
-import { singleTransactionMessage } from "@/server/lib/notifications";
+import {
+	gmailReconnectMessage,
+	singleTransactionMessage,
+} from "@/server/lib/notifications";
 import { localToUtc } from "@/server/lib/timezone";
 import type { CategoryRepository } from "@/server/repositories/category.repository";
 import type { GmailOAuthRepository } from "@/server/repositories/gmail-oauth.repository";
@@ -129,6 +132,27 @@ export interface ProcessNotificationResult {
  * - Manage watch subscriptions
  * - Handle OAuth token management
  */
+/**
+ * Google rejected the refresh token (`invalid_grant`): revoked by the user,
+ * expired (OAuth consent screen still in Testing mode expires tokens after
+ * ~7 days), or rotated. Nothing can revive it — the user must reconnect.
+ */
+export class GmailTokenRevokedError extends Error {
+	constructor() {
+		super(
+			"Gmail access was revoked or expired — reconnect your account in Settings → Gmail.",
+		);
+		this.name = "GmailTokenRevokedError";
+	}
+}
+
+/** True when an error is (or wraps) a Google `invalid_grant` rejection. */
+export function isInvalidGrant(error: unknown): boolean {
+	if (error instanceof GmailTokenRevokedError) return true;
+	const message = error instanceof Error ? error.message : String(error);
+	return message.includes("invalid_grant");
+}
+
 export class GmailService extends BaseService {
 	private readonly gmailApiBaseUrl = "https://gmail.googleapis.com/gmail/v1";
 	private readonly oauthTokenUrl = "https://oauth2.googleapis.com/token";
@@ -204,9 +228,15 @@ export class GmailService extends BaseService {
 			const error = await response
 				.json()
 				.catch(() => ({ error: response.statusText }));
-			throw new Error(
-				`Failed to refresh token: ${response.status} ${response.statusText} - ${JSON.stringify(error)}`,
-			);
+			const message = `Failed to refresh token: ${response.status} ${response.statusText} - ${JSON.stringify(error)}`;
+			if (message.includes("invalid_grant")) {
+				// Dead credential: drop it so status flips to disconnected
+				// (instead of retrying forever) and nudge the user to
+				// reconnect. Best-effort — the throw below is what matters.
+				await this.handleRevokedToken(userId);
+				throw new GmailTokenRevokedError();
+			}
+			throw new Error(message);
 		}
 
 		const data = await response.json();
@@ -220,6 +250,24 @@ export class GmailService extends BaseService {
 		});
 
 		return data.access_token;
+	}
+
+	/**
+	 * Cleanup for a dead Gmail credential: remove the token row so every
+	 * surface reports disconnected, and push-notify the user to reconnect.
+	 * Best-effort — callers still throw the revoked error afterwards.
+	 */
+	private async handleRevokedToken(userId: string): Promise<void> {
+		try {
+			await this.gmailOAuthRepo.deleteByUserId(userId);
+		} catch (error) {
+			console.warn(`Failed to clear revoked Gmail token:`, error);
+		}
+		try {
+			await this.pushService.sendToUser(userId, gmailReconnectMessage());
+		} catch (error) {
+			console.warn(`Failed to notify user about revoked Gmail:`, error);
+		}
 	}
 
 	/**
@@ -291,7 +339,11 @@ export class GmailService extends BaseService {
 			});
 
 			if (response.ok) {
-				return response.json();
+				// Some Gmail endpoints (users.stop, filters.delete) answer
+				// 200 with an empty body — response.json() would throw on
+				// those, so parse defensively.
+				const text = await response.text();
+				return (text ? JSON.parse(text) : {}) as T;
 			}
 
 			const retryable =

@@ -1,6 +1,7 @@
 import { db } from "@/server/db/connection";
 import { inngest } from "@/server/inngest/client";
 import { createContainer } from "@/server/lib/container";
+import { isInvalidGrant } from "@/server/services/gmail.service";
 
 type GmailWatchStartedEvent = {
 	name: "gmail/watch.started";
@@ -55,24 +56,39 @@ export const gmailWatchResync = inngest.createFunction(
 		// Note: cancellation happens between steps, so we sleep between renewals.
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
-			await step.run("renew-watch", async () => {
-				const labelIds = eventLabelIds?.length
-					? eventLabelIds
-					: await container.gmailService.getWatchLabelIds(userId);
-				const response = await container.gmailService.startWatchAndPersist(
-					userId,
-					topicName,
-					labelIds,
-				);
-				await container.gmailOAuthRepo.updateHistoryId(
-					userId,
-					response.historyId,
-				);
-				return {
-					historyId: response.historyId,
-					expiration: response.expiration,
-				};
+			const outcome = await step.run("renew-watch", async () => {
+				try {
+					// No credential (disconnected or cleaned up after revoke) —
+					// end the loop instead of failing forever.
+					const existing = await container.gmailOAuthRepo.findByUserId(userId);
+					if (!existing) return { status: "disconnected" as const };
+
+					const labelIds = eventLabelIds?.length
+						? eventLabelIds
+						: await container.gmailService.getWatchLabelIds(userId);
+					const response = await container.gmailService.startWatchAndPersist(
+						userId,
+						topicName,
+						labelIds,
+					);
+					await container.gmailOAuthRepo.updateHistoryId(
+						userId,
+						response.historyId,
+					);
+					return {
+						status: "renewed" as const,
+						historyId: response.historyId,
+						expiration: response.expiration,
+					};
+				} catch (error) {
+					// Revoked mid-loop: already cleaned up centrally, stop
+					// instead of retrying a dead credential.
+					if (isInvalidGrant(error)) return { status: "revoked" as const };
+					throw error;
+				}
 			});
+
+			if (outcome.status !== "renewed") return outcome;
 
 			await step.sleep("wait-before-renew", interval);
 		}

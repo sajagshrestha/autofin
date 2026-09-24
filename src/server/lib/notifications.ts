@@ -40,6 +40,22 @@ export function singleTransactionMessage(txn: TransactionNotification): {
 }
 
 /**
+ * Gmail access lost (refresh token rejected with invalid_grant):
+ * "Gmail disconnected — reconnect your account in Settings → Gmail to resume automatic imports."
+ */
+export function gmailReconnectMessage(): {
+	title: string;
+	body: string;
+	url: string;
+} {
+	return {
+		title: "Gmail disconnected",
+		body: "Google rejected the saved access — reconnect your account in Settings → Gmail to resume automatic imports.",
+		url: "/settings/gmail",
+	};
+}
+
+/**
  * Batch import summary:
  * "12 transactions imported · Rs. 4,500.00 debited · Rs. 2,000.00 credited · KFC, Daraz +10 more"
  */

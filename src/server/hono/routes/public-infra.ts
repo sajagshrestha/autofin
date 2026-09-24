@@ -5,6 +5,10 @@ import { inngest } from "@/server/inngest/client";
 import { gmailHistoryPoll } from "@/server/inngest/functions/gmail-history-poll";
 import { gmailWatchResync } from "@/server/inngest/functions/gmail-watch-resync";
 import { getContainer } from "@/server/lib/container";
+import {
+	isInvalidGrant,
+	type ProcessNotificationResult,
+} from "@/server/services/gmail.service";
 
 const inngestHandler = serve({
 	client: inngest,
@@ -198,11 +202,30 @@ export const publicInfraRouter = new Hono()
 				});
 			}
 
-			const result = await container.gmailService.processNotification(
-				token.userId,
-				notification,
-				token.historyId,
-			);
+			let result: ProcessNotificationResult;
+			try {
+				result = await container.gmailService.processNotification(
+					token.userId,
+					notification,
+					token.historyId,
+				);
+			} catch (error) {
+				// Dead credential is cleaned up centrally — ack Pub/Sub (no
+				// retry can succeed) and surface the revoked state.
+				if (isInvalidGrant(error)) {
+					return c.json(
+						{
+							success: false,
+							revoked: true as const,
+							message:
+								"Gmail access revoked — user must reconnect before imports resume",
+							messageId: body.message.messageId,
+						},
+						200,
+					);
+				}
+				throw error;
+			}
 
 			if (result.success) {
 				await container.gmailOAuthRepo.updateHistoryIdByEmail(

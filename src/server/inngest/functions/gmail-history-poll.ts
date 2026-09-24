@@ -1,6 +1,7 @@
 import { db } from "@/server/db/connection";
 import { inngest } from "@/server/inngest/client";
 import { createContainer } from "@/server/lib/container";
+import { isInvalidGrant } from "@/server/services/gmail.service";
 
 /**
  * Hourly catch-up poll that re-scans Gmail history for every connected user.
@@ -94,10 +95,20 @@ export const gmailHistoryPoll = inngest.createFunction(
 						errors: processResult.errors,
 					};
 				} catch (error) {
+					// Revoked credentials are already cleaned up centrally
+					// (token dropped, user notified) — just record it, no
+					// retry: nothing can succeed until the user reconnects.
+					const revoked = isInvalidGrant(error);
+					if (revoked) {
+						console.warn(
+							`Gmail token revoked for ${token.emailAddress} — disconnected, awaiting reconnect`,
+						);
+					}
 					return {
 						email: token.emailAddress,
 						processed: 0,
 						failed: 1,
+						revoked,
 						errors: [
 							{
 								messageId: "poll",
