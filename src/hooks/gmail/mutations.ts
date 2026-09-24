@@ -103,7 +103,7 @@ export function useCreateSource() {
 			});
 			return unwrap<{ source: EmailSource }>(res);
 		},
-		onSuccess: () => invalidateSources(queryClient),
+		onSettled: () => invalidateSources(queryClient),
 	});
 }
 
@@ -121,7 +121,7 @@ export function useUpdateSource() {
 			});
 			return unwrap<{ source: EmailSource }>(res);
 		},
-		onSuccess: () => invalidateSources(queryClient),
+		onSettled: () => invalidateSources(queryClient),
 	});
 }
 
@@ -137,6 +137,6 @@ export function useDeleteSource() {
 			});
 			return unwrap<SuccessResult>(res);
 		},
-		onSuccess: () => invalidateSources(queryClient),
+		onSettled: () => invalidateSources(queryClient),
 	});
 }

@@ -275,16 +275,46 @@ export class GmailService extends BaseService {
 		const accessToken = await this.getAccessToken(userId);
 		const url = `${this.gmailApiBaseUrl}${endpoint}`;
 
-		const response = await fetch(url, {
-			...options,
-			headers: {
-				Authorization: `Bearer ${accessToken}`,
-				"Content-Type": "application/json",
-				...options.headers,
-			},
-		});
+		// Retry transient Gmail failures with backoff. 429 is always safe
+		// to retry; other 5xx are only retried for idempotent methods so a
+		// retried POST can never create a duplicate filter or label.
+		const method = (options.method ?? "GET").toUpperCase();
+		const maxAttempts = 3;
+		for (let attempt = 1; ; attempt++) {
+			const response = await fetch(url, {
+				...options,
+				headers: {
+					Authorization: `Bearer ${accessToken}`,
+					"Content-Type": "application/json",
+					...options.headers,
+				},
+			});
 
-		if (!response.ok) {
+			if (response.ok) {
+				return response.json();
+			}
+
+			const retryable =
+				response.status === 429 ||
+				(response.status >= 500 &&
+					response.status <= 599 &&
+					(method === "GET" || method === "DELETE"));
+			if (retryable && attempt < maxAttempts) {
+				const retryAfterHeader = response.headers.get("retry-after");
+				const retryAfterMs =
+					retryAfterHeader === null
+						? Number.NaN
+						: Number(retryAfterHeader) * 1000;
+				const backoffMs = Number.isFinite(retryAfterMs)
+					? Math.min(Math.max(retryAfterMs, 0), 10000)
+					: Math.min(500 * 2 ** (attempt - 1), 4000);
+				console.warn(
+					`Gmail API ${response.status} on ${method} ${endpoint} — retrying (${attempt}/${maxAttempts - 1}) after ${backoffMs}ms`,
+				);
+				await new Promise((resolve) => setTimeout(resolve, backoffMs));
+				continue;
+			}
+
 			const error = await response
 				.json()
 				.catch(() => ({ error: response.statusText }));
@@ -292,8 +322,6 @@ export class GmailService extends BaseService {
 				`Gmail API error: ${response.status} ${response.statusText} - ${JSON.stringify(error)}`,
 			);
 		}
-
-		return response.json();
 	}
 
 	/**
@@ -1072,6 +1100,25 @@ export class GmailService extends BaseService {
 	}
 
 	/**
+	 * Find an existing Gmail filter by sender address. Used to adopt filters
+	 * Gmail refuses to recreate ("Filter already exists") — e.g. created
+	 * manually or orphaned by an earlier partial sync — instead of failing.
+	 */
+	async findFilterByFrom(
+		userId: string,
+		email: string,
+	): Promise<{ id: string } | null> {
+		const response = await this.gmailRequest<{
+			filter?: Array<{ id: string; criteria?: { from?: string } }>;
+		}>(userId, "/users/me/settings/filters", { method: "GET" });
+		const wanted = email.trim().toLowerCase();
+		const match = (response.filter ?? []).find(
+			(filter) => (filter.criteria?.from ?? "").trim().toLowerCase() === wanted,
+		);
+		return match ? { id: match.id } : null;
+	}
+
+	/**
 	 * Full reconcile of Gmail sender filters from the user's sources: delete
 	 * every previously created filter (legacy ids plus per-source ids), then
 	 * create one filter per source email and persist the new ids.
@@ -1123,13 +1170,34 @@ export class GmailService extends BaseService {
 		// sender and keep every ID in `autofinFilterIds`.
 		const filterIds: string[] = [];
 		for (const source of sourceList) {
-			const filter = await this.createFilter(
-				userId,
-				{ from: source.email },
-				labelIds,
-			);
-			filterIds.push(filter.id);
-			await this.sourceRepo.setGmailFilterId(userId, source.id, filter.id);
+			let filterId: string;
+			try {
+				const filter = await this.createFilter(
+					userId,
+					{ from: source.email },
+					labelIds,
+				);
+				filterId = filter.id;
+			} catch (error) {
+				// An identical filter already exists outside our tracking
+				// (created manually or orphaned earlier) — adopt it instead of
+				// failing so it becomes managed going forward.
+				if (
+					error instanceof Error &&
+					error.message.includes("Filter already exists")
+				) {
+					const existing = await this.findFilterByFrom(userId, source.email);
+					if (!existing) throw error;
+					console.log(
+						`Adopting existing Gmail filter ${existing.id} for ${source.email}`,
+					);
+					filterId = existing.id;
+				} else {
+					throw error;
+				}
+			}
+			filterIds.push(filterId);
+			await this.sourceRepo.setGmailFilterId(userId, source.id, filterId);
 		}
 
 		await this.gmailOAuthRepo.setFilterConfig(userId, {
