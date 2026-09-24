@@ -1074,9 +1074,9 @@ function LandingPage() {
 			<main id="home-content">
 				<section className="mx-auto w-[min(1200px,calc(100%-96px))] pb-[72px] pt-[88px] max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)] max-md:pb-9 max-md:pt-11">
 					<div className="relative grid grid-cols-[1.2fr_1fr] items-center gap-[clamp(40px,5vw,80px)] max-lg:gap-[35px] max-md:grid-cols-1 max-md:gap-10">
-						<div>
+						<div className="max-md:flex max-md:flex-col max-md:items-center max-md:text-center">
 							<motion.h1
-								className="relative text-[clamp(60px,7vw,100px)] leading-none tracking-[-0.065em] text-balance [font-weight:550] max-lg:text-[64px] max-md:text-[clamp(42px,13vw,78px)]"
+								className="relative text-[clamp(60px,7vw,100px)] leading-none tracking-[-0.065em] text-balance [font-weight:550] max-lg:text-[64px] max-md:text-[clamp(32px,11vw,56px)]"
 								initial={{ opacity: 0, y: 16 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
@@ -1098,7 +1098,7 @@ function LandingPage() {
 									ease: [0.22, 1, 0.36, 1],
 								}}
 							>
-								<div className="mt-8 flex flex-wrap items-center gap-5 max-[359px]:gap-[14px]">
+								<div className="mt-8 flex flex-wrap items-center gap-5 max-[359px]:gap-[14px] max-md:justify-center">
 									<AccessButton />
 									<TextLink href="#how-it-works">
 										See how it works{" "}
