@@ -6,6 +6,7 @@ import type { CreateLoanInput, Loan } from "./types";
 
 interface UpdateLoanInput {
 	id: string;
+	counterpartyId?: string;
 	counterpartyName?: string;
 	principalAmount?: number;
 	dueDate?: string | null;

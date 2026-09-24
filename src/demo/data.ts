@@ -91,6 +91,7 @@ export function createDemoData(now = new Date()) {
 		{
 			id: "demo-loan",
 			direction: "given",
+			counterparty: { id: "demo-counterparty", name: "Alex" },
 			counterpartyName: "Alex",
 			principalAmount: "10000",
 			currency: "NPR",

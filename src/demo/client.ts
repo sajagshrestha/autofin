@@ -77,7 +77,28 @@ export function createDemoFetch(
 		}
 		if (path === "/api/categories")
 			return Response.json({ categories: data.categories });
+		if (path === "/api/sources")
+			return Response.json({
+				sources: [],
+			});
 		if (path === "/api/loans") return Response.json({ loans: data.loans });
+		if (path === "/api/counterparties") {
+			const seen = new Map<string, string>();
+			for (const loan of data.loans) {
+				if (!seen.has(loan.counterparty.id))
+					seen.set(loan.counterparty.id, loan.counterparty.name);
+			}
+			return Response.json({
+				counterparties: [...seen].map(([id, name]) => ({
+					id,
+					name,
+					notes: null,
+					totalLoans: data.loans.filter((l) => l.counterparty.id === id).length,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+				})),
+			});
+		}
 		const id = decodeURIComponent(path.split("/").pop() ?? "");
 		if (path.startsWith("/api/transactions/")) {
 			const transaction = data.transactions.find((t) => t.id === id);

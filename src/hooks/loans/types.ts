@@ -1,10 +1,20 @@
 export type LoanDirection = "given" | "taken";
 export type LoanStatus = "outstanding" | "settled" | "overpaid";
 
+export interface LoanCounterparty {
+	id: string;
+	name: string;
+	notes: string | null;
+	totalLoans: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
 /** A tracked loan with derived settlement stats (amounts are NPR). */
 export interface Loan {
 	id: string;
 	direction: LoanDirection;
+	counterparty: { id: string; name: string };
 	counterpartyName: string;
 	principalAmount: string;
 	currency: string | null;
@@ -34,7 +44,10 @@ export interface LoanSettlement {
 }
 
 export interface CreateLoanInput {
-	counterpartyName: string;
+	/** Existing counterparty … */
+	counterpartyId?: string;
+	/** … or a name to match-or-create. Exactly one is required. */
+	counterpartyName?: string;
 	direction: LoanDirection;
 	principalAmount?: number;
 	issuedDate?: string;

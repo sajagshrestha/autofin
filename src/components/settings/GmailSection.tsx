@@ -4,13 +4,14 @@ import {
 	Filter,
 	Loader2,
 	Mail,
+	Pencil,
+	Plus,
 	Radio,
 	RefreshCw,
 	Trash2,
-	X,
 	XCircle,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,54 +30,34 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import {
-	useDeleteSenderFilters,
+	useCreateSource,
+	useDeleteSource,
 	useDisconnectGmailAccount,
-	useSetSenderFilters,
 	useStartGmailWatch,
 	useStopGmailWatch,
+	useUpdateSource,
 } from "@/hooks/gmail/mutations";
 import {
+	type EmailSource,
 	useGetGmailAuthorizationUrl,
 	useGetGmailConnectionStatus,
 	useGetGmailWatchStatus,
-	useGetSenderFilters,
+	useGetSources,
 } from "@/hooks/gmail/queries";
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function parseEmailsFromTextarea(text: string): string[] {
-	return text
-		.split("\n")
-		.map((line) => line.trim().toLowerCase())
-		.filter((line) => line.length > 0);
-}
-
-function validateEmails(emails: string[]): {
-	valid: string[];
-	invalid: string[];
-} {
-	const valid: string[] = [];
-	const invalid: string[] = [];
-	for (const email of emails) {
-		if (EMAIL_REGEX.test(email)) {
-			valid.push(email);
-		} else {
-			invalid.push(email);
-		}
-	}
-	return { valid, invalid };
-}
+export const SOURCE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function GmailSection() {
-	const filterEmailsId = useId();
-	const [filterInput, setFilterInput] = useState("");
 	const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 	const [confirmStopWatch, setConfirmStopWatch] = useState(false);
-	const [confirmClearFilters, setConfirmClearFilters] = useState(false);
+	const [sourceDialog, setSourceDialog] = useState<
+		{ mode: "create" } | { mode: "edit"; source: EmailSource } | null
+	>(null);
+	const [deleteTarget, setDeleteTarget] = useState<EmailSource | null>(null);
 
 	const { data: authUrlData, isLoading: isAuthUrlLoading } =
 		useGetGmailAuthorizationUrl();
@@ -86,34 +67,24 @@ export function GmailSection() {
 		refetch: refetchStatus,
 	} = useGetGmailConnectionStatus();
 	const {
-		data: senderFilters,
-		isLoading: isFiltersLoading,
-		isFetched: isFiltersFetched,
-	} = useGetSenderFilters({ enabled: connectionStatus?.authorized ?? false });
+		data: sourcesData,
+		isLoading: isSourcesLoading,
+		isFetched: isSourcesFetched,
+	} = useGetSources({ enabled: connectionStatus?.authorized ?? false });
 	const { data: watchStatus, refetch: refetchWatchStatus } =
 		useGetGmailWatchStatus({
 			enabled: connectionStatus?.authorized ?? false,
 		});
 
 	const disconnectMutation = useDisconnectGmailAccount();
-	const setFiltersMutation = useSetSenderFilters();
-	const deleteFiltersMutation = useDeleteSenderFilters();
+	const deleteSourceMutation = useDeleteSource();
 	const startWatchMutation = useStartGmailWatch();
 	const stopWatchMutation = useStopGmailWatch();
 
 	const isConnected = connectionStatus?.authorized ?? false;
 	const isLoading = isAuthUrlLoading || isStatusLoading;
-	const emails = senderFilters?.emails ?? [];
-	const hasFilters = emails.length > 0;
-
-	// Sync filter input when data loads (only on first fetch to avoid overwriting user edits)
-	const displayFilterValue =
-		filterInput !== "" ? filterInput : emails.join("\n");
-
-	// Live validation of what the user has typed (only while actively editing)
-	const hasEdits = filterInput !== "";
-	const liveParsed = hasEdits ? parseEmailsFromTextarea(filterInput) : [];
-	const liveValid = hasEdits ? validateEmails(liveParsed) : null;
+	const sources = sourcesData?.sources ?? [];
+	const hasFilters = sources.length > 0;
 
 	const isWatchActive =
 		(watchStatus?.hasWatch && !watchStatus.isExpired) ?? false;
@@ -129,7 +100,6 @@ export function GmailSection() {
 			onSuccess: () => {
 				setConfirmDisconnect(false);
 				refetchStatus();
-				setFilterInput("");
 				toast.success("Google account disconnected");
 			},
 			onError: (error) => {
@@ -140,64 +110,22 @@ export function GmailSection() {
 		});
 	};
 
-	const handleSaveFilters = () => {
-		const { valid, invalid } = validateEmails(
-			parseEmailsFromTextarea(displayFilterValue),
-		);
-
-		if (invalid.length > 0) {
-			toast.error("Invalid email addresses", {
-				description: invalid.join(", "),
-			});
-			return;
-		}
-
-		setFiltersMutation.mutate(
-			{ emails: valid },
+	const handleDeleteSource = () => {
+		if (!deleteTarget) return;
+		deleteSourceMutation.mutate(
+			{ id: deleteTarget.id },
 			{
 				onSuccess: () => {
-					setFilterInput("");
-					toast.success("Filter list saved");
+					setDeleteTarget(null);
+					toast.success("Source removed");
 				},
 				onError: (error) => {
-					toast.error("Failed to save filters", {
+					toast.error("Failed to remove source", {
 						description: error.message,
 					});
 				},
 			},
 		);
-	};
-
-	const handleRemoveEmail = (email: string) => {
-		const next = emails.filter((e) => e !== email);
-		setFiltersMutation.mutate(
-			{ emails: next },
-			{
-				onSuccess: () => {
-					toast.success("Filter removed");
-				},
-				onError: (error) => {
-					toast.error("Failed to remove filter", {
-						description: error.message,
-					});
-				},
-			},
-		);
-	};
-
-	const handleClearFilters = () => {
-		deleteFiltersMutation.mutate(undefined, {
-			onSuccess: () => {
-				setConfirmClearFilters(false);
-				setFilterInput("");
-				toast.success("All filters cleared");
-			},
-			onError: (error) => {
-				toast.error("Failed to clear filters", {
-					description: error.message,
-				});
-			},
-		});
 	};
 
 	const handleStartWatching = () => {
@@ -263,7 +191,7 @@ export function GmailSection() {
 					step={2}
 					complete={step2Complete}
 					current={step2Current}
-					label="Set Filters"
+					label="Add Sources"
 				/>
 				<StepConnector active={step2Complete} />
 				<StepCircle
@@ -366,7 +294,7 @@ export function GmailSection() {
 				</CardContent>
 			</Card>
 
-			{/* Step 2: Set Filter List */}
+			{/* Step 2: Email sources */}
 			<Card
 				className={`border-l-4 transition-shadow ${
 					step2Complete
@@ -381,17 +309,17 @@ export function GmailSection() {
 						<div className="flex items-center gap-2 space-y-1">
 							<Filter className="h-5 w-5 shrink-0" />
 							<div>
-								<CardTitle>Step 2: Set Filter List</CardTitle>
+								<CardTitle>Step 2: Add email sources</CardTitle>
 								<CardDescription>
-									Add sender email addresses to monitor (e.g. bank alerts,
-									noreply@yourbank.com). One per line.
+									Add the bank alert senders to monitor. A Gmail filter is
+									created for each source.
 								</CardDescription>
 							</div>
 						</div>
 						{step2Complete && (
 							<Badge variant="green">
 								<CheckCircle2 className="mr-1 h-3 w-3" />
-								{emails.length} filter{emails.length !== 1 ? "s" : ""}
+								{sources.length} source{sources.length !== 1 ? "s" : ""}
 							</Badge>
 						)}
 					</div>
@@ -399,101 +327,67 @@ export function GmailSection() {
 				<CardContent>
 					{!isConnected ? (
 						<p className="py-4 text-center text-sm text-muted-foreground">
-							Connect Gmail first to set up filters.
+							Connect Gmail first to add sources.
 						</p>
-					) : isFiltersLoading && !isFiltersFetched ? (
+					) : isSourcesLoading && !isSourcesFetched ? (
 						<div className="flex items-center justify-center py-8">
 							<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
 						</div>
 					) : (
 						<div className="space-y-4">
-							{hasFilters && (
-								<div className="flex flex-wrap gap-2">
-									{emails.map((email) => (
-										<Badge
-											key={email}
-											variant="gray"
-											contrast="low"
-											className="py-1 pr-1 pl-2"
+							{sources.length === 0 ? (
+								<p className="py-2 text-center text-sm text-muted-foreground">
+									No sources yet — add your first bank alert sender below.
+								</p>
+							) : (
+								<ul className="space-y-2">
+									{sources.map((source) => (
+										<li
+											key={source.id}
+											className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
 										>
-											{email}
-											<button
-												type="button"
-												aria-label={`Remove ${email}`}
-												onClick={() => handleRemoveEmail(email)}
-												disabled={setFiltersMutation.isPending}
-												className="rounded-full p-0.5 transition-colors hover:bg-ds-red-100 hover:text-ds-red-1000 disabled:opacity-50"
-											>
-												<X className="h-3 w-3" />
-											</button>
-										</Badge>
+											<div className="min-w-0">
+												<p className="truncate text-sm font-medium">
+													{source.name}
+												</p>
+												<p className="truncate text-xs text-muted-foreground">
+													{source.email}
+												</p>
+											</div>
+											<div className="flex shrink-0 items-center gap-1">
+												<Button
+													variant="ghost"
+													size="sm"
+													aria-label={`Edit ${source.name}`}
+													onClick={() =>
+														setSourceDialog({ mode: "edit", source })
+													}
+												>
+													<Pencil className="h-4 w-4" />
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													aria-label={`Remove ${source.name}`}
+													className="text-ds-red-700 hover:text-ds-red-800"
+													onClick={() => setDeleteTarget(source)}
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											</div>
+										</li>
 									))}
-								</div>
+								</ul>
 							)}
 
-							<div className="space-y-2">
-								<Label htmlFor={filterEmailsId}>
-									Sender emails (one per line)
-								</Label>
-								<Textarea
-									id={filterEmailsId}
-									placeholder={"alerts@bank.com\nnoreply@anotherbank.com"}
-									rows={5}
-									value={displayFilterValue}
-									onChange={(e) => setFilterInput(e.target.value)}
-									className="font-mono text-sm"
-								/>
-								{liveValid && liveValid.invalid.length > 0 && (
-									<p className="flex items-center gap-1 text-xs font-medium text-ds-red-1000">
-										<AlertTriangle className="h-3.5 w-3.5" />
-										{liveValid.invalid.length} invalid email
-										{liveValid.invalid.length !== 1 ? "s" : ""}:{" "}
-										{liveValid.invalid.join(", ")}
-									</p>
-								)}
-								{liveValid &&
-									liveValid.invalid.length === 0 &&
-									liveParsed.length > 0 && (
-										<p className="text-xs text-muted-foreground">
-											{liveValid.valid.length} valid email
-											{liveValid.valid.length !== 1 ? "s" : ""} ready to save.
-										</p>
-									)}
-							</div>
-
-							<div className="flex gap-3">
-								<Button
-									onClick={handleSaveFilters}
-									disabled={
-										!hasEdits ||
-										(liveValid?.invalid.length ?? 0) > 0 ||
-										setFiltersMutation.isPending
-									}
-									className="flex-1"
-								>
-									{setFiltersMutation.isPending ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : null}
-									Save Filters
-								</Button>
-								{hasFilters && (
-									<Button
-										variant="outline"
-										onClick={() => setConfirmClearFilters(true)}
-										disabled={
-											deleteFiltersMutation.isPending ||
-											setFiltersMutation.isPending
-										}
-									>
-										{deleteFiltersMutation.isPending ? (
-											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										) : (
-											<Trash2 className="mr-2 h-4 w-4" />
-										)}
-										Clear All
-									</Button>
-								)}
-							</div>
+							<Button
+								variant="outline"
+								className="w-full"
+								onClick={() => setSourceDialog({ mode: "create" })}
+							>
+								<Plus className="mr-2 h-4 w-4" />
+								Add source
+							</Button>
 						</div>
 					)}
 				</CardContent>
@@ -616,35 +510,48 @@ export function GmailSection() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Confirm: Clear filters */}
-			<Dialog open={confirmClearFilters} onOpenChange={setConfirmClearFilters}>
+			{/* Add / edit source */}
+			{sourceDialog && (
+				<SourceDialog
+					key={sourceDialog.mode === "edit" ? sourceDialog.source.id : "new"}
+					initial={sourceDialog.mode === "edit" ? sourceDialog.source : null}
+					onClose={() => setSourceDialog(null)}
+				/>
+			)}
+
+			{/* Confirm: Remove source */}
+			<Dialog
+				open={!!deleteTarget}
+				onOpenChange={(o) => !o && setDeleteTarget(null)}
+			>
 				<DialogContent className="sm:max-w-md">
 					<DialogHeader>
-						<DialogTitle>Clear all filters?</DialogTitle>
+						<DialogTitle>Remove source?</DialogTitle>
 						<DialogDescription>
-							This removes all {emails.length} sender email
-							{emails.length !== 1 ? "s" : ""} from your monitoring list.
+							This stops monitoring{" "}
+							<span className="font-medium">{deleteTarget?.email}</span> and
+							removes its Gmail filter. Existing transactions are kept.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
 						<Button
 							variant="outline"
-							onClick={() => setConfirmClearFilters(false)}
-							disabled={deleteFiltersMutation.isPending}
+							onClick={() => setDeleteTarget(null)}
+							disabled={deleteSourceMutation.isPending}
 						>
 							Cancel
 						</Button>
 						<Button
 							variant="destructive"
-							onClick={handleClearFilters}
-							disabled={deleteFiltersMutation.isPending}
+							onClick={handleDeleteSource}
+							disabled={deleteSourceMutation.isPending}
 						>
-							{deleteFiltersMutation.isPending ? (
+							{deleteSourceMutation.isPending ? (
 								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 							) : (
 								<Trash2 className="mr-2 h-4 w-4" />
 							)}
-							Clear All
+							{deleteSourceMutation.isPending ? "Removing…" : "Remove"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -684,6 +591,158 @@ export function GmailSection() {
 				</DialogContent>
 			</Dialog>
 		</div>
+	);
+}
+
+function SourceDialog({
+	initial,
+	onClose,
+}: {
+	initial: EmailSource | null;
+	onClose: () => void;
+}) {
+	const [name, setName] = useState(initial?.name ?? "");
+	const [email, setEmail] = useState(initial?.email ?? "");
+	const [identifier, setIdentifier] = useState(initial?.identifier ?? "");
+	const [aliases, setAliases] = useState((initial?.aliases ?? []).join(", "));
+	const [error, setError] = useState<string | null>(null);
+	const createMutation = useCreateSource();
+	const updateMutation = useUpdateSource();
+	const isPending = createMutation.isPending || updateMutation.isPending;
+
+	const submit = () => {
+		setError(null);
+		if (!name.trim()) {
+			setError("Bank name is required");
+			return;
+		}
+		if (!SOURCE_EMAIL_REGEX.test(email.trim().toLowerCase())) {
+			setError("Enter a valid email address");
+			return;
+		}
+		const input = {
+			name: name.trim(),
+			email: email.trim().toLowerCase(),
+			identifier: identifier.trim() || null,
+			aliases: aliases
+				.split(",")
+				.map((a) => a.trim())
+				.filter((a) => a.length > 0),
+		};
+		if (initial) {
+			updateMutation.mutate(
+				{ id: initial.id, ...input },
+				{
+					onSuccess: () => {
+						toast.success("Source updated");
+						onClose();
+					},
+					onError: (err) => {
+						toast.error("Failed to update source", {
+							description: err.message,
+						});
+					},
+				},
+			);
+		} else {
+			createMutation.mutate(input, {
+				onSuccess: () => {
+					toast.success("Source added");
+					onClose();
+				},
+				onError: (err) => {
+					toast.error("Failed to add source", {
+						description: err.message,
+					});
+				},
+			});
+		}
+	};
+
+	return (
+		<Dialog open onOpenChange={(o) => !o && onClose()}>
+			<DialogContent className="sm:max-w-md">
+				<DialogHeader>
+					<DialogTitle>{initial ? "Edit source" : "Add source"}</DialogTitle>
+					<DialogDescription>
+						{initial
+							? "Update the bank name, email, or account identifier."
+							: "Monitor a new bank alert sender. A Gmail filter is created for it."}
+					</DialogDescription>
+				</DialogHeader>
+				<div className="space-y-4 py-1">
+					{error && (
+						<div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+							{error}
+						</div>
+					)}
+					<div className="space-y-2">
+						<Label htmlFor="source-name">Bank name</Label>
+						<Input
+							id="source-name"
+							placeholder="e.g. Nabil Bank"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="source-email">Sender email</Label>
+						<Input
+							id="source-email"
+							type="email"
+							placeholder="alerts@nabilbank.com"
+							value={email}
+							onChange={(e) => setEmail(e.target.value)}
+							className="font-mono text-sm"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="source-identifier">
+							Account identifier{" "}
+							<span className="text-muted-foreground">(optional)</span>
+						</Label>
+						<Input
+							id="source-identifier"
+							placeholder="e.g. last digits of the account"
+							value={identifier}
+							onChange={(e) => setIdentifier(e.target.value)}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="source-aliases">
+							Alternate names{" "}
+							<span className="text-muted-foreground">
+								(optional, comma-separated)
+							</span>
+						</Label>
+						<Input
+							id="source-aliases"
+							placeholder="e.g. nBank, Nabil"
+							value={aliases}
+							onChange={(e) => setAliases(e.target.value)}
+						/>
+						<p className="text-xs text-muted-foreground">
+							Other spellings the bank uses — matched to transactions at import.
+						</p>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" onClick={onClose} disabled={isPending}>
+						Cancel
+					</Button>
+					<Button onClick={submit} disabled={isPending}>
+						{isPending ? (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						) : null}
+						{isPending
+							? "Syncing Gmail filters…"
+							: initial
+								? "Save changes"
+								: "Add source"}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }
 

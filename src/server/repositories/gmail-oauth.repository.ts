@@ -238,15 +238,9 @@ export class GmailOAuthRepository extends BaseRepository {
 	}
 
 	/**
-	 * Get filter sender emails for a user
-	 */
-	async getFilterSenderEmails(userId: string): Promise<string[]> {
-		const token = await this.findByUserId(userId);
-		return (token?.filterSenderEmails ?? []) as string[];
-	}
-
-	/**
-	 * Set filter config (filter IDs and sender emails) for a user
+	 * Set filter config (filter IDs and sender emails) for a user.
+	 * Sync bookkeeping for the sources-driven Gmail filters — the sources
+	 * table is the user-facing source of truth.
 	 */
 	async setFilterConfig(
 		userId: string,

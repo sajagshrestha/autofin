@@ -3,6 +3,10 @@ import { singleTransactionMessage } from "@/server/lib/notifications";
 import { localToUtc } from "@/server/lib/timezone";
 import type { CategoryRepository } from "@/server/repositories/category.repository";
 import type { GmailOAuthRepository } from "@/server/repositories/gmail-oauth.repository";
+import {
+	parseFromHeader,
+	type SourceRepository,
+} from "@/server/repositories/source.repository";
 import type { TransactionRepository } from "@/server/repositories/transaction.repository";
 import type { UserRepository } from "@/server/repositories/user.repository";
 import type { UserPreferenceRepository } from "@/server/repositories/user-preference.repository";
@@ -139,6 +143,7 @@ export class GmailService extends BaseService {
 		private readonly transactionExtractor: TransactionExtractorService,
 		private readonly discordService: DiscordService,
 		private readonly pushService: PushService,
+		private readonly sourceRepo: SourceRepository,
 	) {
 		super(db);
 	}
@@ -588,6 +593,27 @@ export class GmailService extends BaseService {
 								}
 							}
 
+							// Link the email source (bank) when a matching source
+							// exists: sender address first, then the sender display
+							// name and AI-extracted bank name (incl. aliases).
+							const fromParts = parseFromHeader(headers.from);
+							let sourceId: string | null = null;
+							try {
+								const source = await this.sourceRepo.resolveForTransaction(
+									userId,
+									{
+										email: fromParts.address,
+										names: [fromParts.displayName, txn.bankName],
+									},
+								);
+								sourceId = source?.id ?? null;
+							} catch (sourceError) {
+								console.warn(
+									"Source resolution failed; saving without source:",
+									sourceError,
+								);
+							}
+
 							try {
 								const created = await this.transactionRepo.create({
 									id: crypto.randomUUID(),
@@ -599,6 +625,7 @@ export class GmailService extends BaseService {
 									merchant: txn.merchant,
 									accountNumber: txn.accountLastFour,
 									bankName: txn.bankName,
+									sourceId,
 									transactionDate,
 									remarks: txn.remarks,
 									emailId: messageId,
@@ -1045,68 +1072,71 @@ export class GmailService extends BaseService {
 	}
 
 	/**
-	 * Set sender filter emails: delete existing filters, create new one, store config.
-	 * Ensures Autofin label exists before creating the filter, so the filter can apply it to matching emails.
+	 * Full reconcile of Gmail sender filters from the user's sources: delete
+	 * every previously created filter (legacy ids plus per-source ids), then
+	 * create one filter per source email and persist the new ids.
+	 * Ensures the Autofin label exists before creating filters so they can
+	 * apply it to matching emails. Idempotent — run after every sources
+	 * mutation.
 	 */
-	async setSenderFilterEmails(
+	async syncSourceFilters(
 		userId: string,
-		emails: string[],
-	): Promise<{ filterId: string }> {
-		if (emails.length === 0) {
-			const existingFilterIds =
-				await this.gmailOAuthRepo.getAutofinFilterIds(userId);
-			for (const filterId of existingFilterIds) {
+	): Promise<{ filterIds: string[]; emails: string[] }> {
+		const [sourceList, legacyFilterIds] = await Promise.all([
+			this.sourceRepo.findAllForUser(userId),
+			this.gmailOAuthRepo.getAutofinFilterIds(userId),
+		]);
+
+		const knownIds = new Set([
+			...legacyFilterIds,
+			...sourceList
+				.map((source) => source.gmailFilterId)
+				.filter((id): id is string => id !== null),
+		]);
+		// Deletes are independent and best-effort — run them concurrently
+		// instead of sequentially to cut Gmail roundtrips off the wall time.
+		await Promise.all(
+			[...knownIds].map(async (filterId) => {
 				try {
 					await this.deleteFilter(userId, filterId);
 				} catch (err) {
 					console.warn(`Failed to delete filter ${filterId}:`, err);
 				}
-			}
+			}),
+		);
+
+		const emails = sourceList.map((source) => source.email);
+		if (sourceList.length === 0) {
 			await this.gmailOAuthRepo.setFilterConfig(userId, {
 				filterIds: [],
 				senderEmails: [],
 			});
-			return { filterId: "" };
+			return { filterIds: [], emails };
 		}
 
-		// Ensure Autofin label exists before creating filter (create if not already configured)
+		// Ensure Autofin label exists before creating filters (create if not already configured)
 		const labelIds = await this.getWatchLabelIds(userId);
 
-		const existingFilterIds =
-			await this.gmailOAuthRepo.getAutofinFilterIds(userId);
-		for (const filterId of existingFilterIds) {
-			try {
-				await this.deleteFilter(userId, filterId);
-			} catch (err) {
-				console.warn(`Failed to delete filter ${filterId}:`, err);
-			}
-		}
-
-		// Create one filter per sender. Joining all senders into a single
+		// Create one filter per source. Joining all senders into a single
 		// `from:a OR from:b ...` query blows past Gmail's filter query length
 		// limit once a few addresses are configured, so we use a filter per
 		// sender and keep every ID in `autofinFilterIds`.
 		const filterIds: string[] = [];
-		for (const email of emails) {
-			const trimmed = email.trim();
-			if (!trimmed) continue;
+		for (const source of sourceList) {
 			const filter = await this.createFilter(
 				userId,
-				{ from: trimmed },
+				{ from: source.email },
 				labelIds,
 			);
 			filterIds.push(filter.id);
-		}
-
-		if (filterIds.length === 0) {
-			return { filterId: "" };
+			await this.sourceRepo.setGmailFilterId(userId, source.id, filter.id);
 		}
 
 		await this.gmailOAuthRepo.setFilterConfig(userId, {
 			filterIds,
 			senderEmails: emails,
 		});
-		return { filterId: filterIds[0] };
+		return { filterIds, emails };
 	}
 
 	/**

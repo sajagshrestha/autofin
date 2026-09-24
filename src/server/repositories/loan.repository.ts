@@ -35,10 +35,7 @@ export class LoanRepository extends BaseRepository {
 		userId: string,
 		id: string,
 		data: Partial<
-			Pick<
-				NewLoan,
-				"counterpartyName" | "principalAmount" | "dueDate" | "notes"
-			>
+			Pick<NewLoan, "counterpartyId" | "principalAmount" | "dueDate" | "notes">
 		>,
 	): Promise<Loan | null> {
 		const rows = await this.db

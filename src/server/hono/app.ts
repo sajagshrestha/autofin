@@ -9,6 +9,7 @@ import {
 import { authRouter } from "@/server/hono/routes/auth";
 import { categoriesRouter } from "@/server/hono/routes/categories";
 import { chatRouter } from "@/server/hono/routes/chat";
+import { counterpartiesRouter } from "@/server/hono/routes/counterparties";
 import { gmailRouter } from "@/server/hono/routes/gmail";
 import { integrationsRouter } from "@/server/hono/routes/integrations";
 import { loansRouter } from "@/server/hono/routes/loans";
@@ -16,6 +17,7 @@ import { mcpRouter } from "@/server/hono/routes/mcp";
 import { preferencesRouter } from "@/server/hono/routes/preferences";
 import { publicInfraRouter } from "@/server/hono/routes/public-infra";
 import { pushRouter } from "@/server/hono/routes/push";
+import { sourcesRouter } from "@/server/hono/routes/sources";
 import { statementsRouter } from "@/server/hono/routes/statements";
 import { transactionsRouter } from "@/server/hono/routes/transactions";
 
@@ -32,6 +34,8 @@ const api = new Hono()
 	.route("/transactions", transactionsRouter)
 	.route("/categories", categoriesRouter)
 	.route("/loans", loansRouter)
+	.route("/counterparties", counterpartiesRouter)
+	.route("/sources", sourcesRouter)
 	.route("/chat", chatRouter)
 	.route("/statements", statementsRouter)
 	.route("/integrations", integrationsRouter)

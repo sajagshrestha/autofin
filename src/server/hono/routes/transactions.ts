@@ -341,6 +341,21 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			transactionDate,
 		});
 
+		// Link the email source (bank) when a matching source exists: SMS
+		// sender first, then the AI-extracted bank name (incl. aliases).
+		let sourceId: string | null = null;
+		try {
+			const source = await container.sourceRepo.resolveForTransaction(user.id, {
+				names: [body.sender, txn.bankName],
+			});
+			sourceId = source?.id ?? null;
+		} catch (sourceError) {
+			console.warn(
+				"Source resolution failed; saving without source:",
+				sourceError,
+			);
+		}
+
 		const created = await container.transactionRepo.create({
 			id: crypto.randomUUID(),
 			userId: user.id,
@@ -351,6 +366,7 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			merchant: txn.merchant,
 			accountNumber: txn.accountLastFour,
 			bankName: txn.bankName,
+			sourceId,
 			transactionDate,
 			remarks: txn.remarks,
 			aiConfidence: txn.confidence.toString(),

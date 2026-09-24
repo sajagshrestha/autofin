@@ -22,6 +22,8 @@ export interface Transaction {
 	notes: string | null;
 	/** Set when this transaction is the origin of / a repayment on a tracked loan */
 	loanId?: string | null;
+	/** Email source (bank) this transaction was imported from, when known */
+	sourceId?: string | null;
 	emailId?: string | null;
 	rawEmailContent?: string | null;
 	aiConfidence?: string | null;

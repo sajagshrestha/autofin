@@ -6,12 +6,16 @@ import type { Database } from "@/server/db/connection";
 import { db as appDb } from "@/server/db/connection";
 import type { CategoryRepository } from "@/server/repositories/category.repository";
 import { CategoryRepository as CategoryRepositoryImpl } from "@/server/repositories/category.repository";
+import type { CounterpartyRepository } from "@/server/repositories/counterparty.repository";
+import { CounterpartyRepository as CounterpartyRepositoryImpl } from "@/server/repositories/counterparty.repository";
 import type { GmailOAuthRepository } from "@/server/repositories/gmail-oauth.repository";
 import { GmailOAuthRepository as GmailOAuthRepositoryImpl } from "@/server/repositories/gmail-oauth.repository";
 import type { LoanRepository } from "@/server/repositories/loan.repository";
 import { LoanRepository as LoanRepositoryImpl } from "@/server/repositories/loan.repository";
 import type { PushSubscriptionRepository } from "@/server/repositories/push-subscription.repository";
 import { PushSubscriptionRepository as PushSubscriptionRepositoryImpl } from "@/server/repositories/push-subscription.repository";
+import type { SourceRepository } from "@/server/repositories/source.repository";
+import { SourceRepository as SourceRepositoryImpl } from "@/server/repositories/source.repository";
 import type { TransactionRepository } from "@/server/repositories/transaction.repository";
 import { TransactionRepository as TransactionRepositoryImpl } from "@/server/repositories/transaction.repository";
 import type { UserRepository } from "@/server/repositories/user.repository";
@@ -42,6 +46,8 @@ export interface Container {
 	readonly userPreferenceRepo: UserPreferenceRepository;
 	readonly gmailOAuthRepo: GmailOAuthRepository;
 	readonly categoryRepo: CategoryRepository;
+	readonly counterpartyRepo: CounterpartyRepository;
+	readonly sourceRepo: SourceRepository;
 	readonly loanRepo: LoanRepository;
 	readonly pushSubscriptionRepo: PushSubscriptionRepository;
 	readonly transactionRepo: TransactionRepository;
@@ -67,6 +73,9 @@ export function createContainer(db: Database): Container {
 		new UserPreferenceRepositoryImpl(db);
 	const gmailOAuthRepo: GmailOAuthRepository = new GmailOAuthRepositoryImpl(db);
 	const categoryRepo: CategoryRepository = new CategoryRepositoryImpl(db);
+	const counterpartyRepo: CounterpartyRepository =
+		new CounterpartyRepositoryImpl(db);
+	const sourceRepo: SourceRepository = new SourceRepositoryImpl(db);
 	const loanRepo: LoanRepository = new LoanRepositoryImpl(db);
 	const pushSubscriptionRepo: PushSubscriptionRepository =
 		new PushSubscriptionRepositoryImpl(db);
@@ -92,6 +101,7 @@ export function createContainer(db: Database): Container {
 		transactionExtractor,
 		discordService,
 		pushService,
+		sourceRepo,
 	);
 	return {
 		db,
@@ -99,6 +109,8 @@ export function createContainer(db: Database): Container {
 		userPreferenceRepo,
 		gmailOAuthRepo,
 		categoryRepo,
+		counterpartyRepo,
+		sourceRepo,
 		loanRepo,
 		pushSubscriptionRepo,
 		transactionRepo,

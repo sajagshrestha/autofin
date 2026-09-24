@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Loan } from "@/server/db/schema";
 import { getContainer } from "@/server/lib/container";
 import { filterDateToUtc } from "@/server/lib/timezone";
+import type { CounterpartyRepository } from "@/server/repositories/counterparty.repository";
 import type { LoanRepository } from "@/server/repositories/loan.repository";
 
 export interface AdvisorToolContext {
@@ -35,6 +36,7 @@ function dayEnd(date: string, timezone: string): Date {
 interface LoanStat {
 	id: string;
 	direction: "given" | "taken";
+	counterparty: { id: string; name: string };
 	counterpartyName: string;
 	principalAmount: number;
 	settledAmount: number;
@@ -54,6 +56,7 @@ interface LoanStat {
  */
 function loanToStat(
 	loan: Loan,
+	counterpartyName: string,
 	totals: { settledAmount: number; settlementCount: number },
 ): LoanStat {
 	const settled = Number(totals.settledAmount.toFixed(2));
@@ -62,7 +65,8 @@ function loanToStat(
 	return {
 		id: loan.id,
 		direction: loan.direction,
-		counterpartyName: loan.counterpartyName,
+		counterparty: { id: loan.counterpartyId, name: counterpartyName },
+		counterpartyName,
 		principalAmount: principal,
 		settledAmount: settled,
 		remainingAmount: remaining,
@@ -81,19 +85,28 @@ function loanToStat(
 
 async function loadLoansWithStats(
 	loanRepo: LoanRepository,
+	counterpartyRepo: CounterpartyRepository,
 	loans: Loan[],
 ): Promise<LoanStat[]> {
 	if (loans.length === 0) return [];
-	const totals = await loanRepo.getSettlementTotals(
-		loans[0].userId,
-		loans.map((loan) => ({
-			loanId: loan.id,
-			excludeTransactionId: loan.transactionId,
-		})),
-	);
+	const [totals, counterparties] = await Promise.all([
+		loanRepo.getSettlementTotals(
+			loans[0].userId,
+			loans.map((loan) => ({
+				loanId: loan.id,
+				excludeTransactionId: loan.transactionId,
+			})),
+		),
+		counterpartyRepo.findManyByIds(
+			loans[0].userId,
+			loans.map((loan) => loan.counterpartyId),
+		),
+	]);
+	const names = new Map(counterparties.map((c) => [c.id, c.name]));
 	return loans.map((loan) =>
 		loanToStat(
 			loan,
+			names.get(loan.counterpartyId) ?? "(Unknown)",
 			totals.get(loan.id) ?? { settledAmount: 0, settlementCount: 0 },
 		),
 	);
@@ -348,7 +361,11 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 				};
 				const container = getContainer();
 				const loans = await container.loanRepo.findAllForUser(ctx.userId);
-				const stats = await loadLoansWithStats(container.loanRepo, loans);
+				const stats = await loadLoansWithStats(
+					container.loanRepo,
+					container.counterpartyRepo,
+					loans,
+				);
 				const filtered = stats.filter(
 					(loan) =>
 						(direction ? loan.direction === direction : true) &&
@@ -371,7 +388,11 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 			execute: async (_args, ctx) => {
 				const container = getContainer();
 				const loans = await container.loanRepo.findAllForUser(ctx.userId);
-				const stats = await loadLoansWithStats(container.loanRepo, loans);
+				const stats = await loadLoansWithStats(
+					container.loanRepo,
+					container.counterpartyRepo,
+					loans,
+				);
 
 				const sumRemaining = (items: LoanStat[]) =>
 					items.reduce((sum, loan) => sum + loan.remainingAmount, 0);
@@ -424,15 +445,17 @@ export function getAdvisorToolDefs(): AdvisorToolDef[] {
 				if (!loan) {
 					return { error: `Loan not found: ${loanId}` };
 				}
-				const settlements = await container.loanRepo.findSettlements(
-					ctx.userId,
-					loan,
-				);
+				const [settlements, counterparty] = await Promise.all([
+					container.loanRepo.findSettlements(ctx.userId, loan),
+					container.counterpartyRepo.findById(ctx.userId, loan.counterpartyId),
+				]);
+				const counterpartyName = counterparty?.name ?? "(Unknown)";
 				return {
 					currency: "NPR",
 					loanId,
 					direction: loan.direction,
-					counterpartyName: loan.counterpartyName,
+					counterparty: { id: loan.counterpartyId, name: counterpartyName },
+					counterpartyName,
 					settlements,
 				};
 			},

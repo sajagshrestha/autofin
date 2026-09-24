@@ -8,6 +8,7 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -111,6 +112,71 @@ export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 
 /**
+ * Email sources to monitor for bank alerts. One row per sender email per
+ * user: `name` is the display name (usually the bank), `email` is the sender
+ * address Gmail filters are built from, and `identifier` optionally pins an
+ * account id. `gmailFilterId` tracks the Gmail-side filter created for this
+ * source so it can be replaced or removed on resync.
+ */
+export const sources = pgTable(
+	"sources",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		email: text("email").notNull(),
+		identifier: text("identifier"),
+		gmailFilterId: text("gmail_filter_id"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("sources_user_email_unique").on(table.userId, table.email),
+	],
+);
+
+export type Source = typeof sources.$inferSelect;
+export type NewSource = typeof sources.$inferInsert;
+
+/**
+ * Alternate names for a source (e.g. "nBank" for "Nabil Bank"). Used to
+ * resolve AI-extracted bank names and sender display names to the right
+ * source at import time. Values are unique per user (case-sensitively in
+ * the DB; matched case-insensitively in app code, like counterparties).
+ */
+export const sourceAliases = pgTable(
+	"source_aliases",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		sourceId: text("source_id")
+			.notNull()
+			.references(() => sources.id, { onDelete: "cascade" }),
+		value: text("value").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("source_aliases_user_value_unique").on(
+			table.userId,
+			table.value,
+		),
+	],
+);
+
+export type SourceAlias = typeof sourceAliases.$inferSelect;
+export type NewSourceAlias = typeof sourceAliases.$inferInsert;
+
+/**
  * Transactions table
  *
  * Stores financial transactions extracted from bank emails.
@@ -141,6 +207,10 @@ export const transactions = pgTable("transactions", {
 
 	// Source tracking - emailId is UNIQUE to prevent duplicate processing
 	loanId: text("loan_id").references((): AnyPgColumn => loans.id, {
+		onDelete: "set null",
+	}),
+	/** Email source (bank) this transaction was imported from, when known. */
+	sourceId: text("source_id").references(() => sources.id, {
 		onDelete: "set null",
 	}),
 	emailId: text("email_id").unique(), // Gmail message ID (unique constraint)
@@ -176,6 +246,39 @@ export const userPreferences = pgTable("user_preferences", {
 export const loanDirectionEnum = pgEnum("loan_direction", ["given", "taken"]);
 
 /**
+ * People / entities the user lends to or borrows from. One row per person
+ * per user (names are unique case-sensitively per user; lookups match
+ * case-insensitively). Loans reference a counterparty instead of storing a
+ * free-text name.
+ */
+export const loanCounterparties = pgTable(
+	"loan_counterparties",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		notes: text("notes"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("loan_counterparties_user_name_unique").on(
+			table.userId,
+			table.name,
+		),
+	],
+);
+
+export type LoanCounterparty = typeof loanCounterparties.$inferSelect;
+export type NewLoanCounterparty = typeof loanCounterparties.$inferInsert;
+
+/**
  * Money lent to / borrowed from a counterparty. The optional origin
  * `transactionId` records the movement that created the loan; repayments are
  * ordinary transactions referencing the loan via `transactions.loanId`.
@@ -186,7 +289,9 @@ export const loans = pgTable("loans", {
 		.notNull()
 		.references(() => users.id, { onDelete: "cascade" }),
 	direction: loanDirectionEnum("direction").notNull(), // given | taken
-	counterpartyName: text("counterparty_name").notNull(),
+	counterpartyId: text("counterparty_id")
+		.notNull()
+		.references(() => loanCounterparties.id, { onDelete: "restrict" }),
 	principalAmount: numeric("principal_amount", {
 		precision: 12,
 		scale: 2,
@@ -246,6 +351,51 @@ export const usersRelations = relations(users, ({ many }) => ({
 	gmailTokens: many(gmailOAuthTokens),
 	categories: many(categories),
 	transactions: many(transactions),
+	loanCounterparties: many(loanCounterparties),
+	loans: many(loans),
+	sources: many(sources),
+}));
+
+export const sourcesRelations = relations(sources, ({ one, many }) => ({
+	user: one(users, {
+		fields: [sources.userId],
+		references: [users.id],
+	}),
+	aliases: many(sourceAliases),
+	transactions: many(transactions),
+}));
+
+export const sourceAliasesRelations = relations(sourceAliases, ({ one }) => ({
+	user: one(users, {
+		fields: [sourceAliases.userId],
+		references: [users.id],
+	}),
+	source: one(sources, {
+		fields: [sourceAliases.sourceId],
+		references: [sources.id],
+	}),
+}));
+
+export const loanCounterpartiesRelations = relations(
+	loanCounterparties,
+	({ one, many }) => ({
+		user: one(users, {
+			fields: [loanCounterparties.userId],
+			references: [users.id],
+		}),
+		loans: many(loans),
+	}),
+);
+
+export const loansRelations = relations(loans, ({ one }) => ({
+	user: one(users, {
+		fields: [loans.userId],
+		references: [users.id],
+	}),
+	counterparty: one(loanCounterparties, {
+		fields: [loans.counterpartyId],
+		references: [loanCounterparties.id],
+	}),
 }));
 
 export const gmailOAuthTokensRelations = relations(
@@ -274,6 +424,10 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 	category: one(categories, {
 		fields: [transactions.categoryId],
 		references: [categories.id],
+	}),
+	source: one(sources, {
+		fields: [transactions.sourceId],
+		references: [sources.id],
 	}),
 }));
 

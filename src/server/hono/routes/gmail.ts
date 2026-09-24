@@ -1,7 +1,5 @@
-import { zValidator as zv } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { z } from "zod";
 import type { ApiEnv } from "@/server/hono/middleware";
 import { requireUser } from "@/server/hono/middleware";
 import { inngest } from "@/server/inngest/client";
@@ -141,44 +139,6 @@ export const gmailRouter = new Hono<ApiEnv>()
 		return c.json({
 			success: true as const,
 			message: "Gmail account disconnected",
-		});
-	})
-
-	.get("/filters/senders", async (c) => {
-		const user = c.get("user");
-		const container = getContainer();
-
-		const emails = await container.gmailOAuthRepo.getFilterSenderEmails(
-			user.id,
-		);
-		return c.json({ filterId: emails.length > 0 ? "configured" : "", emails });
-	})
-
-	.post(
-		"/filters/senders",
-		zv("json", z.object({ emails: z.array(z.string().email()) })),
-		async (c) => {
-			const user = c.get("user");
-			const body = c.req.valid("json");
-			const container = getContainer();
-
-			const result = await container.gmailService.setSenderFilterEmails(
-				user.id,
-				body.emails,
-			);
-
-			return c.json({ filterId: result.filterId, emails: body.emails });
-		},
-	)
-
-	.delete("/filters/senders", async (c) => {
-		const user = c.get("user");
-		const container = getContainer();
-
-		await container.gmailService.setSenderFilterEmails(user.id, []);
-		return c.json({
-			success: true as const,
-			message: "Sender filter deleted successfully",
 		});
 	})
 

@@ -41,6 +41,10 @@ import {
 	CategoryCombobox,
 	type CategoryComboboxOption,
 } from "@/components/ui/category-combobox";
+import {
+	CounterpartySelect,
+	type CounterpartySelection,
+} from "@/components/ui/counterparty-select";
 import { DataTable } from "@/components/ui/data-table";
 import {
 	DateFilter,
@@ -1040,7 +1044,14 @@ export function TransactionsPage() {
 					open={filtersSheetOpen}
 					onOpenChange={handleFiltersSheetOpenChange}
 				>
-					<SheetContent side="right" className="sm:max-w-md">
+					<SheetContent
+						side="right"
+						className="sm:max-w-md"
+						// Don't steal focus into the category combobox on open —
+						// with Headless UI's `immediate`, focusing it would pop
+						// the dropdown open before the user interacts with it.
+						onOpenAutoFocus={(event) => event.preventDefault()}
+					>
 						<SheetHeader>
 							<SheetTitle>Filters</SheetTitle>
 							<SheetDescription>
@@ -1290,7 +1301,11 @@ export function TransactionsPage() {
 								if (!loanTrackingTarget) return;
 								createLoanMutation.mutate(
 									{
-										counterpartyName: fields.counterpartyName,
+										...(fields.counterparty.kind === "existing"
+											? { counterpartyId: fields.counterparty.id }
+											: {
+													counterpartyName: fields.counterparty.name.trim(),
+												}),
 										direction:
 											loanTrackingTarget.type === "debit" ? "given" : "taken",
 										principalAmount: Number(loanTrackingTarget.amount),
@@ -1439,26 +1454,35 @@ function LoanTrackingFields({
 	isPending,
 }: {
 	defaultCounterparty?: string;
-	onSubmit: (fields: { counterpartyName: string; dueDate: string }) => void;
+	onSubmit: (fields: {
+		counterparty: CounterpartySelection;
+		dueDate: string;
+	}) => void;
 	isPending: boolean;
 }) {
-	const [counterpartyName, setCounterpartyName] = useState(
-		defaultCounterparty ?? "",
-	);
+	const [counterparty, setCounterparty] =
+		useState<CounterpartySelection | null>(
+			defaultCounterparty?.trim()
+				? { kind: "new", name: defaultCounterparty.trim() }
+				: null,
+		);
 	const [dueDate, setDueDate] = useState("");
+	const [error, setError] = useState<string | null>(null);
 
 	return (
 		<div className="space-y-4 py-1">
 			<div className="space-y-2">
 				<Label htmlFor="track-loan-counterparty">Counterparty</Label>
-				<Input
+				<CounterpartySelect
 					id="track-loan-counterparty"
-					placeholder="Who is this with?"
-					value={counterpartyName}
-					onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-						setCounterpartyName(e.target.value)
-					}
+					defaultName={defaultCounterparty?.trim()}
+					value={counterparty}
+					onChange={(next) => {
+						setCounterparty(next);
+						setError(null);
+					}}
 				/>
+				{error && <p className="text-sm text-destructive">{error}</p>}
 			</div>
 			<div className="space-y-2">
 				<Label htmlFor="track-loan-due">Due date (optional)</Label>
@@ -1473,7 +1497,15 @@ function LoanTrackingFields({
 			</div>
 			<DialogFooter>
 				<Button
-					onClick={() => onSubmit({ counterpartyName, dueDate })}
+					onClick={() => {
+						const name =
+							counterparty?.kind === "new" ? counterparty.name.trim() : null;
+						if (!counterparty || (counterparty.kind === "new" && !name)) {
+							setError("Select an existing counterparty or create a new one");
+							return;
+						}
+						onSubmit({ counterparty, dueDate });
+					}}
 					disabled={isPending}
 				>
 					{isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

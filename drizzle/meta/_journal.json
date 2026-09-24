@@ -50,6 +50,34 @@
       "when": 1788148357528,
       "tag": "0006_faithful_malcolm_colcord",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790229913920,
+      "tag": "0007_giant_preak",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790229936305,
+      "tag": "0008_remarkable_the_enforcers",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790233996620,
+      "tag": "0009_lazy_the_twelve",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790237094384,
+      "tag": "0010_mushy_iron_monger",
+      "breakpoints": true
     }
   ]
 }

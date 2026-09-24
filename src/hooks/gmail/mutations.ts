@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { rpc, unwrap } from "@/lib/api-client";
-import { GMAIL_QUERY_KEYS } from "./queries";
+import { type EmailSource, GMAIL_QUERY_KEYS } from "./queries";
 
 interface SuccessResult {
 	success: true;
@@ -74,40 +74,69 @@ export function useStopGmailWatch() {
 	});
 }
 
+function invalidateSources(queryClient: ReturnType<typeof useQueryClient>) {
+	queryClient.invalidateQueries({ queryKey: GMAIL_QUERY_KEYS.sources });
+}
+
+export interface UpsertSourceInput {
+	name: string;
+	email: string;
+	identifier?: string | null;
+	aliases?: string[];
+}
+
 /**
- * Sets the sender filter (emails to monitor, e.g. bank alerts).
- * Creates a Gmail filter that auto-applies the monitor label to emails from
- * the given senders.
+ * Adds an email source (bank name + sender email + optional account id).
+ * Re-syncs the Gmail sender filters.
  */
-export function useSetSenderFilters() {
+export function useCreateSource() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async (input: { emails: string[] }) => {
-			const res = await rpc.api.gmail.filters.senders.$post({ json: input });
-			return unwrap<{ filterId: string; emails: string[] }>(res);
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({
-				queryKey: GMAIL_QUERY_KEYS.senderFilters,
+		mutationFn: async (input: UpsertSourceInput) => {
+			const res = await rpc.api.sources.$post({
+				json: {
+					name: input.name,
+					email: input.email,
+					identifier: input.identifier ?? undefined,
+					aliases: input.aliases,
+				},
 			});
+			return unwrap<{ source: EmailSource }>(res);
 		},
+		onSuccess: () => invalidateSources(queryClient),
 	});
 }
 
 /**
- * Removes the sender filter and clears stored config.
+ * Updates an email source. Changing the email re-syncs Gmail filters.
  */
-export function useDeleteSenderFilters() {
+export function useUpdateSource() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async () => {
-			const res = await rpc.api.gmail.filters.senders.$delete();
+		mutationFn: async (input: { id: string } & Partial<UpsertSourceInput>) => {
+			const { id, ...body } = input;
+			const res = await rpc.api.sources[":id"].$patch({
+				param: { id },
+				json: body,
+			});
+			return unwrap<{ source: EmailSource }>(res);
+		},
+		onSuccess: () => invalidateSources(queryClient),
+	});
+}
+
+/**
+ * Removes an email source and its Gmail filter.
+ */
+export function useDeleteSource() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async (input: { id: string }) => {
+			const res = await rpc.api.sources[":id"].$delete({
+				param: { id: input.id },
+			});
 			return unwrap<SuccessResult>(res);
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({
-				queryKey: GMAIL_QUERY_KEYS.senderFilters,
-			});
-		},
+		onSuccess: () => invalidateSources(queryClient),
 	});
 }

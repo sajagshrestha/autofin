@@ -18,6 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+	CounterpartySelect,
+	type CounterpartySelection,
+} from "@/components/ui/counterparty-select";
+import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -38,13 +42,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	type Loan,
+	type LoanCounterparty,
 	type LoanDirection,
 	type LoanSettlement,
 	useCreateLoan,
+	useDeleteCounterparty,
 	useDeleteLoan,
+	useGetCounterparties,
 	useGetLoan,
 	useGetLoans,
 	useSettleLoan,
+	useUpdateCounterparty,
 } from "@/hooks/loans";
 import { formatCurrency } from "@/lib/formatCurrency";
 
@@ -93,6 +101,7 @@ export function LoansPage() {
 	const { data, isLoading } = useGetLoans();
 
 	const [createOpen, setCreateOpen] = useState(false);
+	const [counterpartiesOpen, setCounterpartiesOpen] = useState(false);
 	const [detailLoan, setDetailLoan] = useState<Loan | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<Loan | null>(null);
 
@@ -137,10 +146,19 @@ export function LoansPage() {
 						Track money you've lent or borrowed — settle via transactions.
 					</p>
 				</div>
-				<Button data-demo-action onClick={() => setCreateOpen(true)}>
-					<Plus className="mr-2 h-4 w-4" />
-					Track a loan
-				</Button>
+				<div className="flex gap-2">
+					<Button
+						variant="outline"
+						data-demo-action
+						onClick={() => setCounterpartiesOpen(true)}
+					>
+						Counterparties
+					</Button>
+					<Button data-demo-action onClick={() => setCreateOpen(true)}>
+						<Plus className="mr-2 h-4 w-4" />
+						Track a loan
+					</Button>
+				</div>
 			</div>
 
 			{/* Summary */}
@@ -283,6 +301,11 @@ export function LoansPage() {
 				onClose={() => setCreateOpen(false)}
 			/>
 
+			<CounterpartiesDialog
+				open={counterpartiesOpen}
+				onClose={() => setCounterpartiesOpen(false)}
+			/>
+
 			{detailLoan && (
 				<LoanDetailDialog
 					key={detailLoan.id + detailLoan.settlementCount}
@@ -419,7 +442,7 @@ function CreateLoanDialog({
 }) {
 	const createMutation = useCreateLoan();
 	const [form, setForm] = useState({
-		counterpartyName: "",
+		counterparty: null as CounterpartySelection | null,
 		direction: "given" as LoanDirection,
 		principalAmount: "",
 		dueDate: "",
@@ -431,8 +454,10 @@ function CreateLoanDialog({
 	const submit = () => {
 		setError(null);
 		const amount = Number(form.principalAmount);
-		if (!form.counterpartyName.trim()) {
-			setError("Counterparty is required");
+		const name =
+			form.counterparty?.kind === "new" ? form.counterparty.name.trim() : null;
+		if (!form.counterparty || (form.counterparty.kind === "new" && !name)) {
+			setError("Select an existing counterparty or create a new one");
 			return;
 		}
 		if (!Number.isFinite(amount) || amount <= 0) {
@@ -441,7 +466,9 @@ function CreateLoanDialog({
 		}
 		createMutation.mutate(
 			{
-				counterpartyName: form.counterpartyName.trim(),
+				...(form.counterparty.kind === "existing"
+					? { counterpartyId: form.counterparty.id }
+					: { counterpartyName: name as string }),
 				direction: form.direction,
 				principalAmount: amount,
 				issuedDate: todayIso(),
@@ -453,7 +480,7 @@ function CreateLoanDialog({
 				onSuccess: () => {
 					toast.success("Loan tracked");
 					setForm({
-						counterpartyName: "",
+						counterparty: null,
 						direction: "given",
 						principalAmount: "",
 						dueDate: "",
@@ -486,12 +513,11 @@ function CreateLoanDialog({
 					)}
 					<div className="space-y-2">
 						<Label htmlFor="loan-counterparty">Counterparty</Label>
-						<Input
+						<CounterpartySelect
 							id="loan-counterparty"
-							placeholder="Who lent / borrowed?"
-							value={form.counterpartyName}
-							onChange={(e) =>
-								setForm((f) => ({ ...f, counterpartyName: e.target.value }))
+							value={form.counterparty}
+							onChange={(counterparty) =>
+								setForm((f) => ({ ...f, counterparty }))
 							}
 						/>
 					</div>
@@ -590,6 +616,185 @@ function CreateLoanDialog({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+	);
+}
+
+/* ── Counterparties manager ────────────────────────────────────────────── */
+
+function CounterpartiesDialog({
+	open,
+	onClose,
+}: {
+	open: boolean;
+	onClose: () => void;
+}) {
+	const { data, isLoading } = useGetCounterparties();
+	const counterparties = data?.counterparties ?? [];
+
+	return (
+		<Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+				<DialogHeader>
+					<DialogTitle>Counterparties</DialogTitle>
+					<DialogDescription>
+						People you lend to or borrow from. Renaming updates every loan
+						linked to them.
+					</DialogDescription>
+				</DialogHeader>
+				{isLoading ? (
+					<div className="flex items-center justify-center py-8">
+						<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+					</div>
+				) : counterparties.length === 0 ? (
+					<p className="py-4 text-center text-sm text-muted-foreground">
+						No counterparties yet — one is created each time you track a loan.
+					</p>
+				) : (
+					<ul className="space-y-2">
+						{counterparties.map((counterparty) => (
+							<CounterpartyRow
+								key={counterparty.id}
+								counterparty={counterparty}
+							/>
+						))}
+					</ul>
+				)}
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+function CounterpartyRow({ counterparty }: { counterparty: LoanCounterparty }) {
+	const [editing, setEditing] = useState(false);
+	const [name, setName] = useState(counterparty.name);
+	const [confirmingDelete, setConfirmingDelete] = useState(false);
+	const updateMutation = useUpdateCounterparty();
+	const deleteMutation = useDeleteCounterparty();
+
+	const save = () => {
+		const trimmed = name.trim();
+		if (!trimmed) {
+			toast.error("Name cannot be empty");
+			return;
+		}
+		if (trimmed === counterparty.name) {
+			setEditing(false);
+			return;
+		}
+		updateMutation.mutate(
+			{ id: counterparty.id, name: trimmed },
+			{
+				onSuccess: () => {
+					toast.success("Counterparty renamed");
+					setEditing(false);
+				},
+				onError: (err) => {
+					toast.error("Failed to rename", { description: err.message });
+				},
+			},
+		);
+	};
+
+	const remove = () => {
+		deleteMutation.mutate(
+			{ id: counterparty.id },
+			{
+				onSuccess: () => toast.success("Counterparty deleted"),
+				onError: (err) => {
+					toast.error("Failed to delete", { description: err.message });
+					setConfirmingDelete(false);
+				},
+			},
+		);
+	};
+
+	return (
+		<li className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2">
+			<div className="min-w-0 flex-1">
+				{editing ? (
+					<Input
+						value={name}
+						onChange={(e) => setName(e.target.value)}
+						className="h-8"
+					/>
+				) : (
+					<>
+						<p className="truncate font-medium">{counterparty.name}</p>
+						<p className="text-xs text-muted-foreground">
+							{counterparty.totalLoans} loan
+							{counterparty.totalLoans !== 1 ? "s" : ""}
+						</p>
+					</>
+				)}
+			</div>
+			<div className="flex shrink-0 items-center gap-1">
+				{editing ? (
+					<>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={save}
+							disabled={updateMutation.isPending}
+						>
+							Save
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => {
+								setEditing(false);
+								setName(counterparty.name);
+							}}
+						>
+							Cancel
+						</Button>
+					</>
+				) : confirmingDelete ? (
+					<>
+						<Button
+							variant="destructive"
+							size="sm"
+							onClick={remove}
+							disabled={deleteMutation.isPending}
+						>
+							Confirm
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => setConfirmingDelete(false)}
+						>
+							Cancel
+						</Button>
+					</>
+				) : (
+					<>
+						<Button
+							variant="ghost"
+							size="sm"
+							data-demo-action
+							onClick={() => setEditing(true)}
+						>
+							Rename
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							className="text-ds-red-700 hover:text-ds-red-800"
+							data-demo-action
+							onClick={() => setConfirmingDelete(true)}
+							title={
+								counterparty.totalLoans > 0
+									? "Delete or reassign its loans first"
+									: "Delete counterparty"
+							}
+						>
+							<Trash2 className="h-4 w-4" />
+						</Button>
+					</>
+				)}
+			</div>
+		</li>
 	);
 }
 

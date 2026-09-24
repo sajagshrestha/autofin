@@ -16,6 +16,7 @@ function notFound(message: string): HTTPException {
 interface LoanWithStats {
 	id: string;
 	direction: "given" | "taken";
+	counterparty: { id: string; name: string };
 	counterpartyName: string;
 	principalAmount: string;
 	currency: string | null;
@@ -33,6 +34,7 @@ interface LoanWithStats {
 
 function withStats(
 	loan: Loan,
+	counterpartyName: string,
 	totals: { settledAmount: number; settlementCount: number },
 ): LoanWithStats {
 	const settled = Number(totals.settledAmount.toFixed(2));
@@ -41,7 +43,8 @@ function withStats(
 	return {
 		id: loan.id,
 		direction: loan.direction,
-		counterpartyName: loan.counterpartyName,
+		counterparty: { id: loan.counterpartyId, name: counterpartyName },
+		counterpartyName,
 		principalAmount: loan.principalAmount,
 		currency: loan.currency ?? "NPR",
 		issuedDate: loan.issuedDate.toISOString(),
@@ -66,19 +69,58 @@ async function loadStats(
 	loans: Loan[],
 ): Promise<LoanWithStats[]> {
 	const container = getContainer();
-	const totals = await container.loanRepo.getSettlementTotals(
-		userId,
-		loans.map((loan) => ({
-			loanId: loan.id,
-			excludeTransactionId: loan.transactionId,
-		})),
-	);
+	const [totals, counterparties] = await Promise.all([
+		container.loanRepo.getSettlementTotals(
+			userId,
+			loans.map((loan) => ({
+				loanId: loan.id,
+				excludeTransactionId: loan.transactionId,
+			})),
+		),
+		container.counterpartyRepo.findManyByIds(
+			userId,
+			loans.map((loan) => loan.counterpartyId),
+		),
+	]);
+	const names = new Map(counterparties.map((c) => [c.id, c.name]));
 	return loans.map((loan) =>
 		withStats(
 			loan,
+			names.get(loan.counterpartyId) ?? "(Unknown)",
 			totals.get(loan.id) ?? { settledAmount: 0, settlementCount: 0 },
 		),
 	);
+}
+
+/**
+ * Resolve the select-or-create counterparty input: an existing id (verified
+ * against the user) or a new name (matched case-insensitively, created when
+ * missing). Exactly one must be provided.
+ */
+async function resolveCounterparty(
+	userId: string,
+	input: { counterpartyId?: string; counterpartyName?: string },
+): Promise<{ id: string; name: string }> {
+	const container = getContainer();
+	if (input.counterpartyId) {
+		const existing = await container.counterpartyRepo.findById(
+			userId,
+			input.counterpartyId,
+		);
+		if (!existing) throw notFound("Counterparty not found");
+		return { id: existing.id, name: existing.name };
+	}
+	const name = input.counterpartyName?.trim();
+	if (!name) {
+		throw new HTTPException(400, {
+			message: "Provide counterpartyId or counterpartyName",
+		});
+	}
+	const counterparty = await container.counterpartyRepo.findOrCreate(
+		userId,
+		name,
+	);
+	return { id: counterparty.id, name: counterparty.name };
 }
 
 /** Create the money-movement transaction for a loan (origin or repayment). */
@@ -118,30 +160,63 @@ async function createLinkedTransaction(
 	return created.id;
 }
 
-const createSchema = z.object({
-	counterpartyName: z.string().min(1).max(120),
-	direction: z.enum(["given", "taken"]),
-	principalAmount: z.number().positive().max(99_999_999_999).optional(),
-	/** Track an EXISTING transaction as the origin of this loan. */
-	originTransactionId: z.string().optional(),
-	issuedDate: isoDate.optional(),
-	dueDate: z
-		.union([isoDate, z.literal("")])
-		.optional()
-		.transform((value) => value || undefined),
-	notes: z.string().max(500).optional(),
-	/** When no originTransactionId: also record the money movement. */
-	createTransaction: z.boolean().default(true),
-	transactionDate: isoDate.optional(),
-	categoryId: z.string().optional(),
-});
+const counterpartySelectSchema = z
+	.object({
+		/** Use an existing counterparty … */
+		counterpartyId: z.string().optional(),
+		/** … or create one from a name (matched case-insensitively). */
+		counterpartyName: z.string().min(1).max(120).optional(),
+	})
+	.superRefine((value, ctx) => {
+		if (
+			(value.counterpartyId ? 1 : 0) + (value.counterpartyName ? 1 : 0) !==
+			1
+		) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Provide exactly one of counterpartyId or counterpartyName",
+			});
+		}
+	});
 
-const updateSchema = z.object({
-	counterpartyName: z.string().min(1).max(120).optional(),
-	principalAmount: z.number().positive().optional(),
-	dueDate: z.union([isoDate, z.null()]).optional(),
-	notes: z.string().max(500).nullable().optional(),
-});
+const createSchema = z.intersection(
+	counterpartySelectSchema,
+	z.object({
+		direction: z.enum(["given", "taken"]),
+		principalAmount: z.number().positive().max(99_999_999_999).optional(),
+		/** Track an EXISTING transaction as the origin of this loan. */
+		originTransactionId: z.string().optional(),
+		issuedDate: isoDate.optional(),
+		dueDate: z
+			.union([isoDate, z.literal("")])
+			.optional()
+			.transform((value) => value || undefined),
+		notes: z.string().max(500).optional(),
+		/** When no originTransactionId: also record the money movement. */
+		createTransaction: z.boolean().default(true),
+		transactionDate: isoDate.optional(),
+		categoryId: z.string().optional(),
+	}),
+);
+
+const updateSchema = z
+	.object({
+		/** Relink to an existing counterparty … */
+		counterpartyId: z.string().optional(),
+		/** … or to one matched/created from a name. */
+		counterpartyName: z.string().min(1).max(120).optional(),
+		principalAmount: z.number().positive().optional(),
+		dueDate: z.union([isoDate, z.null()]).optional(),
+		notes: z.string().max(500).nullable().optional(),
+	})
+	.superRefine((value, ctx) => {
+		if (value.counterpartyId && value.counterpartyName) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Provide only one of counterpartyId or counterpartyName",
+			});
+		}
+	});
 
 const settleSchema = z.object({
 	amount: z.number().positive().optional(),
@@ -230,11 +305,16 @@ export const loansRouter = new Hono<ApiEnv>()
 				? new Date(body.issuedDate)
 				: new Date();
 
+		const counterparty = await resolveCounterparty(user.id, {
+			counterpartyId: body.counterpartyId,
+			counterpartyName: body.counterpartyName,
+		});
+
 		const loan = await container.loanRepo.create({
 			id: crypto.randomUUID(),
 			userId: user.id,
 			direction,
-			counterpartyName: body.counterpartyName.trim(),
+			counterpartyId: counterparty.id,
 			principalAmount: principal.toFixed(2),
 			currency: "NPR",
 			issuedDate: issuedAt,
@@ -259,7 +339,7 @@ export const loansRouter = new Hono<ApiEnv>()
 				isOrigin: true,
 				amount: principal,
 				transactionDate: issuedAt,
-				merchant: `Loan ${direction} — ${body.counterpartyName.trim()}`,
+				merchant: `Loan ${direction} — ${counterparty.name}`,
 				categoryId: body.categoryId ?? null,
 				remarks: body.notes?.trim() || null,
 			});
@@ -282,8 +362,16 @@ export const loansRouter = new Hono<ApiEnv>()
 		const body = c.req.valid("json");
 		const container = getContainer();
 
+		const counterparty =
+			body.counterpartyId || body.counterpartyName
+				? await resolveCounterparty(user.id, {
+						counterpartyId: body.counterpartyId,
+						counterpartyName: body.counterpartyName,
+					})
+				: null;
+
 		const updated = await container.loanRepo.update(user.id, id, {
-			counterpartyName: body.counterpartyName,
+			counterpartyId: counterparty?.id,
 			principalAmount: body.principalAmount?.toFixed(2),
 			dueDate:
 				body.dueDate === undefined
@@ -368,7 +456,7 @@ export const loansRouter = new Hono<ApiEnv>()
 			transactionDate: input.transactionDate
 				? new Date(input.transactionDate)
 				: new Date(),
-			merchant: `${loan.direction === "given" ? "Repayment from" : "Repayment to"} ${loan.counterpartyName}`,
+			merchant: `${loan.direction === "given" ? "Repayment from" : "Repayment to"} ${current.counterparty.name}`,
 			categoryId: input.categoryId ?? null,
 			remarks: input.remarks ?? null,
 		});

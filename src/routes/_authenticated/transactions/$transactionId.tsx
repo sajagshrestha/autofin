@@ -15,6 +15,10 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import {
+	CounterpartySelect,
+	type CounterpartySelection,
+} from "@/components/ui/counterparty-select";
+import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -55,7 +59,8 @@ export function TransactionDetailPage() {
 	const navigate = useNavigate();
 	const [editOpen, setEditOpen] = useState(false);
 	const [loanOpen, setLoanOpen] = useState(false);
-	const [loanCounterparty, setLoanCounterparty] = useState("");
+	const [loanCounterparty, setLoanCounterparty] =
+		useState<CounterpartySelection | null>(null);
 	const [loanDueDate, setLoanDueDate] = useState("");
 	const createLoanMutation = useCreateLoan();
 	const { data, isLoading, error, refetch } =
@@ -156,7 +161,7 @@ export function TransactionDetailPage() {
 							className="gap-2"
 							data-demo-action
 							onClick={() => {
-								setLoanCounterparty("");
+								setLoanCounterparty(null);
 								setLoanDueDate("");
 								setLoanOpen(true);
 							}}
@@ -371,11 +376,11 @@ export function TransactionDetailPage() {
 					<div className="space-y-4 py-1">
 						<div className="space-y-2">
 							<Label htmlFor="loan-counterparty">Counterparty</Label>
-							<Input
+							<CounterpartySelect
 								id="loan-counterparty"
-								placeholder={transaction.merchant ?? "Who is this with?"}
+								defaultName={transaction.merchant ?? undefined}
 								value={loanCounterparty}
-								onChange={(e) => setLoanCounterparty(e.target.value)}
+								onChange={setLoanCounterparty}
 							/>
 						</div>
 						<div className="space-y-2">
@@ -395,15 +400,26 @@ export function TransactionDetailPage() {
 						<Button
 							disabled={createLoanMutation.isPending}
 							onClick={() => {
-								if (!loanCounterparty.trim()) {
-									toast.error("Counterparty is required");
+								const name =
+									loanCounterparty?.kind === "new"
+										? loanCounterparty.name.trim()
+										: null;
+								if (
+									!loanCounterparty ||
+									(loanCounterparty.kind === "new" && !name)
+								) {
+									toast.error(
+										"Select an existing counterparty or create a new one",
+									);
 									return;
 								}
 								const direction: LoanDirection =
 									transaction.type === "debit" ? "given" : "taken";
 								createLoanMutation.mutate(
 									{
-										counterpartyName: loanCounterparty.trim(),
+										...(loanCounterparty.kind === "existing"
+											? { counterpartyId: loanCounterparty.id }
+											: { counterpartyName: name as string }),
 										direction,
 										principalAmount: amountNum,
 										originTransactionId: transaction.id,

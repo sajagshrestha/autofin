@@ -5,9 +5,19 @@ export const GMAIL_QUERY_KEYS = {
 	root: ["gmail"] as const,
 	authUrl: ["gmail", "auth-url"] as const,
 	status: ["gmail", "status"] as const,
-	senderFilters: ["gmail", "sender-filters"] as const,
+	sources: ["gmail", "sources"] as const,
 	watchStatus: ["gmail", "watch-status"] as const,
 };
+
+export interface EmailSource {
+	id: string;
+	name: string;
+	email: string;
+	identifier: string | null;
+	aliases: string[];
+	createdAt: string;
+	updatedAt: string;
+}
 
 export interface GmailConnectionStatus {
 	authorized: boolean;
@@ -48,17 +58,18 @@ export function useGetGmailConnectionStatus() {
 }
 
 /**
- * Fetches the current sender filter config (emails being filtered).
+ * Fetches the user's email sources (bank name + sender email + optional
+ * account identifier) that Gmail filters are built from.
  */
-export function useGetSenderFilters(options?: { enabled?: boolean }) {
+export function useGetSources(options?: { enabled?: boolean }) {
 	return useQuery({
-		queryKey: GMAIL_QUERY_KEYS.senderFilters,
+		queryKey: GMAIL_QUERY_KEYS.sources,
 		queryFn:
 			options?.enabled === false
 				? skipToken
 				: async () => {
-						const res = await rpc.api.gmail.filters.senders.$get();
-						return unwrap<{ filterId: string; emails: string[] }>(res);
+						const res = await rpc.api.sources.$get();
+						return unwrap<{ sources: EmailSource[] }>(res);
 					},
 	});
 }
