@@ -931,6 +931,7 @@ function DemoFrame() {
 	// Mount after hydration so the iframe load event cannot fire before React listens.
 	useEffect(() => setIsMounted(true), []);
 	const [isOpen, setIsOpen] = useState(false);
+	const [isTransitioning, setIsTransitioning] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 
 	// Lock page scroll (including Lenis smooth scroll) while the modal is open.
@@ -957,133 +958,137 @@ function DemoFrame() {
 	const closeRef = useRef<HTMLButtonElement>(null);
 	useEffect(() => {
 		if (!isOpen) return;
-		closeRef.current?.focus();
+		closeRef.current?.focus({ preventScroll: true });
 		return () => {
-			requestAnimationFrame(() => triggerRef.current?.focus());
+			requestAnimationFrame(() =>
+				triggerRef.current?.focus({ preventScroll: true }),
+			);
 		};
 	}, [isOpen]);
 
 	return (
 		<>
-			{/* Placeholder keeps the page flow stable while the frame is fixed. */}
-			{isOpen && (
-				<div aria-hidden="true" className="h-[780px] w-full max-md:h-[680px]" />
-			)}
-			<motion.div
-				layout={!reduceMotion}
-				transition={
-					reduceMotion
-						? { duration: 0 }
-						: { duration: 0.45, ease: [0.22, 1, 0.36, 1] }
-				}
-				animate={{ borderRadius: isOpen ? 16 : 12 }}
-				{...(isOpen
-					? {
-							role: "dialog",
-							"aria-modal": true,
-							"aria-label": "AutoFin full demo",
-						}
-					: {})}
-				className={`group flex w-full flex-col overflow-hidden border border-border bg-background shadow-2xl ${
-					isOpen
-						? "fixed inset-0 z-[100] m-auto h-[min(860px,calc(100dvh-3rem))] w-[min(1200px,calc(100vw-3rem))] max-md:w-[calc(100vw-1rem)] max-md:h-[calc(100dvh-1rem)]"
-						: "relative h-[780px] max-md:h-[680px]"
-				}`}
-			>
-				<AnimatePresence initial={false}>
-					{isOpen && (
-						<motion.div
-							key="demo-header"
-							initial={{ height: 0, opacity: 0 }}
-							animate={{ height: "auto", opacity: 1 }}
-							exit={{ height: 0, opacity: 0 }}
-							transition={
-								reduceMotion
-									? { duration: 0 }
-									: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }
+			{/* Keep the inline slot stable throughout both layout transitions. */}
+			<div className="relative h-[780px] w-full max-md:h-[680px]">
+				<motion.div
+					layout={!reduceMotion}
+					onLayoutAnimationStart={() => setIsTransitioning(true)}
+					onLayoutAnimationComplete={() => setIsTransitioning(false)}
+					style={{ zIndex: isOpen || isTransitioning ? 100 : undefined }}
+					transition={
+						reduceMotion
+							? { duration: 0 }
+							: { type: "spring", stiffness: 300, damping: 36, mass: 0.8 }
+					}
+					animate={{ borderRadius: isOpen ? 16 : 12 }}
+					{...(isOpen
+						? {
+								role: "dialog",
+								"aria-modal": true,
+								"aria-label": "AutoFin full demo",
 							}
-							className="shrink-0 overflow-hidden border-b border-border"
-						>
-							<div className="flex min-h-[56px] items-center justify-between gap-3 px-5 py-2.5">
-								<span className="flex items-center gap-2 whitespace-nowrap text-xs font-medium">
-									<span className="size-2 shrink-0 rounded-full bg-emerald-600" />{" "}
-									Live demo{" "}
-									<span className="hidden font-normal text-muted-foreground sm:inline">
-										· Sample data
-									</span>
-								</span>
-								<div className="flex items-center gap-2">
-									<a
-										href="/demo"
-										target="_blank"
-										rel="noreferrer"
-										className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium underline-offset-4 hover:underline"
-									>
-										New tab{" "}
-										<ArrowUpRight aria-hidden="true" className="size-4" />
-									</a>
-									<button
-										ref={closeRef}
-										type="button"
-										onClick={() => setIsOpen(false)}
-										aria-label="Close demo"
-										className="inline-flex size-11 items-center justify-center rounded-full border border-border transition-colors hover:bg-muted"
-									>
-										<X aria-hidden="true" className="size-4" />
-									</button>
-								</div>
-							</div>
-						</motion.div>
-					)}
-				</AnimatePresence>
-
-				<div className="relative min-h-0 flex-1">
-					{isMounted && (
-						<iframe
-							src="/demo"
-							title="Interactive AutoFin demo with sample data"
-							onLoad={() => setIsReady(true)}
-							tabIndex={isOpen ? 0 : -1}
-							aria-hidden={!isOpen}
-							className={`absolute inset-0 block h-full w-full border-0 bg-background ${
-								isOpen ? "" : "pointer-events-none"
-							}`}
-						/>
-					)}
-					{!isReady && (
-						<div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
-							<p role="status" className="text-sm text-muted-foreground">
-								Loading the sample workspace…
-							</p>
-							<a
-								href="/demo"
-								target="_blank"
-								rel="noreferrer"
-								className="text-sm underline underline-offset-4"
+						: {})}
+					className={`group flex flex-col overflow-hidden border border-border bg-background shadow-2xl ${
+						isOpen
+							? "fixed inset-0 z-[100] m-auto h-[min(860px,calc(100dvh-3rem))] w-[min(1200px,calc(100vw-3rem))] max-md:w-[calc(100vw-1rem)] max-md:h-[calc(100dvh-1rem)]"
+							: "relative w-full h-[780px] max-md:h-[680px]"
+					}`}
+				>
+					<AnimatePresence initial={false}>
+						{isOpen && (
+							<motion.div
+								key="demo-header"
+								initial={{ height: 0, opacity: 0 }}
+								animate={{ height: "auto", opacity: 1 }}
+								exit={{ height: 0, opacity: 0 }}
+								transition={
+									reduceMotion
+										? { duration: 0 }
+										: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }
+								}
+								className="shrink-0 overflow-hidden border-b border-border"
 							>
-								Open demo in a new tab
-							</a>
-						</div>
-					)}
-					{/* Overlay blocks the iframe's scroll so it never hijacks page
+								<div className="flex min-h-[56px] items-center justify-between gap-3 px-5 py-2.5">
+									<span className="flex items-center gap-2 whitespace-nowrap text-xs font-medium">
+										<span className="size-2 shrink-0 rounded-full bg-emerald-600" />{" "}
+										Live demo{" "}
+										<span className="hidden font-normal text-muted-foreground sm:inline">
+											· Sample data
+										</span>
+									</span>
+									<div className="flex items-center gap-2">
+										<a
+											href="/demo"
+											target="_blank"
+											rel="noreferrer"
+											className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium underline-offset-4 hover:underline"
+										>
+											New tab{" "}
+											<ArrowUpRight aria-hidden="true" className="size-4" />
+										</a>
+										<button
+											ref={closeRef}
+											type="button"
+											onClick={() => setIsOpen(false)}
+											aria-label="Close demo"
+											className="inline-flex size-11 items-center justify-center rounded-full border border-border transition-colors hover:bg-muted"
+										>
+											<X aria-hidden="true" className="size-4" />
+										</button>
+									</div>
+								</div>
+							</motion.div>
+						)}
+					</AnimatePresence>
+
+					<div className="relative min-h-0 flex-1">
+						{isMounted && (
+							<iframe
+								src="/demo"
+								title="Interactive AutoFin demo with sample data"
+								onLoad={() => setIsReady(true)}
+								tabIndex={isOpen ? 0 : -1}
+								aria-hidden={!isOpen}
+								className={`absolute inset-0 block h-full w-full border-0 bg-background ${
+									isOpen ? "" : "pointer-events-none"
+								}`}
+							/>
+						)}
+						{!isReady && (
+							<div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+								<p role="status" className="text-sm text-muted-foreground">
+									Loading the sample workspace…
+								</p>
+								<a
+									href="/demo"
+									target="_blank"
+									rel="noreferrer"
+									className="text-sm underline underline-offset-4"
+								>
+									Open demo in a new tab
+								</a>
+							</div>
+						)}
+						{/* Overlay blocks the iframe's scroll so it never hijacks page
 					    scroll. On hover it invites opening the semi-fullscreen view. */}
-					{isReady && !isOpen && (
-						<button
-							type="button"
-							ref={triggerRef}
-							onClick={() => setIsOpen(true)}
-							aria-label="Open full demo"
-							aria-haspopup="dialog"
-							className="absolute inset-0 z-10 flex cursor-zoom-in items-center justify-center bg-black/10 transition-colors duration-200 hover:bg-black/55 focus-visible:bg-black/55 focus-visible:outline-none"
-						>
-							<span className="flex translate-y-1 items-center gap-2.5 rounded-full border border-border bg-background/90 px-5 py-3 text-sm font-semibold shadow-xl opacity-100 backdrop-blur transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100">
-								<Expand aria-hidden="true" className="size-4" />
-								Open full demo
-							</span>
-						</button>
-					)}
-				</div>
-			</motion.div>
+						{isReady && !isOpen && (
+							<button
+								type="button"
+								ref={triggerRef}
+								onClick={() => setIsOpen(true)}
+								aria-label="Open full demo"
+								aria-haspopup="dialog"
+								className="absolute inset-0 z-10 flex cursor-zoom-in items-center justify-center bg-black/10 transition-colors duration-200 hover:bg-black/55 focus-visible:bg-black/55 focus-visible:outline-none"
+							>
+								<span className="flex translate-y-1 items-center gap-2.5 rounded-full border border-border bg-background/90 px-5 py-3 text-sm font-semibold shadow-xl opacity-100 backdrop-blur transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100">
+									<Expand aria-hidden="true" className="size-4" />
+									Open full demo
+								</span>
+							</button>
+						)}
+					</div>
+				</motion.div>
+			</div>
 
 			<AnimatePresence>
 				{isOpen && (
@@ -1091,6 +1096,7 @@ function DemoFrame() {
 						type="button"
 						aria-label="Close full demo"
 						onClick={() => setIsOpen(false)}
+						data-lenis-prevent
 						className="fixed inset-0 z-[90] cursor-zoom-out bg-black/60 backdrop-blur-sm"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
@@ -1204,9 +1210,18 @@ function LandingPage() {
 				<section className="mx-auto w-[min(1200px,calc(100%-96px))] max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)]">
 					<div className="relative mx-auto max-w-[800px]">
 						<div className="@container flex min-w-0 flex-col items-center text-center">
-							<p className="mb-5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+							<motion.p
+								initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{
+									duration: reduceMotion ? 0 : 0.7,
+									delay: reduceMotion ? 0 : 0,
+									ease: [0.22, 1, 0.36, 1],
+								}}
+								className="mb-5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+							>
 								Personal finance tracking · Closed beta
-							</p>
+							</motion.p>
 							<motion.h1
 								className="relative text-[clamp(28px,11.5cqw,76px)] leading-[1.05] tracking-[-0.065em] [font-weight:550]"
 								initial={{ opacity: 0, y: 16 }}
@@ -1221,11 +1236,20 @@ function LandingPage() {
 								</span>
 								<span className="sr-only">on Autopilot.</span>
 							</motion.h1>
-							<p className="mt-6 max-w-[48ch] text-base leading-8 text-muted-foreground sm:text-lg">
+							<motion.p
+								initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{
+									duration: reduceMotion ? 0 : 0.7,
+									delay: reduceMotion ? 0 : 0.15,
+									ease: [0.22, 1, 0.36, 1],
+								}}
+								className="mt-6 max-w-[48ch] text-base leading-8 text-muted-foreground sm:text-lg"
+							>
 								AutoFin turns bank alerts in Gmail into organized transactions.
 								See what you spend, what you earn, and who owes what—with less
 								manual entry.
-							</p>
+							</motion.p>
 							<motion.div
 								initial={{ opacity: 0, y: 16 }}
 								animate={{ opacity: 1, y: 0 }}
@@ -1253,13 +1277,13 @@ function LandingPage() {
 					className="mx-auto w-[min(1200px,calc(100%-96px))] scroll-mt-6 max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)]"
 				>
 					<motion.div
-						className="overflow-hidden rounded-2xl border border-border bg-muted shadow-[0_24px_65px_-40px_#0006]"
+						className="rounded-2xl border border-border bg-muted shadow-[0_24px_65px_-40px_#0006]"
 						initial={{ opacity: 0, y: 16, scale: 0.99 }}
 						whileInView={{ opacity: 1, y: 0, scale: 1 }}
 						viewport={{ once: true, margin: "-80px" }}
 						transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
 					>
-						<div className="flex min-h-[62px] items-center justify-between gap-3 border-b border-border px-5 py-2.5 max-md:min-h-[54px] max-md:p-2">
+						<div className="flex min-h-[62px] rounded-t-2xl items-center justify-between gap-3 border-b border-border px-5 py-2.5 max-md:min-h-[54px] max-md:p-2">
 							<span className="flex items-center gap-2 text-xs font-medium">
 								<span className="size-2 rounded-full bg-emerald-600" /> Live
 								demo{" "}
@@ -1362,12 +1386,6 @@ function LandingPage() {
 									</Link>
 								</Button>
 							</div>
-							<Link
-								to="/login"
-								className="mt-6 text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
-							>
-								Log in
-							</Link>
 						</div>
 					</Reveal>
 				</section>

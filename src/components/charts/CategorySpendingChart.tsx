@@ -28,9 +28,15 @@ export function CategorySpendingChart({
 				value={view}
 				onValueChange={(value) => setView(value as "bar" | "pie")}
 			>
-				<CardHeader className="flex flex-row items-center justify-between space-y-0">
-					<CardTitle>Spending by Category</CardTitle>
-					<TabsList>
+				<CardHeader className="flex flex-row items-center justify-between space-y-0 gap-3 max-sm:p-4">
+					<CardTitle className="flex min-w-0 items-center gap-2 leading-tight">
+						<ChartPie
+							aria-hidden="true"
+							className="h-4 w-4 shrink-0 sm:h-5 sm:w-5"
+						/>
+						Spending by Category
+					</CardTitle>
+					<TabsList className="shrink-0">
 						<TabsTrigger value="bar" aria-label="Bar chart">
 							<ChartBar className="h-4 w-4" />
 						</TabsTrigger>

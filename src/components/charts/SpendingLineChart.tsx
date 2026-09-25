@@ -91,12 +91,6 @@ export function SpendingLineChart({
 	}, [data, theme]);
 
 	const perLabel = granularity === "month" ? "per month" : "per day";
-	const categoryName = categories?.find(
-		(c) => c.name === selectedCategory,
-	)?.name;
-	const subtitle = [`Spending ${perLabel}`, categoryName, periodLabel]
-		.filter(Boolean)
-		.join(" · ");
 
 	const categoryOptions = useMemo<CategoryComboboxOption[]>(
 		() => [
@@ -116,13 +110,13 @@ export function SpendingLineChart({
 
 	return (
 		<Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">
-			<CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4">
-				<div className="min-w-0">
-					<CardTitle className="flex items-center gap-2">
-						<TrendingUp className="h-5 w-5" />
-						Spending
+			<CardHeader className="flex flex-row items-start justify-between gap-3 max-sm:p-4">
+				<div className="min-w-0 flex-1">
+					<CardTitle className="flex items-center gap-2 leading-tight">
+						<TrendingUp className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+						Spending {perLabel}
 					</CardTitle>
-					<p className="text-sm text-muted-foreground">{subtitle}</p>
+					<p className="text-sm text-muted-foreground">{periodLabel}</p>
 				</div>
 				{categories && categories.length > 0 && (
 					<CategoryCombobox
@@ -132,7 +126,7 @@ export function SpendingLineChart({
 						}
 						options={categoryOptions}
 						placeholder="Filter by category"
-						className="w-52"
+						className="w-32 shrink-0 sm:w-52"
 					/>
 				)}
 			</CardHeader>
