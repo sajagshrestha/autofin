@@ -3,7 +3,6 @@ import Lenis from "lenis";
 import {
 	ArrowDown,
 	ArrowUpRight,
-	Bell,
 	ChartNoAxesCombined,
 	Check,
 	ChevronDown,
@@ -14,6 +13,7 @@ import {
 	PencilLine,
 	Search,
 	SlidersHorizontal,
+	Smartphone,
 	Sparkles,
 	TrendingDown,
 	X,
@@ -185,10 +185,10 @@ const FEATURES = [
 			"Ask the built-in AI assistant about spending, trends, and outstanding loans. Connect compatible AI assistants from Settings, too.",
 	},
 	{
-		icon: Bell,
-		title: "Stay up to date",
+		icon: Smartphone,
+		title: "Install it like an app",
 		description:
-			"Enable browser notifications for import updates, then open your transactions to review what has been added.",
+			"AutoFin is a progressive web app (PWA). Install it from a supported browser on your phone or desktop for quick access, and enable notifications for import updates.",
 	},
 ];
 
