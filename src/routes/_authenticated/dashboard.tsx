@@ -510,9 +510,9 @@ export function AnalyticsDashboard() {
 		<div className="space-y-6 min-w-0 overflow-hidden">
 			<div className="space-y-6 min-w-0">
 				{/* Header - always visible */}
-				<div className="flex flex-wrap items-center justify-between gap-4">
+				<div className="relative flex flex-wrap items-center justify-between gap-4">
 					<div>
-						<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+						<h1 className="pr-12 text-2xl sm:pr-0 sm:text-3xl font-semibold tracking-tight">
 							Your money, at a glance
 						</h1>
 						<p className="text-sm text-muted-foreground mt-2">
@@ -541,8 +541,8 @@ export function AnalyticsDashboard() {
 									title="Dashboard filters"
 									className={
 										excludeLoans
-											? "relative border-primary/60 text-primary"
-											: "relative"
+											? "max-sm:absolute max-sm:right-0 max-sm:top-0 relative border-primary/60 text-primary"
+											: "max-sm:absolute max-sm:right-0 max-sm:top-0 relative"
 									}
 								>
 									<SlidersHorizontal aria-hidden="true" />

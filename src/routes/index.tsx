@@ -3,18 +3,25 @@ import Lenis from "lenis";
 import {
 	ArrowDown,
 	ArrowUpRight,
+	Bell,
+	ChartNoAxesCombined,
 	Check,
 	ChevronDown,
 	Expand,
+	FileUp,
+	HandCoins,
+	MessageSquare,
+	PencilLine,
+	Search,
+	SlidersHorizontal,
+	Sparkles,
 	TrendingDown,
 	X,
 } from "lucide-react";
 import {
 	AnimatePresence,
-	animate,
 	motion,
 	stagger,
-	useMotionValue,
 	useMotionValueEvent,
 	useReducedMotion,
 	useScroll,
@@ -25,6 +32,7 @@ import {
 import {
 	useCallback,
 	useEffect,
+	useId,
 	useLayoutEffect,
 	useRef,
 	useState,
@@ -43,11 +51,11 @@ export const Route = createFileRoute("/")({
 	},
 	head: () => ({
 		meta: [
-			{ title: "AutoFin — Expense tracking on autopilot" },
+			{ title: "AutoFin — Automatic expense tracking from bank alerts" },
 			{
 				name: "description",
 				content:
-					"AutoFin automates your expense tracking. Connect Gmail and bank alerts become neat records and simple insights.",
+					"Turn bank alerts into organized transactions. Track spending, income, and loans, import statements or SMS, and ask AI questions about your money.",
 			},
 		],
 	}),
@@ -62,61 +70,192 @@ const FLOW_STEPS: {
 	title: string;
 	description: string;
 	example: {
-		variant: "statement" | "email" | "transaction" | "dashboard";
+		variant: "setup" | "statement" | "email" | "transaction" | "dashboard";
 	};
 }[] = [
 	{
 		no: "01",
-		title: "You pay as usual.",
+		title: "Connect Gmail",
 		description:
-			"Buy groceries, pay a bill, or send money. You don't need to do anything extra.",
-		example: { variant: "statement" },
+			"Connect Gmail, add your bank’s sender address, and enable email watching in Settings.",
+		example: { variant: "setup" },
 	},
 	{
 		no: "02",
-		title: "Your bank sends an email.",
+		title: "Make a payment",
 		description:
-			"Your bank sends a receipt or alert to your Gmail, like it already does.",
-		example: { variant: "email" },
+			"Pay as you normally would. Your bank records the transaction, like this NPR 850 purchase at Big Mart.",
+		example: { variant: "statement" },
 	},
 	{
 		no: "03",
-		title: "AutoFin sorts it for you.",
+		title: "Receive a bank alert",
 		description:
-			"We pull out the amount and shop name, then put it in the right bucket, like Food or Travel.",
-		example: { variant: "transaction" },
+			"Your bank emails the payment details. AutoFin watches for alerts from the senders you selected.",
+		example: { variant: "email" },
 	},
 	{
 		no: "04",
-		title: "You see simple insights.",
+		title: "Get an organized transaction",
 		description:
-			"Open your dashboard to see what you spent, what you earned, and what is left.",
+			"AutoFin extracts the amount, merchant, and date, then categorizes the purchase. You can correct any details.",
+		example: { variant: "transaction" },
+	},
+	{
+		no: "05",
+		title: "See your spending",
+		description:
+			"The transaction joins your other records in the dashboard. Compare income and expenses, categories, and monthly savings.",
 		example: { variant: "dashboard" },
 	},
 ];
 
 const FAQS = [
 	{
-		question: "How do I try it?",
+		question: "How can I try AutoFin?",
 		answer:
-			"AutoFin is in closed beta. Tap Request access to email us. If you already have an account, just log in.",
+			"Explore the demo with sample data—no account or Gmail connection needed. AutoFin is in closed beta; Request beta access opens an email to the team to ask for an invitation. If you already have access, log in.",
 	},
 	{
 		question: "Do I have to connect Gmail?",
 		answer:
-			"No. Gmail saves time, but you can also upload a bank statement, paste a bank SMS, or add a payment by hand.",
+			"No. You can import a PDF or image of a bank statement, paste a transaction SMS, or add a transaction manually. Gmail is optional and automates imports from the sender addresses you choose.",
 	},
 	{
-		question: "Can I fix a category?",
+		question: "Will it work with my bank?",
 		answer:
-			"Yes. You can change any category or make your own. If we are not sure, we leave it for you to check.",
+			"Automatic imports need transaction alerts delivered to Gmail. Add your bank’s sender address as a source and enable email watching. Email and statement formats vary, so check your first imports for accuracy. You can also use SMS or manual entry.",
 	},
 	{
-		question: "What can I ask the AI helper?",
+		question: "What does connecting Gmail allow?",
 		answer:
-			"Ask simple things like “How much did I spend on food this month?” It looks at your saved payments to answer.",
+			"AutoFin uses Gmail permissions to read matching alerts, manage the labels and filters used for imports, and mark processed messages as read. You choose the sender addresses in Settings, and can stop email watching or disconnect Gmail there.",
+	},
+	{
+		question: "Can I correct transactions and categories?",
+		answer:
+			"Yes. Edit transaction details, add notes, change categories, or create your own. You can also add custom instructions for AI categorization in Settings. AI can make mistakes, so review imported records.",
+	},
+	{
+		question: "Can I track money I lend or borrow?",
+		answer:
+			"Yes. Track loans given or taken, counterparties, due dates, repayments, and remaining balances. Link transactions to a loan, and use the dashboard filter to exclude loan-linked transfers from your spending and income totals.",
+	},
+	{
+		question: "What can I ask the AI assistant?",
+		answer:
+			"Ask questions such as “How much did I spend on food this month?” or “Which loans are still outstanding?” The assistant uses your recorded transactions and loans to answer. You can also connect compatible external AI assistants from Settings.",
+	},
+	{
+		question: "Is the savings figure my bank balance?",
+		answer:
+			"No. Savings is income minus expenses in your recorded transactions for the selected period. It is not a live bank balance, and missing transactions will affect the totals.",
 	},
 ];
+
+const FEATURES = [
+	{
+		icon: ChartNoAxesCombined,
+		title: "Understand your cash flow",
+		description:
+			"See income, expenses, and savings together. Switch date ranges and explore spending by day, month, or category.",
+	},
+	{
+		icon: Search,
+		title: "Find the transaction you need",
+		description:
+			"Search your records and filter by date, bank, category, or transaction type. Add notes and correct details in one place.",
+	},
+	{
+		icon: HandCoins,
+		title: "Keep track of loans",
+		description:
+			"See who owes you and what you owe, record repayments, and track due dates. Exclude loan transfers from dashboard totals when you need to.",
+	},
+	{
+		icon: SlidersHorizontal,
+		title: "Organize it your way",
+		description:
+			"Create categories, change AI suggestions, and add your own categorization rules. Manage bank email sources and their alternate names.",
+	},
+	{
+		icon: Sparkles,
+		title: "Ask questions about your money",
+		description:
+			"Ask the built-in AI assistant about spending, trends, and outstanding loans. Connect compatible AI assistants from Settings, too.",
+	},
+	{
+		icon: Bell,
+		title: "Stay up to date",
+		description:
+			"Enable browser notifications for import updates, then open your transactions to review what has been added.",
+	},
+];
+
+const IMPORT_METHODS = [
+	{
+		icon: FileUp,
+		title: "Import a statement",
+		description:
+			"Upload a PDF or statement image, review extracted transactions, and check possible duplicates before saving.",
+	},
+	{
+		icon: MessageSquare,
+		title: "Paste a bank SMS",
+		description:
+			"Turn a transaction message into a record without typing every field yourself.",
+	},
+	{
+		icon: PencilLine,
+		title: "Add it yourself",
+		description:
+			"Record cash purchases or any transaction that did not arrive as a bank alert.",
+	},
+];
+
+function FaqItem({ question, answer }: (typeof FAQS)[number]) {
+	const [open, setOpen] = useState(false);
+	const id = useId();
+	const reduceMotion = useReducedMotion();
+
+	return (
+		<Reveal className="border-b border-border first:border-t">
+			<h3>
+				<button
+					type="button"
+					id={id}
+					aria-expanded={open}
+					aria-controls={`${id}-answer`}
+					onClick={() => setOpen((value) => !value)}
+					className="flex w-full items-center justify-between gap-6 rounded-sm py-6 text-left text-[15px] font-medium transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				>
+					{question}
+					<ChevronDown
+						aria-hidden="true"
+						className={`size-5 shrink-0 text-muted-foreground transition-transform duration-250 motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
+					/>
+				</button>
+			</h3>
+			<motion.div
+				id={`${id}-answer`}
+				aria-labelledby={id}
+				aria-hidden={!open}
+				inert={!open}
+				initial={false}
+				animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}
+				transition={{
+					duration: reduceMotion ? 0 : 0.25,
+					ease: [0.22, 1, 0.36, 1],
+				}}
+				className="overflow-hidden"
+			>
+				<p className="pb-6 pr-6 text-sm leading-[1.8] text-muted-foreground">
+					{answer}
+				</p>
+			</motion.div>
+		</Reveal>
+	);
+}
 
 function AccessButton({ className = "" }: { className?: string }) {
 	return (
@@ -126,17 +265,27 @@ function AccessButton({ className = "" }: { className?: string }) {
 			className={`h-12 gap-2.5 rounded-[10px] border-0 bg-foreground px-6 font-semibold text-background transition-opacity duration-150 hover:bg-foreground hover:opacity-85 max-[359px]:gap-2 max-[359px]:px-[18px] max-[359px]:text-[13px] ${className}`}
 		>
 			<a href={ACCESS_URL}>
-				Request access <ArrowUpRight aria-hidden="true" className="size-4" />
+				Request beta access{" "}
+				<ArrowUpRight aria-hidden="true" className="size-4" />
 			</a>
 		</Button>
 	);
 }
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
+function SectionHeading({
+	id,
+	children,
+}: {
+	id: string;
+	children: React.ReactNode;
+}) {
 	return (
-		<p className="flex items-center gap-2.5 text-[10px] font-semibold leading-[1.6] tracking-[0.15em] text-muted-foreground max-md:text-[9px] max-md:tracking-[0.12em]">
+		<h2
+			id={id}
+			className="text-center text-3xl font-medium leading-tight tracking-[-0.035em] sm:text-4xl"
+		>
 			{children}
-		</p>
+		</h2>
 	);
 }
 
@@ -168,13 +317,18 @@ function Reveal({
 	delay?: number;
 	className?: string;
 }) {
+	const reduceMotion = useReducedMotion();
 	return (
 		<motion.div
 			className={className}
-			initial={{ opacity: 0, y: 16 }}
+			initial={reduceMotion ? false : { opacity: 0, y: 16 }}
 			whileInView={{ opacity: 1, y: 0 }}
 			viewport={{ once: true, margin: "-80px" }}
-			transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
+			transition={{
+				duration: reduceMotion ? 0 : 0.7,
+				delay: reduceMotion ? 0 : delay,
+				ease: [0.22, 1, 0.36, 1],
+			}}
 		>
 			{children}
 		</motion.div>
@@ -221,6 +375,37 @@ const STATEMENT_ROWS = [
 		tone: "debit",
 	},
 ] as const;
+
+function GmailSetupMock() {
+	return (
+		<div className="space-y-4">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<p className="text-sm font-semibold">Gmail</p>
+				<Badge variant="secondary" className="gap-1.5 font-normal">
+					<Check aria-hidden="true" className="size-3.5" />
+					Connected
+				</Badge>
+			</div>
+			<dl className="divide-y divide-border rounded-lg border border-border px-3">
+				<div className="py-3">
+					<dt className="text-xs text-muted-foreground">Bank source</dt>
+					<dd className="mt-1 text-sm font-medium">Nabil Bank</dd>
+				</div>
+				<div className="py-3">
+					<dt className="text-xs text-muted-foreground">Sender email</dt>
+					<dd className="mt-1 break-all text-sm">alerts@nabilbank.com</dd>
+				</div>
+				<div className="flex items-center justify-between gap-3 py-3">
+					<dt className="text-sm">Email watching</dt>
+					<dd className="flex items-center gap-1.5 text-sm font-medium">
+						<Check aria-hidden="true" className="size-3.5" />
+						Enabled
+					</dd>
+				</div>
+			</dl>
+		</div>
+	);
+}
 
 function StatementMock() {
 	return (
@@ -328,7 +513,7 @@ function TransactionMock() {
 				</Badge>
 			</div>
 			<p className="mt-3 text-[13px] text-muted-foreground">
-				Bank: Nabil Bank · Created by AI · 98% sure
+				Nabil Bank · AI-categorized · Editable
 			</p>
 		</div>
 	);
@@ -386,6 +571,7 @@ function DashboardMock() {
 function FlowExample({ step }: { step: (typeof FLOW_STEPS)[number] }) {
 	return (
 		<ExampleShell>
+			{step.example.variant === "setup" ? <GmailSetupMock /> : null}
 			{step.example.variant === "statement" ? <StatementMock /> : null}
 			{step.example.variant === "email" ? <EmailMock /> : null}
 			{step.example.variant === "transaction" ? <TransactionMock /> : null}
@@ -405,7 +591,7 @@ function RollingNumber({ current }: { current: number }) {
 			<span className="h-screen shrink-0 leading-none max-[900px]:h-[1em]">
 				<motion.span
 					className="block will-change-transform"
-					animate={{ y: `-${(current - 1) * 25}%` }}
+					animate={{ y: `-${(current - 1) * (100 / FLOW_STEPS.length)}%` }}
 					transition={
 						reduceMotion
 							? { duration: 0 }
@@ -455,18 +641,26 @@ function TimelineStep({
 			viewport={{ once: true, margin: "-64px" }}
 			transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
 		>
-			<article className="relative py-[clamp(56px,7vw,96px)] max-[900px]:py-10">
-				<div className="relative z-[1] max-w-[520px]">
-					<p className="mb-3 hidden text-[13px] font-semibold tracking-[0.15em] text-muted-foreground tabular-nums max-[900px]:block">
-						{step.no}
-					</p>
-					<h3
-						ref={titleRef}
-						className="text-[clamp(30px,3.2vw,44px)] leading-[1.1] tracking-[-0.035em] text-balance [font-weight:550]"
-					>
-						{step.title}
-					</h3>
-					<p className="mt-[14px] max-w-[44ch] text-base leading-[1.75] text-muted-foreground">
+			<article
+				className={
+					index === 0
+						? "relative pb-[clamp(32px,4vw,56px)] max-[900px]:pb-6"
+						: "relative py-[clamp(32px,4vw,56px)] max-[900px]:border-t max-[900px]:border-border max-[900px]:py-6"
+				}
+			>
+				<div className="relative z-[1] max-w-[520px] max-[900px]:max-w-none">
+					<div className="max-[900px]:flex max-[900px]:items-center max-[900px]:gap-3">
+						<p className="hidden size-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted/40 text-xs font-medium text-muted-foreground tabular-nums max-[900px]:flex">
+							{step.no}
+						</p>
+						<h3
+							ref={titleRef}
+							className="text-[clamp(30px,3.2vw,44px)] leading-[1.1] tracking-[-0.035em] text-balance [font-weight:550] max-[900px]:text-2xl"
+						>
+							{step.title}
+						</h3>
+					</div>
+					<p className="mt-[14px] max-w-[44ch] text-base leading-[1.75] text-muted-foreground max-[900px]:max-w-none max-[900px]:text-sm">
 						{step.description}
 					</p>
 					<FlowExample step={step} />
@@ -509,18 +703,15 @@ function HowItWorksTimeline() {
 	}, []);
 
 	return (
-		<div ref={sectionRef} className="relative mt-2">
+		<div ref={sectionRef} className="relative">
 			<motion.div
-				className="mb-4"
+				className="mb-8"
 				initial={{ opacity: 0, y: 16 }}
 				whileInView={{ opacity: 1, y: 0 }}
 				viewport={{ once: true, margin: "-80px" }}
 				transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
 			>
-				<Eyebrow>HOW IT WORKS</Eyebrow>
-				<h2 className="mt-[19px] text-[clamp(34px,3.6vw,48px)] font-medium leading-[1.13] tracking-[-0.045em] text-balance">
-					Getting started is simple. The rest runs itself.
-				</h2>
+				<SectionHeading id="workflow-title">How it works</SectionHeading>
 			</motion.div>
 			<div className="relative">
 				<svg
@@ -548,7 +739,7 @@ function HowItWorksTimeline() {
 					)}
 				</svg>
 				<div className="relative z-[1] grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-stretch gap-[clamp(32px,5vw,80px)] max-[900px]:grid-cols-1">
-					<ol className="grid min-w-0 list-none">
+					<ol className="grid min-w-0 list-none max-[900px]:mx-auto max-[900px]:w-full max-[900px]:max-w-[640px]">
 						{FLOW_STEPS.map((step, i) => (
 							<TimelineStep
 								key={step.no}
@@ -568,15 +759,24 @@ function HowItWorksTimeline() {
 					</div>
 				</div>
 			</div>
-			<div className="mx-auto grid max-w-[580px] justify-items-center gap-4 px-6 pb-2 pt-[clamp(56px,7vw,96px)] text-center">
-				<h3 className="text-[clamp(28px,3vw,40px)] tracking-[-0.035em] text-balance [font-weight:550]">
-					Every step runs itself.
+			<Reveal className="mx-auto grid max-w-[580px] justify-items-center gap-4 px-6 pb-2 pt-[clamp(56px,7vw,96px)] text-center">
+				<h3 className="text-2xl font-medium tracking-tight sm:text-3xl">
+					Other ways to add transactions
 				</h3>
-				<p className="max-w-[46ch] text-base leading-[1.7] text-muted-foreground">
-					Connect Gmail once — AutoFin handles every payment after that, at your
-					pace.
-				</p>
-				<AccessButton className="mt-2" />
+			</Reveal>
+			<div className="mt-8 grid gap-6 md:grid-cols-3">
+				{IMPORT_METHODS.map(({ icon: Icon, title, description }) => (
+					<Reveal
+						key={title}
+						className="rounded-2xl border border-border bg-card p-6"
+					>
+						<Icon aria-hidden="true" className="size-5 text-muted-foreground" />
+						<h4 className="mt-4 text-base font-semibold">{title}</h4>
+						<p className="mt-2 text-sm leading-7 text-muted-foreground">
+							{description}
+						</p>
+					</Reveal>
+				))}
 			</div>
 		</div>
 	);
@@ -723,118 +923,15 @@ function FlipBrandWord() {
 	);
 }
 
-const heroContainer: Variants = {
-	hidden: {},
-	show: {
-		transition: { staggerChildren: 0.22, delayChildren: 0.35 },
-	},
-};
-
-const heroCard: Variants = {
-	hidden: { opacity: 0, y: 28 },
-	show: {
-		opacity: 1,
-		y: 0,
-		transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] },
-	},
-};
-
-function HeroVisual() {
-	const reduceMotion = useReducedMotion();
-
-	if (reduceMotion) {
-		return (
-			<div className="relative mx-auto w-full max-w-[420px]" aria-hidden="true">
-				<MockCard>
-					<EmailMock />
-				</MockCard>
-				<div className="flex justify-center py-1.5 text-muted-foreground">
-					<ArrowDown className="size-4" />
-				</div>
-				<MockCard>
-					<TransactionMock />
-				</MockCard>
-			</div>
-		);
-	}
-
-	return (
-		<motion.div
-			className="relative mx-auto w-full max-w-[420px]"
-			aria-hidden="true"
-			variants={heroContainer}
-			initial="hidden"
-			animate="show"
-		>
-			<motion.div variants={heroCard}>
-				<MockCard>
-					<EmailMock />
-				</MockCard>
-			</motion.div>
-			<motion.div
-				variants={heroCard}
-				className="flex justify-center py-1.5 text-muted-foreground"
-			>
-				<motion.span
-					className="block"
-					animate={{ y: [0, 4, 0] }}
-					transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-				>
-					<ArrowDown className="size-4" />
-				</motion.span>
-			</motion.div>
-			<motion.div variants={heroCard}>
-				<motion.div
-					animate={{ y: [0, -6, 0] }}
-					transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-				>
-					<MockCard>
-						<TransactionMock />
-					</MockCard>
-				</motion.div>
-			</motion.div>
-		</motion.div>
-	);
-}
-
 function DemoFrame() {
 	const reduceMotion = useReducedMotion();
-	const [phase, setPhase] = useState<"loading" | "booting" | "ready">(
-		"loading",
-	);
+	const [isReady, setIsReady] = useState(false);
+	const [isMounted, setIsMounted] = useState(false);
+
+	// Mount after hydration so the iframe load event cannot fire before React listens.
+	useEffect(() => setIsMounted(true), []);
 	const [isOpen, setIsOpen] = useState(false);
-	const pct = useMotionValue(4);
-	const pctText = useTransform(pct, (v) => `${Math.round(v)}%`);
-	const barWidth = useTransform(pct, (v) => `${v}%`);
-
-	// Hold a fake loader on screen while the hero entrance finishes, then
-	// boot the full demo app behind it. The iframe only reveals once it has
-	// actually painted, so there is no flash of empty frame.
-	useEffect(() => {
-		const t = setTimeout(() => setPhase("booting"), reduceMotion ? 400 : 1500);
-		return () => clearTimeout(t);
-	}, [reduceMotion]);
-
-	useEffect(() => {
-		if (phase === "loading") {
-			const controls = animate(
-				pct,
-				88,
-				reduceMotion ? { duration: 0 } : { duration: 2.4, ease: "easeOut" },
-			);
-			return () => controls.stop();
-		}
-		if (phase === "ready") {
-			const controls = animate(pct, 100, { duration: 0.35 });
-			return () => controls.stop();
-		}
-	}, [phase, pct, reduceMotion]);
-
-	useEffect(() => {
-		if (phase !== "booting") return;
-		const t = setTimeout(() => setPhase("ready"), 9000);
-		return () => clearTimeout(t);
-	}, [phase]);
+	const triggerRef = useRef<HTMLButtonElement>(null);
 
 	// Lock page scroll (including Lenis smooth scroll) while the modal is open.
 	useEffect(() => {
@@ -842,7 +939,9 @@ function DemoFrame() {
 		const prevOverflow = document.body.style.overflow;
 		document.body.style.overflow = "hidden";
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") setIsOpen(false);
+			if (e.key === "Escape") {
+				setIsOpen(false);
+			}
 		};
 		window.addEventListener("keydown", onKey);
 		return () => {
@@ -857,7 +956,11 @@ function DemoFrame() {
 	// the demo keeps its state and never reloads.
 	const closeRef = useRef<HTMLButtonElement>(null);
 	useEffect(() => {
-		if (isOpen) closeRef.current?.focus();
+		if (!isOpen) return;
+		closeRef.current?.focus();
+		return () => {
+			requestAnimationFrame(() => triggerRef.current?.focus());
+		};
 	}, [isOpen]);
 
 	return (
@@ -883,7 +986,7 @@ function DemoFrame() {
 					: {})}
 				className={`group flex w-full flex-col overflow-hidden border border-border bg-background shadow-2xl ${
 					isOpen
-						? "fixed inset-0 z-[100] m-auto h-[min(860px,calc(100dvh-3rem))] w-[75vw] max-w-7xl"
+						? "fixed inset-0 z-[100] m-auto h-[min(860px,calc(100dvh-3rem))] w-[min(1200px,calc(100vw-3rem))] max-md:w-[calc(100vw-1rem)] max-md:h-[calc(100dvh-1rem)]"
 						: "relative h-[780px] max-md:h-[680px]"
 				}`}
 			>
@@ -902,10 +1005,10 @@ function DemoFrame() {
 							className="shrink-0 overflow-hidden border-b border-border"
 						>
 							<div className="flex min-h-[56px] items-center justify-between gap-3 px-5 py-2.5">
-								<span className="flex items-center gap-2 text-xs font-medium">
-									<span className="size-2 rounded-full bg-emerald-600" /> Live
-									demo{" "}
-									<span className="font-normal text-muted-foreground">
+								<span className="flex items-center gap-2 whitespace-nowrap text-xs font-medium">
+									<span className="size-2 shrink-0 rounded-full bg-emerald-600" />{" "}
+									Live demo{" "}
+									<span className="hidden font-normal text-muted-foreground sm:inline">
 										· Sample data
 									</span>
 								</span>
@@ -916,7 +1019,7 @@ function DemoFrame() {
 										rel="noreferrer"
 										className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium underline-offset-4 hover:underline"
 									>
-										Open in new tab{" "}
+										New tab{" "}
 										<ArrowUpRight aria-hidden="true" className="size-4" />
 									</a>
 									<button
@@ -924,7 +1027,7 @@ function DemoFrame() {
 										type="button"
 										onClick={() => setIsOpen(false)}
 										aria-label="Close demo"
-										className="inline-flex size-8 items-center justify-center rounded-full border border-border transition-colors hover:bg-muted"
+										className="inline-flex size-11 items-center justify-center rounded-full border border-border transition-colors hover:bg-muted"
 									>
 										<X aria-hidden="true" className="size-4" />
 									</button>
@@ -935,11 +1038,11 @@ function DemoFrame() {
 				</AnimatePresence>
 
 				<div className="relative min-h-0 flex-1">
-					{phase !== "loading" && (
+					{isMounted && (
 						<iframe
 							src="/demo"
 							title="Interactive AutoFin demo with sample data"
-							onLoad={() => setPhase("ready")}
+							onLoad={() => setIsReady(true)}
 							tabIndex={isOpen ? 0 : -1}
 							aria-hidden={!isOpen}
 							className={`absolute inset-0 block h-full w-full border-0 bg-background ${
@@ -947,35 +1050,33 @@ function DemoFrame() {
 							}`}
 						/>
 					)}
-					{phase !== "ready" && (
-						<div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background">
-							<p className="text-sm text-muted-foreground">
-								{phase === "loading"
-									? "Preparing demo workspace"
-									: "Loading sample data"}
+					{!isReady && (
+						<div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+							<p role="status" className="text-sm text-muted-foreground">
+								Loading the sample workspace…
 							</p>
-							<div className="h-1.5 w-56 overflow-hidden rounded-full bg-muted">
-								<motion.div
-									className="h-full rounded-full bg-foreground"
-									style={{ width: barWidth }}
-								/>
-							</div>
-							<p className="text-xs tabular-nums text-muted-foreground">
-								<motion.span>{pctText}</motion.span>
-							</p>
+							<a
+								href="/demo"
+								target="_blank"
+								rel="noreferrer"
+								className="text-sm underline underline-offset-4"
+							>
+								Open demo in a new tab
+							</a>
 						</div>
 					)}
 					{/* Overlay blocks the iframe's scroll so it never hijacks page
 					    scroll. On hover it invites opening the semi-fullscreen view. */}
-					{phase === "ready" && !isOpen && (
+					{isReady && !isOpen && (
 						<button
 							type="button"
+							ref={triggerRef}
 							onClick={() => setIsOpen(true)}
 							aria-label="Open full demo"
 							aria-haspopup="dialog"
-							className="absolute inset-0 z-10 flex cursor-zoom-in items-center justify-center bg-black/25 backdrop-blur-[1px] transition-colors duration-200 hover:bg-black/55 focus-visible:bg-black/55 focus-visible:outline-none"
+							className="absolute inset-0 z-10 flex cursor-zoom-in items-center justify-center bg-black/10 transition-colors duration-200 hover:bg-black/55 focus-visible:bg-black/55 focus-visible:outline-none"
 						>
-							<span className="flex translate-y-1 items-center gap-2.5 rounded-full border border-border bg-background/90 px-5 py-3 text-sm font-semibold shadow-xl opacity-0 backdrop-blur transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100">
+							<span className="flex translate-y-1 items-center gap-2.5 rounded-full border border-border bg-background/90 px-5 py-3 text-sm font-semibold shadow-xl opacity-100 backdrop-blur transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100">
 								<Expand aria-hidden="true" className="size-4" />
 								Open full demo
 							</span>
@@ -1045,7 +1146,13 @@ function LandingPage() {
 							href="#product"
 							className="transition-colors duration-150 hover:text-foreground"
 						>
-							Product
+							Live demo
+						</a>
+						<a
+							href="#features"
+							className="transition-colors duration-150 hover:text-foreground"
+						>
+							Features
 						</a>
 						<a
 							href="#how-it-works"
@@ -1069,19 +1176,44 @@ function LandingPage() {
 						</Button>
 					</div>
 				</nav>
+				<nav
+					aria-label="Page sections"
+					className="mx-auto flex w-[calc(100%-40px)] flex-wrap items-center justify-between gap-x-4 border-t border-border text-xs text-muted-foreground md:hidden"
+				>
+					{[
+						["#product", "Live demo"],
+						["#features", "Features"],
+						["#how-it-works", "How it works"],
+						["#questions", "FAQ"],
+					].map(([href, label]) => (
+						<a
+							key={href}
+							href={href}
+							className="inline-flex min-h-11 items-center hover:text-foreground"
+						>
+							{label}
+						</a>
+					))}
+				</nav>
 			</header>
 
-			<main id="home-content">
-				<section className="mx-auto w-[min(1200px,calc(100%-96px))] pb-[72px] pt-[88px] max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)] max-md:pb-9 max-md:pt-11">
-					<div className="relative grid grid-cols-[1.2fr_1fr] items-center gap-[clamp(40px,5vw,80px)] max-lg:gap-[35px] max-md:grid-cols-1 max-md:gap-10">
-						<div className="max-md:flex max-md:flex-col max-md:items-center max-md:text-center">
+			<main
+				id="home-content"
+				className="flex flex-col gap-24 py-24 max-md:gap-16 max-md:py-16"
+			>
+				<section className="mx-auto w-[min(1200px,calc(100%-96px))] max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)]">
+					<div className="relative mx-auto max-w-[800px]">
+						<div className="@container flex min-w-0 flex-col items-center text-center">
+							<p className="mb-5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+								Personal finance tracking · Closed beta
+							</p>
 							<motion.h1
-								className="relative text-[clamp(60px,7vw,100px)] leading-none tracking-[-0.065em] text-balance [font-weight:550] max-lg:text-[64px] max-md:text-[clamp(32px,11vw,56px)]"
+								className="relative text-[clamp(28px,11.5cqw,76px)] leading-[1.05] tracking-[-0.065em] [font-weight:550]"
 								initial={{ opacity: 0, y: 16 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
 							>
-								Expense tracking,
+								<span className="whitespace-nowrap">Expense tracking,</span>
 								<br />
 								<span aria-hidden="true">
 									on Auto
@@ -1089,6 +1221,11 @@ function LandingPage() {
 								</span>
 								<span className="sr-only">on Autopilot.</span>
 							</motion.h1>
+							<p className="mt-6 max-w-[48ch] text-base leading-8 text-muted-foreground sm:text-lg">
+								AutoFin turns bank alerts in Gmail into organized transactions.
+								See what you spend, what you earn, and who owes what—with less
+								manual entry.
+							</p>
 							<motion.div
 								initial={{ opacity: 0, y: 16 }}
 								animate={{ opacity: 1, y: 0 }}
@@ -1098,39 +1235,25 @@ function LandingPage() {
 									ease: [0.22, 1, 0.36, 1],
 								}}
 							>
-								<div className="mt-8 flex flex-wrap items-center gap-5 max-[359px]:gap-[14px] max-md:justify-center">
+								<div className="mt-8 flex flex-wrap items-center justify-center gap-5 max-[359px]:gap-[14px]">
 									<AccessButton />
-									<TextLink href="#how-it-works">
-										See how it works{" "}
+									<TextLink href="#product">
+										Explore the demo{" "}
 										<ArrowDown aria-hidden="true" className="size-4" />
 									</TextLink>
 								</div>
 							</motion.div>
 						</div>
-						<HeroVisual />
 					</div>
 				</section>
 
 				<section
 					id="product"
-					aria-labelledby="product-title"
+					aria-label="Live demo"
 					className="mx-auto w-[min(1200px,calc(100%-96px))] scroll-mt-6 max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)]"
 				>
-					<Reveal>
-						<Eyebrow>TRY IT NOW</Eyebrow>
-						<h2
-							id="product-title"
-							className="mt-[19px] max-w-xl text-[clamp(34px,3.6vw,48px)] font-medium leading-[1.13] tracking-[-0.045em] text-balance"
-						>
-							See your money, clearly.
-						</h2>
-						<p className="mt-4 max-w-md text-base leading-[1.75] text-muted-foreground">
-							A live demo with sample data. Try the filters and charts.
-						</p>
-					</Reveal>
-
 					<motion.div
-						className="mt-8 overflow-hidden rounded-2xl border border-border bg-muted shadow-[0_24px_65px_-40px_#0006]"
+						className="overflow-hidden rounded-2xl border border-border bg-muted shadow-[0_24px_65px_-40px_#0006]"
 						initial={{ opacity: 0, y: 16, scale: 0.99 }}
 						whileInView={{ opacity: 1, y: 0, scale: 1 }}
 						viewport={{ once: true, margin: "-80px" }}
@@ -1156,103 +1279,95 @@ function LandingPage() {
 						</div>
 						<DemoFrame />
 					</motion.div>
-					<div className="flex justify-between gap-4 pt-[15px] text-[11px] text-muted-foreground max-md:gap-2.5 max-md:text-[9px]">
-						<span>The real app, with sample data.</span>
-						<span>Click around — nothing will break.</span>
+				</section>
+
+				<section
+					id="features"
+					aria-labelledby="features-title"
+					className="mx-auto w-[min(1200px,calc(100%-96px))] scroll-mt-6 max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)]"
+				>
+					<Reveal>
+						<SectionHeading id="features-title">What you can do</SectionHeading>
+					</Reveal>
+					<div className="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+						{FEATURES.map(({ icon: Icon, title, description }) => (
+							<Reveal key={title}>
+								<article className="border-t border-border pt-8">
+									<Icon
+										aria-hidden="true"
+										className="size-6 text-muted-foreground"
+									/>
+									<h3 className="mt-5 text-lg font-semibold tracking-tight">
+										{title}
+									</h3>
+									<p className="mt-3 text-sm leading-7 text-muted-foreground">
+										{description}
+									</p>
+								</article>
+							</Reveal>
+						))}
 					</div>
 				</section>
 
 				<section
 					id="how-it-works"
 					aria-labelledby="workflow-title"
-					className="mx-auto w-[min(1200px,calc(100%-96px))] scroll-mt-6 py-[108px] max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)] max-md:py-16"
+					className="mx-auto w-[min(1200px,calc(100%-96px))] scroll-mt-6 max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)]"
 				>
-					<h2 id="workflow-title" className="sr-only">
-						How it works
-					</h2>
 					<HowItWorksTimeline />
 				</section>
 
 				<section
 					id="questions"
 					aria-labelledby="questions-title"
-					className="mx-auto grid w-[min(1200px,calc(100%-96px))] scroll-mt-6 grid-cols-[1fr_1.2fr] gap-[85px] py-[108px] max-lg:w-[calc(100%-56px)] max-lg:gap-[45px] max-md:w-[calc(100%-40px)] max-md:grid-cols-1 max-md:gap-8 max-md:py-16"
+					className="mx-auto w-[min(1200px,calc(100%-96px))] scroll-mt-6 max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)]"
 				>
 					<Reveal>
-						<div>
-							<Eyebrow>GOOD TO KNOW</Eyebrow>
-							<h2 className="mt-[19px] text-[clamp(34px,3.6vw,48px)] font-medium leading-[1.13] tracking-[-0.045em] text-balance">
-								Questions,
-								<br />
-								answered simply.
-							</h2>
-							<p className="mt-5 max-w-xs text-base leading-[1.75] text-muted-foreground">
-								Still curious? Email us and we will reply.
-							</p>
-							<TextLink href={ACCESS_URL} className="mt-3">
-								Get in touch{" "}
-								<ArrowUpRight aria-hidden="true" className="size-4" />
-							</TextLink>
+						<div className="text-center">
+							<SectionHeading id="questions-title">
+								Common questions
+							</SectionHeading>
 						</div>
 					</Reveal>
-					<div>
-						{FAQS.map(({ question, answer }, i) => (
-							<motion.details
-								key={question}
-								className="group border-b border-border first:border-t"
-								initial={{ opacity: 0, y: 16 }}
-								whileInView={{ opacity: 1, y: 0 }}
-								viewport={{ once: true, margin: "-40px" }}
-								transition={{ duration: 0.7, delay: i * 0.05 }}
-							>
-								<summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-6 text-[15px] font-medium [&::-webkit-details-marker]:hidden">
-									{question}
-									<ChevronDown
-										aria-hidden="true"
-										className="size-5 shrink-0 text-muted-foreground transition-transform duration-150 group-open:rotate-180"
-									/>
-								</summary>
-								<p className="pb-6 pr-6 text-sm leading-[1.8] text-muted-foreground">
-									{answer}
-								</p>
-							</motion.details>
+					<div className="mx-auto mt-8 max-w-3xl">
+						{FAQS.map((faq) => (
+							<FaqItem key={faq.question} {...faq} />
 						))}
 					</div>
 				</section>
 
 				<section
-					className="mx-auto w-[min(1200px,calc(100%-96px))] pb-16 max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)] sm:pb-24"
+					className="mx-auto w-[min(1200px,calc(100%-96px))] max-lg:w-[calc(100%-56px)] max-md:w-[calc(100%-40px)]"
 					aria-labelledby="start-title"
 				>
 					<Reveal>
-						<div className="flex items-center justify-between gap-10 rounded-[20px] border border-border bg-muted p-[52px] max-lg:p-9 max-md:flex-col max-md:items-start max-md:gap-[30px] max-md:p-[30px_24px]">
-							<div>
-								<p className="flex items-center gap-2.5 text-[10px] font-semibold leading-[1.6] tracking-[0.15em] text-muted-foreground max-md:text-[9px] max-md:tracking-[0.12em]">
-									<span
-										className="size-1.5 shrink-0 rounded-full bg-emerald-500"
-										aria-hidden="true"
-									/>{" "}
-									NOW IN CLOSED BETA
-								</p>
-								<h2 className="mt-[19px] text-[clamp(34px,3.6vw,48px)] font-medium leading-[1.13] tracking-[-0.045em] text-balance">
-									See your money
-									<br />
-									more clearly.
-								</h2>
-								<p className="mt-5 text-muted-foreground max-md:text-sm max-md:leading-[1.7]">
-									Less manual work. More peace of mind.
-								</p>
-							</div>
-							<div className="flex shrink-0 flex-col items-center gap-5 max-md:items-start">
+						<div className="flex flex-col items-center rounded-2xl border border-border bg-muted/40 px-6 py-12 text-center sm:px-12 sm:py-16">
+							<h2
+								id="start-title"
+								className="max-w-[19ch] text-4xl font-medium leading-[1.1] tracking-[-0.045em] sm:text-5xl"
+							>
+								Spend less time tracking expenses.
+							</h2>
+							<div className="mt-8 flex flex-wrap justify-center gap-3">
 								<AccessButton />
-								<span className="flex items-center gap-2 text-xs text-muted-foreground">
-									<Check aria-hidden="true" className="size-3.5" /> Already have
-									access?{" "}
-									<Link to="/login" className="underline underline-offset-4">
-										Log in
+								<Button
+									asChild
+									variant="outline"
+									size="lg"
+									className="h-12 rounded-[10px] px-6"
+								>
+									<Link to="/demo">
+										Explore demo{" "}
+										<ArrowUpRight aria-hidden="true" className="size-4" />
 									</Link>
-								</span>
+								</Button>
 							</div>
+							<Link
+								to="/login"
+								className="mt-6 text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+							>
+								Log in
+							</Link>
 						</div>
 					</Reveal>
 				</section>
@@ -1262,10 +1377,16 @@ function LandingPage() {
 				<div>
 					<Logo className="h-7" />
 					<p className="mt-3 text-xs text-muted-foreground">
-						Clear money, every day.
+						Bank alerts, spending insights, and loans in one place.
 					</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-muted-foreground">
+					<a
+						href="mailto:sajagshrestha0852@gmail.com"
+						className="transition-colors duration-150 hover:text-foreground"
+					>
+						Get in touch
+					</a>
 					<Link
 						to="/privacy"
 						className="transition-colors duration-150 hover:text-foreground"

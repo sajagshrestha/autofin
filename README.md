@@ -1,12 +1,40 @@
 # AutoFin — TanStack Start
 
-Unified full-stack rewrite of the previous `autofin-fe` (Vite SPA) and
-`autfin-BE` (Hono on Bun) repositories as a single
-[TanStack Start](https://tanstack.com/start) application.
+AutoFin turns bank alerts into organized transactions so you can track spending,
+income, and money lent or borrowed. Built as a full-stack TanStack Start app.
 
-Personal finance tracking: connect Gmail, automatically import bank-transaction
-emails via Pub/Sub push + AI extraction, categorize spending, visualize trends,
-and generate AI insights.
+## Features
+
+- **Automatic Gmail imports:** connect Gmail, configure bank sender addresses,
+  and enable email watching. New alerts are extracted and categorized with AI.
+- **Other ways to add transactions:** import PDF/image statements, paste bank SMS
+  messages, or enter records manually. Review statement imports and possible
+  duplicates before saving.
+- **Dashboard:** compare income, expenses, savings, and spending by category or
+  date. The filter menu can exclude loan-linked transactions; on mobile, its
+  button sits beside the page title. Savings means recorded income minus expenses,
+  not a live bank balance.
+- **Search and organization:** filter transactions by date, bank, category, and
+  type; edit details and notes; manage categories, categorization rules, bank
+  sources, and source aliases.
+- **Loans:** track money lent and borrowed, counterparties, due dates, linked
+  transactions, repayments, and outstanding balances.
+- **AI assistance:** ask about recorded finances in the app or connect a compatible
+  external assistant through the MCP endpoint in Settings.
+- **Notifications and responsive UI:** optional browser push notifications,
+  light/dark themes, and layouts for desktop and mobile.
+
+## Homepage and live demo
+
+The public homepage explains the Gmail workflow, alternative import methods,
+features, and common questions. AutoFin is currently in closed beta; the access
+button opens an email request, while existing users can log in.
+
+Visit `/demo` or open the embedded homepage demo to explore the dashboard,
+transactions, categories, and loans without signing in. It uses generated sample
+data and blocks writes; it does not call live Gmail or AI services. The embedded
+frame mounts after hydration so its loading indicator receives the load event.
+See [the demo architecture and isolation checks](src/demo/README.md).
 
 ## Stack
 
@@ -18,7 +46,7 @@ and generate AI insights.
 | UI         | Tailwind CSS v4 + shadcn/ui-style components, Radix primitives, sonner                 |
 | Auth       | Supabase Auth with **cookie sessions** (`@supabase/ssr`) shared client ↔ server        |
 | Database   | PostgreSQL (Supabase) via Drizzle ORM (`postgres-js`)                                  |
-| AI         | Vercel AI SDK (Gemini by default; OpenAI/Anthropic supported)                          |
+| AI         | Vercel AI SDK (OpenAI by default; Google/Anthropic supported)                          |
 | Background | Inngest (Gmail watch renewal loop), Google Pub/Sub push webhook                        |
 
 ## Architecture
@@ -95,6 +123,7 @@ Client (exposed to the browser):
 
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — Supabase project
 - `VITE_APP_TITLE` — optional document title
+- `VITE_VAPID_PUBLIC_KEY` — optional browser push public key
 
 Server:
 
@@ -102,10 +131,14 @@ Server:
 - `DATABASE_URL` — Postgres connection (Supabase pooler compatible)
 - `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`,
   `GMAIL_OAUTH_REDIRECT_URI` — must be `<origin>/api/gmail/oauth/callback`
-- `GOOGLE_GENERATIVE_AI_API_KEY` (+ optional `AI_PROVIDER=google|openai|anthropic`)
+- `AI_PROVIDER=openai|google|anthropic` (default: `openai`) and the matching
+  `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, or `ANTHROPIC_API_KEY`
 - `TYPESAFE_API_KEY` — JEV category selection for email/SMS transactions
 - `TYPESAFE_MODEL` — optional JEV model override (default: `jev-latest`)
 - `DISCORD_WEBHOOK_URL` — optional transaction notifications
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — optional Web Push
+  configuration; the public key must match `VITE_VAPID_PUBLIC_KEY`
+- `MCP_TOKEN_SECRET` — secret used to derive per-user MCP tokens
 - `GMAIL_PUBSUB_TOPIC` — Pub/Sub topic for watch (has a default)
 - `GMAIL_PUBSUB_VERIFICATION_TOKEN` — optional shared secret for the webhook
 - `GMAIL_WATCH_RESYNC_INTERVAL` — watch renewal cadence for the Inngest loop
@@ -165,9 +198,9 @@ The advisor tools are also exposed as a **stateless MCP server** at
 
 Auth is a per-user deterministic bearer token (`Settings → Connect AI
 assistants` shows the URL, token, and a ready-to-paste client config).
-Rotating `MCP_TOKEN_SECRET` revokes every token. The four tools mirror the
-in-app chat: `getSpendingSummary`, `getSpendingByCategory`,
-`getMonthlyTrend`, `listTransactions`.
+Rotating `MCP_TOKEN_SECRET` revokes every token. Tools cover spending summaries, category breakdowns, monthly trends, transaction
+search, categories, and loan balances and settlements. The in-app advisor also
+supports chart rendering.
 
 ## Gmail pipeline
 
@@ -179,9 +212,7 @@ in-app chat: `getSpendingSummary`, `getSpendingByCategory`,
    pushes, dedupes by email ID, runs AI extraction, stores transactions, and
    renews its history cursor. An Inngest function keeps the watch renewed.
 
-> NOTE: verify this repo's `.env` points at a live Supabase project — the
-> credentials inherited from the old backend may reference a paused/deleted
-> instance (DNS will fail in `pnpm db:check`).
+Use `pnpm db:check` to verify database connectivity when setting up a project.
 
 ## Scripts
 
@@ -190,5 +221,7 @@ in-app chat: `getSpendingSummary`, `getSpendingByCategory`,
 | `pnpm dev`        | Dev server (SSR + HMR)               |
 | `pnpm build`      | Production build + typecheck         |
 | `pnpm check`      | Biome lint/format check              |
+| `pnpm test`       | Offline unit tests                   |
+| `pnpm exec vitest run src/demo/client.test.ts` | Demo isolation and filtering tests |
 | `pnpm db:*`       | drizzle-kit generate/migrate/push/studio |
 | `pnpm db:seed`    | Seed default categories (idempotent) |
