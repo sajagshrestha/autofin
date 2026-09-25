@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AiPreferencesSection } from "@/components/settings/AiPreferencesSection";
-import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { GmailSection } from "@/components/settings/GmailSection";
 import { McpSection } from "@/components/settings/McpSection";
 import { NotificationsSection } from "@/components/settings/NotificationsSection";
@@ -88,9 +87,6 @@ function SettingsIndexPage() {
 						</TabsContent>
 						<TabsContent value="mcp" className="mt-0">
 							<McpSection />
-						</TabsContent>
-						<TabsContent value="appearance" className="mt-0">
-							<AppearanceSection />
 						</TabsContent>
 						<TabsContent value="notifications" className="mt-0">
 							<NotificationsSection />

@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/terms")({
@@ -17,7 +16,6 @@ function TermsPage() {
 					<Link to="/" className="flex items-center gap-2">
 						<Logo className="h-7" />
 					</Link>
-					<ThemeSwitcher />
 				</div>
 			</nav>
 

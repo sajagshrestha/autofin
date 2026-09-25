@@ -6,12 +6,10 @@ import {
 	LayoutDashboard,
 	LogOut,
 	Menu,
-	Moon,
 	PanelLeftClose,
 	PanelLeftOpen,
 	Settings,
 	Sparkles,
-	Sun,
 	Upload,
 	Wallet,
 	X,
@@ -22,11 +20,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDemo } from "@/contexts/DemoContext";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { useAdvisorChat } from "./ai-chat/advisor-chat-context";
 import { Logo } from "./Logo";
-import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Button } from "./ui/button";
 import {
 	Dialog,
@@ -66,7 +62,6 @@ export default function Header() {
 	const [signingOut, setSigningOut] = useState(false);
 	const cancelSignOutRef = useRef<HTMLButtonElement>(null);
 	const { collapsed, toggle } = useSidebar();
-	const { resolvedTheme, setMode } = useTheme();
 	const reduceMotion = useReducedMotion();
 	const { user, signOut } = useAuth();
 	const demo = useDemo();
@@ -306,20 +301,6 @@ export default function Header() {
 									Settings
 								</Link>
 							</DropdownMenuItem>
-							<DropdownMenuItem
-								onSelect={() =>
-									setMode(resolvedTheme === "dark" ? "light" : "dark")
-								}
-							>
-								{resolvedTheme === "dark" ? (
-									<Sun aria-hidden="true" className="mr-2 size-4" />
-								) : (
-									<Moon aria-hidden="true" className="mr-2 size-4" />
-								)}
-								{resolvedTheme === "dark"
-									? "Switch to light mode"
-									: "Switch to dark mode"}
-							</DropdownMenuItem>
 							<DropdownMenuSeparator />
 							<DropdownMenuItem onSelect={handleSignOut}>
 								<LogOut aria-hidden="true" className="mr-2 size-4" />
@@ -334,7 +315,6 @@ export default function Header() {
 					<Logo className="h-8" />
 				</Link>
 				<div className="flex items-center gap-2">
-					<ThemeSwitcher />
 					<Drawer
 						open={mobileOpen}
 						onOpenChange={setMobileOpen}

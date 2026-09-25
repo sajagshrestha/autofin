@@ -22,7 +22,7 @@ income, and money lent or borrowed. Built as a full-stack TanStack Start app.
 - **AI assistance:** ask about recorded finances in the app or connect a compatible
   external assistant through the MCP endpoint in Settings.
 - **Notifications and responsive UI:** optional browser push notifications,
-  light/dark themes, and layouts for desktop and mobile.
+  a dark theme, and layouts for desktop and mobile.
 
 ## Homepage and live demo
 

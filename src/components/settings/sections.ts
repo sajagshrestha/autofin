@@ -1,11 +1,4 @@
-import {
-	Bell,
-	type LucideIcon,
-	Mail,
-	Palette,
-	Plug,
-	Sparkles,
-} from "lucide-react";
+import { Bell, type LucideIcon, Mail, Plug, Sparkles } from "lucide-react";
 
 export interface SettingsSection {
 	to: string;
@@ -34,12 +27,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 		label: "MCP",
 		description: "Connect AI assistants to your finances.",
 		icon: Plug,
-	},
-	{
-		to: "/settings/appearance",
-		label: "Appearance",
-		description: "Pick a theme and light or dark mode.",
-		icon: Palette,
 	},
 	{
 		to: "/settings/notifications",

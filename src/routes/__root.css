@@ -608,8 +608,8 @@ kbd {
  * Custom scrollbar, shared by the app and the landing pages.
  * ------------------------------------------------------------------------- */
 :root {
-	--scrollbar-thumb: #ffffff;
-	--scrollbar-thumb-hover: #f0f0f0;
+	--scrollbar-thumb: var(--muted-foreground);
+	--scrollbar-thumb-hover: var(--foreground);
 	--scrollbar-thumb-border: color-mix(
 		in srgb,
 		var(--foreground) 14%,

@@ -40,7 +40,6 @@ import {
 } from "react";
 import { CategoryBarChartContent } from "@/components/charts/CategoryBarChart";
 import { Logo } from "@/components/Logo";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getSessionUserFn } from "@/server/functions/session.fns";
@@ -1221,7 +1220,6 @@ function LandingPage() {
 						</a>
 					</div>
 					<div className="flex items-center gap-2 sm:gap-4">
-						<ThemeSwitcher />
 						<Button variant="outline" asChild className="rounded-full px-5">
 							<Link to="/login">
 								Log in <ArrowUpRight aria-hidden="true" className="size-3.5" />

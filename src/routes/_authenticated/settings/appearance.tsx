@@ -1,19 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AppearanceSection } from "@/components/settings/AppearanceSection";
-import {
-	getSettingsSection,
-	SettingsSectionPage,
-} from "@/components/settings/SettingsSectionPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/settings/appearance")({
-	component: AppearanceSettingsPage,
+	beforeLoad: () => {
+		throw redirect({ to: "/settings" });
+	},
 });
-
-function AppearanceSettingsPage() {
-	const section = getSettingsSection("/settings/appearance");
-	return (
-		<SettingsSectionPage section={section}>
-			<AppearanceSection />
-		</SettingsSectionPage>
-	);
-}
