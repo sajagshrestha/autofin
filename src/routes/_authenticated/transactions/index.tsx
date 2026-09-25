@@ -137,6 +137,7 @@ const searchParamsSchema = z.object({
 	type: z.enum(["all", "debit", "credit"]).optional().default("all"),
 	category: z.string().optional().default(ALL_CATEGORIES_FILTER),
 	bank: z.string().optional().default(""),
+	excludeLoans: z.boolean().optional().default(false),
 });
 
 export const Route = createFileRoute("/_authenticated/transactions/")({
@@ -145,7 +146,7 @@ export const Route = createFileRoute("/_authenticated/transactions/")({
 });
 
 export function TransactionsPage() {
-	const { period, startDate, endDate, type, category, bank } =
+	const { period, startDate, endDate, type, category, bank, excludeLoans } =
 		Route.useSearch();
 	const typeFilter = type ?? "all";
 	const categoryFilter = category ?? ALL_CATEGORIES_FILTER;
@@ -271,17 +272,19 @@ export function TransactionsPage() {
 			);
 		}
 
-		if (bankFilter === "") return categoryFiltered;
 		return categoryFiltered.filter(
-			(transaction) => transaction.bankName === bankFilter,
+			(transaction) =>
+				(bankFilter === "" || transaction.bankName === bankFilter) &&
+				(!excludeLoans || !transaction.loanId),
 		);
-	}, [transactions, categoryFilter, typeFilter, bankFilter]);
+	}, [transactions, categoryFilter, typeFilter, bankFilter, excludeLoans]);
 	const noDataDescription =
 		categoryFilter === ALL_CATEGORIES_FILTER &&
 		typeFilter === "all" &&
-		bankFilter === ""
+		bankFilter === "" &&
+		!excludeLoans
 			? "Get started by adding a transaction or creating one from SMS."
-			: "Try a different category, type, or bank filter, or add/create a transaction.";
+			: "Try changing your filters, or add/create a transaction.";
 
 	const handleCategoryFilterChange = useCallback(
 		(value: string | null) => {
@@ -350,6 +353,7 @@ export function TransactionsPage() {
 				type: "all",
 				category: ALL_CATEGORIES_FILTER,
 				bank: "",
+				excludeLoans: false,
 			}),
 		});
 		setPagination((prev) => ({
@@ -363,8 +367,9 @@ export function TransactionsPage() {
 		if (typeFilter !== "all") count++;
 		if (bankFilter !== "") count++;
 		if (sorting[0]) count++;
+		if (excludeLoans) count++;
 		return count;
-	}, [categoryFilter, typeFilter, bankFilter, sorting]);
+	}, [categoryFilter, typeFilter, bankFilter, sorting, excludeLoans]);
 	const categoryLabel = useMemo(
 		() =>
 			categoryFilterOptions.find((option) => option.id === categoryFilter)
@@ -726,6 +731,18 @@ export function TransactionsPage() {
 						<span className="text-sm font-medium text-muted-foreground">
 							Active filters:
 						</span>
+						{excludeLoans && (
+							<FilterChip
+								label="Excludes loan-linked transactions"
+								onClear={() => {
+									searchNavigate({
+										search: (prev) => ({ ...prev, excludeLoans: false }),
+										resetScroll: false,
+									});
+									setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+								}}
+							/>
+						)}
 						{typeFilter !== "all" && (
 							<FilterChip
 								label={typeFilter === "debit" ? "Debit" : "Credit"}

@@ -19,6 +19,7 @@ import {
 	ArrowUpRight,
 	CreditCard,
 	PiggyBank,
+	SlidersHorizontal,
 	Wallet,
 } from "lucide-react";
 import { useCallback, useMemo } from "react";
@@ -32,6 +33,7 @@ import {
 	SpendingLineChart,
 } from "@/components/charts";
 import { pickChartColor, useChartTheme } from "@/components/charts/chart-theme";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	DateFilter,
@@ -39,7 +41,14 @@ import {
 	type DateRange,
 	getDateRangeForPeriod,
 } from "@/components/ui/date-filter";
+import { Label } from "@/components/ui/label";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { useGetAllTransactions } from "@/hooks/transactions/queries";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -60,6 +69,7 @@ const searchParamsSchema = z.object({
 		.optional()
 		.default(defaultRange.endDate ?? ""),
 	category: z.string().optional().default(""),
+	excludeLoans: z.boolean().optional().default(false),
 });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -68,7 +78,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 export function AnalyticsDashboard() {
-	const { period, startDate, endDate, category } = Route.useSearch();
+	const { period, startDate, endDate, category, excludeLoans } =
+		Route.useSearch();
 	const navigate = Route.useNavigate();
 	// Chart click-to-filter is a pointer-heavy interaction; keep it desktop-only
 	// to avoid accidental navigations while scrolling on touch devices.
@@ -148,11 +159,12 @@ export function AnalyticsDashboard() {
 					type: opts.type ?? "all",
 					category: opts.category ?? "all",
 					bank: opts.bank ?? "",
+					excludeLoans,
 				},
 				resetScroll: false,
 			});
 		},
-		[navigate, period, startDate, endDate],
+		[navigate, period, startDate, endDate, excludeLoans],
 	);
 
 	const handleSpendingPointClick = useCallback(
@@ -187,13 +199,12 @@ export function AnalyticsDashboard() {
 		[goToTransactions],
 	);
 
-	const transactions = useMemo(
-		() => transactionsData?.transactions || [],
-		[transactionsData],
-	);
+	const transactions = useMemo(() => {
+		const entries = transactionsData?.transactions ?? [];
+		return excludeLoans ? entries.filter((t) => !t.loanId) : entries;
+	}, [transactionsData, excludeLoans]);
 
-	// Loan-linked entries are included in income/expenses; loanFlows is kept
-	// as a breakdown for the loan activity card.
+	// Loan activity follows the same filter as the summary cards and charts.
 	const { loanFlows } = useMemo(() => {
 		let lent = 0;
 		let received = 0;
@@ -212,7 +223,7 @@ export function AnalyticsDashboard() {
 		};
 	}, [transactions]);
 
-	// Calculate summary stats (loan transfers included)
+	// Calculate summary stats for the filtered transactions.
 	const stats = useMemo(() => {
 		let totalExpenses = 0;
 		let totalIncome = 0;
@@ -270,7 +281,7 @@ export function AnalyticsDashboard() {
 	}, [transactions]);
 
 	// Net savings per month for the current calendar year (Jan through the
-	// current month). Loan transfers are included, matching the summary cards.
+	// current month), using the same loan filter as the summary cards.
 	const savingsData = useMemo(() => {
 		const transactions = yearTransactionsData?.transactions ?? [];
 		const year = new Date().getFullYear();
@@ -282,6 +293,7 @@ export function AnalyticsDashboard() {
 
 		const savingsByMonth = new Map<string, number>();
 		for (const t of transactions) {
+			if (excludeLoans && t.loanId) continue;
 			const date = t.transactionDate ? new Date(t.transactionDate) : null;
 			if (!date || date.getFullYear() !== year) continue;
 			const amount = parseFloat(t.amount || "0");
@@ -298,7 +310,7 @@ export function AnalyticsDashboard() {
 				key,
 			};
 		});
-	}, [yearTransactionsData]);
+	}, [yearTransactionsData, excludeLoans]);
 
 	const categoryData = useMemo(() => {
 		if (!transactions.length) return [];
@@ -507,13 +519,70 @@ export function AnalyticsDashboard() {
 							Track your cash flow and see where your money goes.
 						</p>
 					</div>
-					<DateFilter
-						period={period}
-						startDate={startDate}
-						endDate={endDate}
-						onPeriodChange={handlePeriodChange}
-						onDateRangeChange={handleDateRangeChange}
-					/>
+
+					<div className="flex flex-wrap items-center gap-2">
+						<DateFilter
+							period={period}
+							startDate={startDate}
+							endDate={endDate}
+							onPeriodChange={handlePeriodChange}
+							onDateRangeChange={handleDateRangeChange}
+						/>
+						<Popover>
+							<PopoverTrigger asChild>
+								<Button
+									variant="outline"
+									size="icon"
+									aria-label={
+										excludeLoans
+											? "Dashboard filters (1 active)"
+											: "Dashboard filters"
+									}
+									title="Dashboard filters"
+									className={
+										excludeLoans
+											? "relative border-primary/60 text-primary"
+											: "relative"
+									}
+								>
+									<SlidersHorizontal aria-hidden="true" />
+									{excludeLoans && (
+										<span
+											aria-hidden="true"
+											className="absolute right-1 top-1 size-1.5 rounded-full bg-primary"
+										/>
+									)}
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent
+								align="end"
+								aria-label="Dashboard filters"
+								className="w-80 max-w-[calc(100vw-2rem)] space-y-4"
+							>
+								<h2 className="text-sm font-semibold">Filters</h2>
+								<div className="flex items-center gap-3">
+									<Switch
+										id="exclude-loan-transactions"
+										className="peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
+										checked={excludeLoans}
+										onChange={(event) => {
+											const checked = event.target.checked;
+											navigate({
+												search: (prev) => ({ ...prev, excludeLoans: checked }),
+												resetScroll: false,
+											});
+										}}
+									/>
+									<Label
+										htmlFor="exclude-loan-transactions"
+										className="cursor-pointer"
+									>
+										Exclude loan-linked transactions
+									</Label>
+								</div>
+							</PopoverContent>
+						</Popover>
+					</div>
 				</div>
 
 				{isLoading ? (
@@ -620,7 +689,9 @@ export function AnalyticsDashboard() {
 										{formatCurrency(stats.totalExpenses)}
 									</div>
 									<p className="text-xs text-muted-foreground">
-										Includes loan transfers
+										{excludeLoans
+											? "Excludes loan transfers"
+											: "Includes loan transfers"}
 									</p>
 								</CardContent>
 							</Card>
@@ -650,7 +721,9 @@ export function AnalyticsDashboard() {
 										{formatCurrency(stats.totalIncome)}
 									</div>
 									<p className="text-xs text-muted-foreground">
-										Includes loan transfers
+										{excludeLoans
+											? "Excludes loan transfers"
+											: "Includes loan transfers"}
 									</p>
 								</CardContent>
 							</Card>
@@ -716,7 +789,9 @@ export function AnalyticsDashboard() {
 									<p className="text-xs text-muted-foreground">
 										{loanFlows.count > 0
 											? `Includes ${loanFlows.count} loan transfer${loanFlows.count !== 1 ? "s" : ""}`
-											: "Total tracked"}
+											: excludeLoans
+												? "Excludes loan transfers"
+												: "Total tracked"}
 									</p>
 								</CardContent>
 							</Card>
