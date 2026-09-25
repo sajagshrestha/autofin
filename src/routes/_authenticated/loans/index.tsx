@@ -111,6 +111,7 @@ export function LoansPage() {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [counterpartiesOpen, setCounterpartiesOpen] = useState(false);
 	const [detailLoan, setDetailLoan] = useState<Loan | null>(null);
+	const [combineTarget, setCombineTarget] = useState<Loan | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<Loan | null>(null);
 
 	const loans = useMemo(() => data?.loans ?? [], [data]);
@@ -134,6 +135,24 @@ export function LoansPage() {
 		}
 		return { givenOutstanding, takenOutstanding };
 	}, [outstandingLoans]);
+
+	// Loans that have at least one combinable partner (same counterparty +
+	// direction) — used to enable the Combine menu item per card.
+	const combinableIds = useMemo(() => {
+		const counts = new Map<string, number>();
+		for (const loan of loans) {
+			const key = `${loan.counterparty.id}:${loan.direction}`;
+			counts.set(key, (counts.get(key) ?? 0) + 1);
+		}
+		return new Set(
+			loans
+				.filter(
+					(loan) =>
+						(counts.get(`${loan.counterparty.id}:${loan.direction}`) ?? 0) > 1,
+				)
+				.map((loan) => loan.id),
+		);
+	}, [loans]);
 
 	const handleTabChange = useCallback(
 		(value: LoanTab) => {
@@ -269,6 +288,8 @@ export function LoansPage() {
 										key={loan.id}
 										loan={loan}
 										onViewDetails={setDetailLoan}
+										onCombine={setCombineTarget}
+										canCombine={combinableIds.has(loan.id)}
 										onDelete={setDeleteTarget}
 									/>
 								))}
@@ -295,6 +316,8 @@ export function LoansPage() {
 										key={loan.id}
 										loan={loan}
 										onViewDetails={setDetailLoan}
+										onCombine={setCombineTarget}
+										canCombine={combinableIds.has(loan.id)}
 										onDelete={setDeleteTarget}
 									/>
 								))}
@@ -322,6 +345,15 @@ export function LoansPage() {
 				/>
 			)}
 
+			{combineTarget && (
+				<LoanDetailDialog
+					key={`${combineTarget.id}-combine`}
+					loan={combineTarget}
+					initialCombineOpen
+					onClose={() => setCombineTarget(null)}
+				/>
+			)}
+
 			<DeleteLoanDialog
 				loan={deleteTarget}
 				onClose={() => setDeleteTarget(null)}
@@ -335,10 +367,14 @@ export function LoansPage() {
 function LoanCard({
 	loan,
 	onViewDetails,
+	onCombine,
+	canCombine,
 	onDelete,
 }: {
 	loan: Loan;
 	onViewDetails: (loan: Loan) => void;
+	onCombine: (loan: Loan) => void;
+	canCombine: boolean;
 	onDelete: (loan: Loan) => void;
 }) {
 	const progress =
@@ -395,6 +431,13 @@ function LoanCard({
 							<DropdownMenuContent align="end">
 								<DropdownMenuItem onClick={() => onViewDetails(loan)}>
 									View details
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									disabled={!canCombine}
+									data-demo-action
+									onClick={() => onCombine(loan)}
+								>
+									Combine…
 								</DropdownMenuItem>
 								<DropdownMenuItem
 									className="text-ds-red-700 focus:text-ds-red-700"
@@ -810,9 +853,11 @@ function CounterpartyRow({ counterparty }: { counterparty: LoanCounterparty }) {
 
 function LoanDetailDialog({
 	loan,
+	initialCombineOpen = false,
 	onClose,
 }: {
 	loan: Loan;
+	initialCombineOpen?: boolean;
 	onClose: () => void;
 }) {
 	const queryClient = useQueryClient();
@@ -827,7 +872,7 @@ function LoanDetailDialog({
 		Math.max(loan.remainingAmount, 0).toString(),
 	);
 	const [remarks, setRemarks] = useState("");
-	const [combineOpen, setCombineOpen] = useState(false);
+	const [combineOpen, setCombineOpen] = useState(initialCombineOpen);
 	const [secondaryId, setSecondaryId] = useState("");
 	const [confirmingCombine, setConfirmingCombine] = useState(false);
 
