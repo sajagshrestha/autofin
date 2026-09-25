@@ -63,10 +63,9 @@ export function CategoryPieChartContent({
 						label: "Category",
 					},
 					{
-						channel: "y" as const,
+						field: "value" as const,
 						label: "Spent",
-						text: (point: { yValue: unknown }) =>
-							formatCurrency(Number(point.yValue)),
+						text: (point) => formatCurrency(point.datum.value),
 					},
 				],
 			},
