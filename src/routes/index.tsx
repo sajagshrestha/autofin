@@ -10,6 +10,7 @@ import {
 	FileUp,
 	HandCoins,
 	MessageSquare,
+	Monitor,
 	PencilLine,
 	Search,
 	SlidersHorizontal,
@@ -923,7 +924,49 @@ function FlipBrandWord() {
 	);
 }
 
-function DemoFrame() {
+type DemoViewport = "desktop" | "mobile";
+
+function DemoViewportSwitch({
+	value,
+	onChange,
+}: {
+	value: DemoViewport;
+	onChange: (value: DemoViewport) => void;
+}) {
+	return (
+		<fieldset
+			aria-label="Demo viewport"
+			className="hidden lg:inline-flex min-h-10 items-center gap-1 rounded-xl bg-muted p-1 text-muted-foreground"
+		>
+			{(
+				[
+					{ value: "desktop", label: "Desktop preview", icon: Monitor },
+					{ value: "mobile", label: "Mobile preview", icon: Smartphone },
+				] as const
+			).map((option) => (
+				<button
+					key={option.value}
+					type="button"
+					aria-label={option.label}
+					title={option.label}
+					aria-pressed={value === option.value}
+					onClick={() => onChange(option.value)}
+					className="inline-flex items-center justify-center rounded-lg px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-card aria-pressed:text-primary aria-pressed:shadow-xs hover:text-foreground"
+				>
+					<option.icon aria-hidden="true" className="size-4" />
+				</button>
+			))}
+		</fieldset>
+	);
+}
+
+function DemoFrame({
+	viewport,
+	onViewportChange,
+}: {
+	viewport: DemoViewport;
+	onViewportChange: (value: DemoViewport) => void;
+}) {
 	const reduceMotion = useReducedMotion();
 	const [isReady, setIsReady] = useState(false);
 	const [isMounted, setIsMounted] = useState(false);
@@ -1012,11 +1055,12 @@ function DemoFrame() {
 									<span className="flex items-center gap-2 whitespace-nowrap text-xs font-medium">
 										<span className="size-2 shrink-0 rounded-full bg-emerald-600" />{" "}
 										Live demo{" "}
-										<span className="hidden font-normal text-muted-foreground sm:inline">
-											· Sample data
-										</span>
 									</span>
 									<div className="flex items-center gap-2">
+										<DemoViewportSwitch
+											value={viewport}
+											onChange={onViewportChange}
+										/>
 										<a
 											href="/demo"
 											target="_blank"
@@ -1041,7 +1085,9 @@ function DemoFrame() {
 						)}
 					</AnimatePresence>
 
-					<div className="relative min-h-0 flex-1">
+					<div
+						className={`relative mx-auto min-h-0 w-full flex-1 transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none ${viewport === "mobile" ? "lg:max-w-[390px] lg:border-x lg:border-border" : "max-w-[1200px]"}`}
+					>
 						{isMounted && (
 							<iframe
 								src="/demo"
@@ -1114,6 +1160,7 @@ function DemoFrame() {
 }
 
 function LandingPage() {
+	const [demoViewport, setDemoViewport] = useState<DemoViewport>("desktop");
 	const reduceMotion = useReducedMotion();
 
 	useEffect(() => {
@@ -1287,21 +1334,27 @@ function LandingPage() {
 							<span className="flex items-center gap-2 text-xs font-medium">
 								<span className="size-2 rounded-full bg-emerald-600" /> Live
 								demo{" "}
-								<span className="font-normal text-muted-foreground">
-									· Sample data
-								</span>
 							</span>
-							<a
-								href="/demo"
-								target="_blank"
-								rel="noreferrer"
-								className="inline-flex items-center gap-3 text-[13px] font-medium underline-offset-[5px] hover:underline"
-							>
-								Open full demo{" "}
-								<ArrowUpRight aria-hidden="true" className="size-4" />
-							</a>
+							<div className="flex items-center gap-4">
+								<DemoViewportSwitch
+									value={demoViewport}
+									onChange={setDemoViewport}
+								/>
+								<a
+									href="/demo"
+									target="_blank"
+									rel="noreferrer"
+									className="inline-flex items-center gap-3 text-[13px] font-medium underline-offset-[5px] hover:underline"
+								>
+									Open full demo{" "}
+									<ArrowUpRight aria-hidden="true" className="size-4" />
+								</a>
+							</div>
 						</div>
-						<DemoFrame />
+						<DemoFrame
+							viewport={demoViewport}
+							onViewportChange={setDemoViewport}
+						/>
 					</motion.div>
 				</section>
 
