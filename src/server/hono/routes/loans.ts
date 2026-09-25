@@ -218,6 +218,13 @@ const updateSchema = z
 		}
 	});
 
+const combineSchema = z.object({
+	/** Survivor: keeps its identity, absorbs the other loan. */
+	primaryLoanId: z.string(),
+	/** Absorbed: its amount and repayments move over, then it is deleted. */
+	secondaryLoanId: z.string(),
+});
+
 const settleSchema = z.object({
 	amount: z.number().positive().optional(),
 	transactionDate: isoDate.optional(),
@@ -397,6 +404,44 @@ export const loansRouter = new Hono<ApiEnv>()
 		if (!deleted) throw notFound("Loan not found");
 
 		return c.json({ message: "Loan deleted — linked transactions are kept" });
+	})
+
+	.post("/combine", zValidator("json", combineSchema), async (c) => {
+		const user = c.get("user");
+		const body = c.req.valid("json");
+		const container = getContainer();
+
+		if (body.primaryLoanId === body.secondaryLoanId) {
+			throw new HTTPException(400, {
+				message: "Pick two different loans to combine",
+			});
+		}
+
+		const [primary, secondary] = await Promise.all([
+			container.loanRepo.findById(user.id, body.primaryLoanId),
+			container.loanRepo.findById(user.id, body.secondaryLoanId),
+		]);
+		if (!primary || !secondary) throw notFound("Loan not found");
+
+		if (primary.counterpartyId !== secondary.counterpartyId) {
+			throw new HTTPException(400, {
+				message: "Only loans for the same counterparty can be combined",
+			});
+		}
+		if (primary.direction !== secondary.direction) {
+			throw new HTTPException(400, {
+				message: "Only loans in the same direction can be combined",
+			});
+		}
+
+		const merged = await container.loanRepo.mergeLoans(
+			user.id,
+			primary,
+			secondary,
+		);
+		const [stats] = await loadStats(user.id, [merged]);
+
+		return c.json({ loan: stats }, 201);
 	})
 
 	.post("/:id/settle", zValidator("json", settleSchema), async (c) => {

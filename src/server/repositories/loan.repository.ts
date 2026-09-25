@@ -55,6 +55,68 @@ export class LoanRepository extends BaseRepository {
 	}
 
 	/**
+	 * Merge `secondary` into `primary` (both already validated: same user,
+	 * counterparty, and direction): principals sum, every linked transaction
+	 * (origins + repayments) repoints to the survivor, earliest dates win,
+	 * notes concatenate — then the absorbed loan is deleted. Atomic.
+	 */
+	async mergeLoans(
+		userId: string,
+		primary: Loan,
+		secondary: Loan,
+	): Promise<Loan> {
+		return this.db.transaction(async (tx) => {
+			await tx
+				.update(transactions)
+				.set({ loanId: primary.id })
+				.where(
+					and(
+						eq(transactions.userId, userId),
+						eq(transactions.loanId, secondary.id),
+					),
+				);
+
+			const principal =
+				Number.parseFloat(primary.principalAmount) +
+				Number.parseFloat(secondary.principalAmount);
+			const notes = [primary.notes, secondary.notes]
+				.map((note) => note?.trim())
+				.filter((note) => note && note.length > 0)
+				.join("\n\n");
+			const dueDates = [primary.dueDate, secondary.dueDate].filter(
+				(date): date is Date => date !== null,
+			);
+
+			const [merged] = await tx
+				.update(loans)
+				.set({
+					principalAmount: principal.toFixed(2),
+					issuedDate: new Date(
+						Math.min(
+							primary.issuedDate.getTime(),
+							secondary.issuedDate.getTime(),
+						),
+					),
+					dueDate:
+						dueDates.length > 0
+							? new Date(Math.min(...dueDates.map((date) => date.getTime())))
+							: null,
+					notes: notes.length > 0 ? notes : null,
+					updatedAt: new Date(),
+				})
+				.where(and(eq(loans.id, primary.id), eq(loans.userId, userId)))
+				.returning();
+			if (!merged) throw new Error("Failed to merge loans");
+
+			await tx
+				.delete(loans)
+				.where(and(eq(loans.id, secondary.id), eq(loans.userId, userId)));
+
+			return merged;
+		});
+	}
+
+	/**
 	 * Settlement totals per loan id: sum of every repayment transaction linked
 	 * via transactions.loanId. The loan's ORIGIN transaction is excluded so a
 	 * newly created loan starts at zero. Missing ids resolve to zero.

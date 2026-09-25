@@ -79,6 +79,33 @@ export function useDeleteLoan() {
 	});
 }
 
+/**
+ * Merges a secondary loan into a primary one (same counterparty +
+ * direction): principals sum, repayments repoint, secondary is deleted.
+ */
+export function useCombineLoans() {
+	const rpc = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async (input: {
+			primaryLoanId: string;
+			secondaryLoanId: string;
+		}) => {
+			const res = await rpc.api.loans.combine.$post({ json: input });
+			return unwrap<{ loan: Loan }>(res);
+		},
+		onSuccess: (_data, variables) => {
+			queryClient.invalidateQueries({ queryKey: LOANS_QUERY_KEYS.root });
+			queryClient.invalidateQueries({
+				queryKey: LOANS_QUERY_KEYS.detail(variables.primaryLoanId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: TRANSACTIONS_ROOT_KEY,
+			});
+		},
+	});
+}
+
 export interface SettleLoanInput {
 	id: string;
 	/** Link an existing transaction as the repayment instead of creating one */

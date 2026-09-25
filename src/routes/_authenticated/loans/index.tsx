@@ -37,6 +37,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +52,7 @@ import {
 	type LoanCounterparty,
 	type LoanDirection,
 	type LoanSettlement,
+	useCombineLoans,
 	useCreateLoan,
 	useDeleteCounterparty,
 	useDeleteLoan,
@@ -811,15 +819,54 @@ function LoanDetailDialog({
 	const detail = useGetLoan(loan.id);
 	const settleMutation = useSettleLoan();
 	const deleteMutation = useDeleteLoan();
+	const combineMutation = useCombineLoans();
+	const { data: allLoansData } = useGetLoans();
 
 	const [settleOpen, setSettleOpen] = useState(false);
 	const [amount, setAmount] = useState(
 		Math.max(loan.remainingAmount, 0).toString(),
 	);
 	const [remarks, setRemarks] = useState("");
+	const [combineOpen, setCombineOpen] = useState(false);
+	const [secondaryId, setSecondaryId] = useState("");
+	const [confirmingCombine, setConfirmingCombine] = useState(false);
 
 	const current = detail.data?.loan ?? loan;
 	const settlements: LoanSettlement[] = detail.data?.settlements ?? [];
+
+	const combinableLoans = useMemo(
+		() =>
+			(allLoansData?.loans ?? []).filter(
+				(other) =>
+					other.id !== loan.id &&
+					other.counterparty.id === current.counterparty.id &&
+					other.direction === current.direction,
+			),
+		[allLoansData, loan.id, current.counterparty.id, current.direction],
+	);
+
+	const handleCombine = () => {
+		if (!secondaryId) {
+			toast.error("Pick another loan to combine into this one");
+			return;
+		}
+		combineMutation.mutate(
+			{ primaryLoanId: loan.id, secondaryLoanId: secondaryId },
+			{
+				onSuccess: () => {
+					toast.success("Loans combined");
+					invalidateLoans(queryClient);
+					onClose();
+				},
+				onError: (err) => {
+					toast.error("Failed to combine loans", {
+						description: err.message,
+					});
+					setConfirmingCombine(false);
+				},
+			},
+		);
+	};
 
 	const recordSettlement = () => {
 		const value = Number(amount);
@@ -979,6 +1026,82 @@ function LoanDetailDialog({
 						</ul>
 					)}
 				</div>
+
+				{combinableLoans.length > 0 && !combineOpen && (
+					<Button
+						variant="outline"
+						size="sm"
+						className="w-full"
+						data-demo-action
+						onClick={() => {
+							setSecondaryId(combinableLoans[0].id);
+							setConfirmingCombine(false);
+							setCombineOpen(true);
+						}}
+					>
+						Combine with another loan
+					</Button>
+				)}
+
+				{combineOpen ? (
+					<div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+						<div className="space-y-2">
+							<Label htmlFor="combine-loan-select">Merge into this loan</Label>
+							<Select value={secondaryId} onValueChange={setSecondaryId}>
+								<SelectTrigger id="combine-loan-select" className="w-full">
+									<SelectValue placeholder="Pick a loan" />
+								</SelectTrigger>
+								<SelectContent>
+									{combinableLoans.map((other) => (
+										<SelectItem key={other.id} value={other.id}>
+											{formatCurrency(Number(other.principalAmount))} ·{" "}
+											{formatCurrency(Math.max(other.remainingAmount, 0))}{" "}
+											remaining
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<p className="text-xs text-muted-foreground">
+							Amounts and repayments move here and the other loan is deleted.
+							This cannot be undone.
+						</p>
+						<div className="flex justify-end gap-2">
+							{confirmingCombine ? (
+								<>
+									<Button
+										variant="ghost"
+										onClick={() => setConfirmingCombine(false)}
+									>
+										Cancel
+									</Button>
+									<Button
+										data-demo-action
+										onClick={handleCombine}
+										disabled={combineMutation.isPending || !secondaryId}
+									>
+										{combineMutation.isPending ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : null}
+										Confirm combine
+									</Button>
+								</>
+							) : (
+								<>
+									<Button variant="ghost" onClick={() => setCombineOpen(false)}>
+										Cancel
+									</Button>
+									<Button
+										onClick={() => setConfirmingCombine(true)}
+										disabled={!secondaryId}
+									>
+										Combine
+									</Button>
+								</>
+							)}
+						</div>
+					</div>
+				) : null}
 
 				<Separator />
 				<div className="flex justify-between">
