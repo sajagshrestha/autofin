@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { GoogleIcon } from "@/components/GoogleIcon";
@@ -72,7 +72,13 @@ function LoginPage() {
 
 	return (
 		<div className="auth-page flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-12">
-			<Logo className="h-12" />
+			<Link
+				to="/"
+				aria-label="AutoFin home"
+				className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+			>
+				<Logo className="h-12" />
+			</Link>
 			<Card className="w-full max-w-md border-border/80 shadow-xl shadow-black/5">
 				<CardHeader className="items-center text-center pb-8 pt-8">
 					<h1 className="text-2xl font-semibold tracking-tight">

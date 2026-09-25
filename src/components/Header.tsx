@@ -17,7 +17,8 @@ import {
 	X,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDemo } from "@/contexts/DemoContext";
 import { useSidebar } from "@/contexts/SidebarContext";
@@ -27,6 +28,14 @@ import { useAdvisorChat } from "./ai-chat/advisor-chat-context";
 import { Logo } from "./Logo";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Button } from "./ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "./ui/dialog";
 import {
 	Drawer,
 	DrawerClose,
@@ -53,6 +62,9 @@ const NAV_ITEMS = [
 
 export default function Header() {
 	const [mobileOpen, setMobileOpen] = useState(false);
+	const [signOutOpen, setSignOutOpen] = useState(false);
+	const [signingOut, setSigningOut] = useState(false);
+	const cancelSignOutRef = useRef<HTMLButtonElement>(null);
 	const { collapsed, toggle } = useSidebar();
 	const { resolvedTheme, setMode } = useTheme();
 	const reduceMotion = useReducedMotion();
@@ -66,14 +78,27 @@ export default function Header() {
 	});
 	const active = (to: string) =>
 		currentPath === to || currentPath.startsWith(`${to}/`);
-	const handleSignOut = async () => {
+	const handleSignOut = () => {
 		if (demo) {
 			demo.requestAccess();
 			return;
 		}
-		await signOut();
-		navigate({ to: "/login" });
+		setSignOutOpen(true);
 	};
+	const confirmSignOut = async () => {
+		if (signingOut) return;
+		setSigningOut(true);
+		try {
+			await signOut();
+			setSignOutOpen(false);
+			await navigate({ to: "/login" });
+		} catch {
+			toast.error("Could not sign out. Please try again.");
+		} finally {
+			setSigningOut(false);
+		}
+	};
+
 	const navigation = (compact = false, mobile = false, items = NAV_ITEMS) =>
 		items.map((item) => (
 			<Link
@@ -108,6 +133,41 @@ export default function Header() {
 		));
 	return (
 		<>
+			<Dialog
+				open={signOutOpen}
+				onOpenChange={(open) => {
+					if (!signingOut) setSignOutOpen(open);
+				}}
+			>
+				<DialogContent
+					className="sm:max-w-sm"
+					onOpenAutoFocus={(event) => {
+						event.preventDefault();
+						cancelSignOutRef.current?.focus();
+					}}
+				>
+					<DialogHeader>
+						<DialogTitle>Sign out of AutoFin?</DialogTitle>
+						<DialogDescription>
+							You’ll need to log in again to access your account.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button
+							ref={cancelSignOutRef}
+							variant="outline"
+							disabled={signingOut}
+							onClick={() => setSignOutOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button disabled={signingOut} onClick={confirmSignOut}>
+							{signingOut ? "Signing out…" : "Sign out"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
 			<a
 				href="#main-content"
 				className="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only"
