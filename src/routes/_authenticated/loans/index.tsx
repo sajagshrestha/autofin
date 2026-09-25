@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
 	ArrowDownLeft,
 	ArrowUpRight,
+	Eye,
+	GitMerge,
 	HandCoins,
 	Loader2,
 	MoreVertical,
@@ -45,6 +47,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -59,6 +62,7 @@ import {
 	useGetCounterparties,
 	useGetLoan,
 	useGetLoans,
+	useManageSettlement,
 	useSettleLoan,
 	useUpdateCounterparty,
 } from "@/hooks/loans";
@@ -173,16 +177,21 @@ export function LoansPage() {
 						Track money you've lent or borrowed — settle via transactions.
 					</p>
 				</div>
-				<div className="flex gap-2">
+				<div className="grid grid-cols-2 gap-2">
 					<Button
+						className="h-10 rounded-lg px-4"
 						variant="outline"
 						data-demo-action
 						onClick={() => setCounterpartiesOpen(true)}
 					>
 						Counterparties
 					</Button>
-					<Button data-demo-action onClick={() => setCreateOpen(true)}>
-						<Plus className="mr-2 h-4 w-4" />
+					<Button
+						className="h-10 rounded-lg px-4 has-[>svg]:px-4"
+						data-demo-action
+						onClick={() => setCreateOpen(true)}
+					>
+						<Plus className="h-4 w-4" />
 						Track a loan
 					</Button>
 				</div>
@@ -430,6 +439,7 @@ function LoanCard({
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
 								<DropdownMenuItem onClick={() => onViewDetails(loan)}>
+									<Eye aria-hidden="true" className="mr-2 h-4 w-4" />
 									View details
 								</DropdownMenuItem>
 								<DropdownMenuItem
@@ -437,6 +447,7 @@ function LoanCard({
 									data-demo-action
 									onClick={() => onCombine(loan)}
 								>
+									<GitMerge aria-hidden="true" className="mr-2 h-4 w-4" />
 									Combine…
 								</DropdownMenuItem>
 								<DropdownMenuItem
@@ -444,7 +455,7 @@ function LoanCard({
 									data-demo-action
 									onClick={() => onDelete(loan)}
 								>
-									<Trash2 className="mr-2 h-4 w-4" />
+									<Trash2 aria-hidden="true" className="mr-2 h-4 w-4" />
 									Delete
 								</DropdownMenuItem>
 							</DropdownMenuContent>
@@ -470,11 +481,10 @@ function LoanCard({
 					<Button
 						variant="outline"
 						size="sm"
-						disabled={loan.status !== "outstanding"}
 						onClick={() => onViewDetails(loan)}
 					>
 						<TrendingUp className="mr-2 h-4 w-4" />
-						Settle
+						Manage settlements
 					</Button>
 				</div>
 			</CardContent>
@@ -1032,41 +1042,51 @@ function LoanDetailDialog({
 
 				<div className="space-y-2">
 					<p className="text-sm font-medium">
-						Repayments ({settlements.length})
+						Repayments{detail.isPending ? "" : ` (${settlements.length})`}
 					</p>
-					{settlements.length === 0 ? (
+					{detail.isPending ? (
+						<div
+							role="status"
+							aria-label="Loading repayments"
+							className="space-y-2"
+						>
+							{[0, 1].map((i) => (
+								<div key={i} className="space-y-3 rounded-lg border p-3">
+									<Skeleton className="h-4 w-28" />
+									<Skeleton className="h-3 w-20" />
+									<Skeleton className="h-3 w-3/4" />
+									<div className="flex gap-2">
+										<Skeleton className="h-8 w-14" />
+										<Skeleton className="h-8 w-20" />
+									</div>
+								</div>
+							))}
+						</div>
+					) : detail.isError ? (
+						<div role="alert" className="space-y-2 py-2">
+							<p className="text-sm text-muted-foreground">
+								Could not load repayments.
+							</p>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => detail.refetch()}
+							>
+								Try again
+							</Button>
+						</div>
+					) : settlements.length === 0 ? (
 						<p className="py-2 text-sm text-muted-foreground">
 							No repayments recorded yet.
 						</p>
 					) : (
 						<ul className="space-y-2 max-h-56 overflow-y-auto pr-1">
 							{settlements.map((settlement: LoanSettlement) => (
-								<li
+								<SettlementRow
 									key={settlement.id}
-									className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
-								>
-									<div className="min-w-0">
-										<p className="truncate font-medium">
-											{formatCurrency(
-												Number(settlement.amount),
-												settlement.currency ?? "NPR",
-											)}
-										</p>
-										<p className="truncate text-xs text-muted-foreground">
-											{settlement.transactionDate
-												? new Date(
-														settlement.transactionDate,
-													).toLocaleDateString()
-												: "No date"}
-											{settlement.category?.name
-												? ` · ${settlement.category.name}`
-												: ""}
-										</p>
-									</div>
-									<Badge variant="gray" contrast="low" size="sm">
-										{current.direction === "given" ? "received" : "paid"}
-									</Badge>
-								</li>
+									loanId={loan.id}
+									settlement={settlement}
+								/>
 							))}
 						</ul>
 					)}
@@ -1158,7 +1178,7 @@ function LoanDetailDialog({
 						onClick={handleDelete}
 						disabled={deleteMutation.isPending}
 					>
-						<Trash2 className="mr-2 h-4 w-4" />
+						<Trash2 aria-hidden="true" className="mr-2 h-4 w-4" />
 						Delete loan
 					</Button>
 					<Button variant="outline" size="sm" onClick={onClose}>
@@ -1230,4 +1250,197 @@ function DeleteLoanDialog({
 
 function invalidateLoans(queryClient: ReturnType<typeof useQueryClient>) {
 	queryClient.invalidateQueries({ queryKey: ["loans"] });
+}
+
+function SettlementRow({
+	loanId,
+	settlement,
+}: {
+	loanId: string;
+	settlement: LoanSettlement;
+}) {
+	const mutation = useManageSettlement();
+	const [editing, setEditing] = useState(false);
+	const [removing, setRemoving] = useState(false);
+	const [amount, setAmount] = useState(settlement.amount);
+	const [date, setDate] = useState(
+		settlement.transactionDate?.slice(0, 10) ?? "",
+	);
+	const [remarks, setRemarks] = useState(settlement.remarks ?? "");
+	const save = (unlink = false) => {
+		const value = Number(amount);
+		if (!unlink && (!Number.isFinite(value) || value <= 0 || !date)) {
+			toast.error("Enter a positive amount and a valid date");
+			return;
+		}
+		mutation.mutate(
+			{
+				id: loanId,
+				transactionId: settlement.id,
+				...(unlink
+					? {}
+					: {
+							changes: {
+								amount: value,
+								transactionDate:
+									date === settlement.transactionDate?.slice(0, 10)
+										? settlement.transactionDate
+										: new Date(`${date}T12:00:00`).toISOString(),
+								remarks,
+							},
+						}),
+			},
+			{
+				onSuccess: () => {
+					setEditing(false);
+					setRemoving(false);
+					toast.success(
+						unlink
+							? "Settlement removed; transaction kept"
+							: "Settlement updated",
+					);
+				},
+				onError: (error) => toast.error(error.message),
+			},
+		);
+	};
+	return (
+		<li className="space-y-3 rounded-lg border p-3 text-sm">
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<div>
+					<p className="font-medium">
+						{formatCurrency(
+							Number(settlement.amount),
+							settlement.currency ?? "NPR",
+						)}
+					</p>
+					<p className="text-xs text-muted-foreground">
+						{settlement.transactionDate
+							? new Date(settlement.transactionDate).toLocaleDateString()
+							: "No date"}
+					</p>
+					{settlement.remarks && (
+						<p className="break-words text-xs text-muted-foreground">
+							{settlement.remarks}
+						</p>
+					)}
+				</div>
+				{!editing && !removing && (
+					<div className="flex gap-2">
+						<Button
+							size="sm"
+							variant="outline"
+							data-demo-action
+							onClick={() => {
+								setAmount(settlement.amount);
+								setDate(settlement.transactionDate?.slice(0, 10) ?? "");
+								setRemarks(settlement.remarks ?? "");
+								setEditing(true);
+							}}
+						>
+							Edit
+						</Button>
+						<Button
+							size="sm"
+							variant="outline"
+							data-demo-action
+							onClick={() => setRemoving(true)}
+						>
+							Remove
+						</Button>
+					</div>
+				)}
+			</div>
+			{editing && (
+				<div className="space-y-3">
+					<label
+						htmlFor={`settlement-amount-${settlement.id}`}
+						className="block space-y-1"
+					>
+						<span>Amount ({settlement.currency ?? "NPR"})</span>
+						<Input
+							id={`settlement-amount-${settlement.id}`}
+							type="number"
+							min="0.01"
+							step="0.01"
+							value={amount}
+							onChange={(e) => setAmount(e.target.value)}
+						/>
+					</label>
+					<label
+						htmlFor={`settlement-date-${settlement.id}`}
+						className="block space-y-1"
+					>
+						<span>Date</span>
+						<Input
+							id={`settlement-date-${settlement.id}`}
+							type="date"
+							value={date}
+							onChange={(e) => setDate(e.target.value)}
+						/>
+					</label>
+					<label
+						htmlFor={`settlement-remarks-${settlement.id}`}
+						className="block space-y-1"
+					>
+						<span>Remarks</span>
+						<Textarea
+							id={`settlement-remarks-${settlement.id}`}
+							maxLength={5000}
+							value={remarks}
+							onChange={(e) => setRemarks(e.target.value)}
+						/>
+					</label>
+					<p className="text-xs text-muted-foreground">
+						Changes also update the linked transaction.
+					</p>
+					<div className="flex gap-2">
+						<Button
+							size="sm"
+							disabled={mutation.isPending}
+							data-demo-action
+							onClick={() => save()}
+						>
+							Save changes
+						</Button>
+						<Button
+							size="sm"
+							variant="ghost"
+							disabled={mutation.isPending}
+							onClick={() => setEditing(false)}
+						>
+							Cancel
+						</Button>
+					</div>
+				</div>
+			)}
+			{removing && (
+				<div className="space-y-2">
+					<p>
+						Remove this repayment from the loan? The transaction will be kept,
+						and the outstanding balance will be recalculated.
+					</p>
+					<div className="flex gap-2">
+						<Button
+							size="sm"
+							variant="destructive"
+							disabled={mutation.isPending}
+							data-demo-action
+							onClick={() => save(true)}
+						>
+							Remove settlement
+						</Button>
+						<Button
+							size="sm"
+							variant="ghost"
+							disabled={mutation.isPending}
+							onClick={() => setRemoving(false)}
+						>
+							Cancel
+						</Button>
+					</div>
+				</div>
+			)}
+		</li>
+	);
 }

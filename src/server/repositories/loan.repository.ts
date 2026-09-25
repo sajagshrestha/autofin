@@ -9,6 +9,35 @@ export interface LoanSettlementTotals {
 }
 
 export class LoanRepository extends BaseRepository {
+	async updateSettlement(
+		userId: string,
+		loan: Loan,
+		transactionId: string,
+		changes: {
+			amount?: string;
+			transactionDate?: Date;
+			remarks?: string;
+			loanId?: null;
+		},
+	) {
+		const rows = await this.db
+			.update(transactions)
+			.set({ ...changes, updatedAt: new Date() })
+			.where(
+				and(
+					eq(transactions.id, transactionId),
+					eq(transactions.userId, userId),
+					eq(transactions.loanId, loan.id),
+					// Match findSettlements: any linked non-origin transaction is manageable.
+					...(loan.transactionId
+						? [ne(transactions.id, loan.transactionId)]
+						: []),
+				),
+			)
+			.returning({ id: transactions.id });
+		return rows[0] ?? null;
+	}
+
 	async create(data: NewLoan): Promise<Loan> {
 		const rows = await this.db.insert(loans).values(data).returning();
 		return rows[0];

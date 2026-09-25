@@ -444,6 +444,51 @@ export const loansRouter = new Hono<ApiEnv>()
 		return c.json({ loan: stats }, 201);
 	})
 
+	.patch(
+		"/:id/settlements/:transactionId",
+		zValidator(
+			"json",
+			z.object({
+				amount: z.number().min(0.01).finite().max(999999999999.99),
+				transactionDate: isoDate,
+				remarks: z.string().max(5000),
+			}),
+		),
+		async (c) => {
+			const user = c.get("user");
+			const repo = getContainer().loanRepo;
+			const loan = await repo.findById(user.id, c.req.param("id"));
+			if (!loan) throw notFound("Loan not found");
+			const input = c.req.valid("json");
+			const updated = await repo.updateSettlement(
+				user.id,
+				loan,
+				c.req.param("transactionId"),
+				{
+					amount: input.amount.toFixed(2),
+					transactionDate: new Date(input.transactionDate),
+					remarks: input.remarks,
+				},
+			);
+			if (!updated) throw notFound("Repayment not found");
+			return c.json({ message: "Repayment updated" });
+		},
+	)
+	.delete("/:id/settlements/:transactionId", async (c) => {
+		const user = c.get("user");
+		const repo = getContainer().loanRepo;
+		const loan = await repo.findById(user.id, c.req.param("id"));
+		if (!loan) throw notFound("Loan not found");
+		const updated = await repo.updateSettlement(
+			user.id,
+			loan,
+			c.req.param("transactionId"),
+			{ loanId: null },
+		);
+		if (!updated) throw notFound("Repayment not found");
+		return c.json({ message: "Repayment unlinked; transaction kept" });
+	})
+
 	.post("/:id/settle", zValidator("json", settleSchema), async (c) => {
 		const user = c.get("user");
 		const id = c.req.param("id");

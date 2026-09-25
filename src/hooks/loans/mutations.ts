@@ -142,3 +142,26 @@ export function useSettleLoan() {
 		},
 	});
 }
+
+export function useManageSettlement() {
+	const rpc = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async (input: {
+			id: string;
+			transactionId: string;
+			changes?: { amount: number; transactionDate: string; remarks: string };
+		}) => {
+			const route = rpc.api.loans[":id"].settlements[":transactionId"];
+			const param = { id: input.id, transactionId: input.transactionId };
+			const response = input.changes
+				? await route.$patch({ param, json: input.changes })
+				: await route.$delete({ param });
+			return unwrap<{ message: string }>(response);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: LOANS_QUERY_KEYS.root });
+			queryClient.invalidateQueries({ queryKey: TRANSACTIONS_ROOT_KEY });
+		},
+	});
+}
