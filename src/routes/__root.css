@@ -880,8 +880,8 @@ kbd {
  .app-main [data-slot="button"] { min-height: 2.75rem; border-radius: 0.75rem; }
  .app-main [data-slot="input"] { min-height: 2.75rem; border-radius: 0.75rem; }
  [data-slot="dialog-content"] {
-  top: auto; bottom: 0; left: 0; translate: none;
-  width: 100%; max-width: 100%; max-height: calc(100dvh - env(safe-area-inset-top) - 1rem);
+  top: auto; bottom: var(--mobile-viewport-bottom, 0px); left: 0; translate: none;
+  width: 100%; max-width: 100%; max-height: calc(var(--mobile-viewport-height, 100dvh) - env(safe-area-inset-top) - 1rem);
   border-radius: 1.5rem 1.5rem 0 0;
   padding: 1.5rem 1rem max(1rem, env(safe-area-inset-bottom));
   scroll-padding-block: 1.5rem;
@@ -898,3 +898,29 @@ kbd {
 }
 @keyframes mobile-dialog-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes mobile-dialog-out { from { transform: translateY(0); } to { transform: translateY(100%); } }
+
+/* The keyboard can shrink the visual viewport without changing CSS viewport units. */
+@media (max-width: 767px) {
+ [data-slot="sheet-content"] {
+  top: var(--mobile-viewport-top, 0px);
+  bottom: auto;
+  height: var(--mobile-viewport-height, 100dvh);
+  max-height: var(--mobile-viewport-height, 100dvh);
+  overscroll-behavior: contain;
+  scroll-padding-block: 1rem;
+ }
+ [data-slot="sheet-content"][data-side="bottom"],
+ [data-slot="sheet-content"][data-side="top"] {
+  height: auto;
+  max-height: calc(var(--mobile-viewport-height, 100dvh) - 1rem);
+  overflow-y: auto;
+ }
+ [data-slot="sheet-content"][data-side="bottom"] {
+  top: auto;
+  bottom: var(--mobile-viewport-bottom, 0px);
+ }
+ [data-slot="dialog-content"] input,
+ [data-slot="dialog-content"] textarea,
+ [data-slot="sheet-content"] input,
+ [data-slot="sheet-content"] textarea { scroll-margin-block: 1rem; font-size: 1rem; }
+}

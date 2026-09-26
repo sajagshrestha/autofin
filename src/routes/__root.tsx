@@ -13,6 +13,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { PostHogProvider } from "@/contexts/PostHogProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { env } from "@/env";
+import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { queryClient } from "@/lib/query-client";
 import appStyles from "./__root.css?url";
 
@@ -60,6 +61,7 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+	useMobileViewport();
 	const isDemo = useRouterState({
 		select: (state) => state.location.pathname === "/demo",
 	});
