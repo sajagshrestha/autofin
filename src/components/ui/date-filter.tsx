@@ -42,7 +42,6 @@ export interface DateRange {
 }
 
 interface DateFilterProps {
-	fullWidthOnMobile?: boolean;
 	period: DatePeriod;
 	startDate?: string;
 	endDate?: string;
@@ -152,7 +151,6 @@ function formatDateLabel(
 }
 
 export function DateFilter({
-	fullWidthOnMobile = false,
 	period,
 	startDate,
 	endDate,
@@ -192,9 +190,7 @@ export function DateFilter({
 	}, [isAllTime, endDate]);
 
 	return (
-		<div
-			className={`flex flex-wrap items-center gap-2 rounded-xl border bg-card p-1.5 shadow-xs ${fullWidthOnMobile ? "max-sm:w-full" : ""}`}
-		>
+		<div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-1.5 shadow-xs max-sm:w-full">
 			<Select value={period} onValueChange={handlePeriodChange}>
 				<SelectTrigger
 					aria-label="Date period"
@@ -213,9 +209,7 @@ export function DateFilter({
 			</Select>
 
 			{!isAllTime && (
-				<div
-					className={`flex items-center gap-1 ${fullWidthOnMobile ? "max-sm:min-w-0 max-sm:flex-1" : ""}`}
-				>
+				<div className="flex items-center gap-1 max-sm:min-w-0 max-sm:flex-1">
 					<Button
 						variant="outline"
 						size="icon-sm"
@@ -224,9 +218,7 @@ export function DateFilter({
 					>
 						<ChevronLeft className="size-4" />
 					</Button>
-					<span
-						className={`text-sm font-medium min-w-[140px] text-center tabular-nums ${fullWidthOnMobile ? "max-sm:min-w-0 max-sm:flex-1" : ""}`}
-					>
+					<span className="text-sm font-medium min-w-[140px] text-center tabular-nums max-sm:min-w-0 max-sm:flex-1">
 						{label}
 					</span>
 					<Button

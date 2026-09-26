@@ -522,7 +522,6 @@ export function AnalyticsDashboard() {
 
 					<div className="flex flex-wrap items-center gap-2 max-sm:w-full">
 						<DateFilter
-							fullWidthOnMobile
 							period={period}
 							startDate={startDate}
 							endDate={endDate}
