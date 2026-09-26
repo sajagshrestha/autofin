@@ -1,5 +1,7 @@
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
+import { queryClient } from "@/lib/query-client";
+import { SESSION_QUERY_KEY } from "@/lib/session-query";
 import { getSupabase } from "@/lib/supabase-browser";
 
 interface AuthContextType {
@@ -15,9 +17,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 /**
  * Client-side auth state.
  *
- * Password sign-in/up and sign-out go through server functions (which manage
- * the session cookies); this context only mirrors the session for UI display
- * and starts the Google OAuth redirect, which must happen in the browser.
+ * Password sign-in uses the server API. The browser SDK mirrors the cookie
+ * session for UI display, starts Google OAuth, and signs out. Account changes
+ * also discard cached session checks and financial data.
  */
 export function AuthProvider({
 	children,
@@ -38,23 +40,45 @@ export function AuthProvider({
 			return;
 		}
 		let active = true;
+		let previousUserId: string | null | undefined;
+		const updateSession = (
+			session: Session | null,
+			event?: AuthChangeEvent,
+		) => {
+			if (!active) return;
+			const nextUserId = session?.user.id ?? null;
+			if (
+				event === "SIGNED_OUT" ||
+				(previousUserId !== undefined && previousUserId !== nextUserId)
+			) {
+				// Never reuse another account's session or financial data.
+				queryClient.removeQueries({
+					predicate: (query) => query.queryKey[0] !== SESSION_QUERY_KEY[0],
+				});
+				if (!nextUserId) {
+					void queryClient.cancelQueries({ queryKey: SESSION_QUERY_KEY });
+					queryClient.setQueryData(SESSION_QUERY_KEY, { user: null });
+				} else {
+					void queryClient.resetQueries({ queryKey: SESSION_QUERY_KEY });
+				}
+			}
+			previousUserId = nextUserId;
+			setSession(session);
+			setUser(session?.user ?? null);
+			setLoading(false);
+		};
 		const supabase = getSupabase();
 		supabase.auth
 			.getSession()
 			.then(({ data: { session } }: { data: { session: Session | null } }) => {
-				if (!active) return;
-				setSession(session);
-				setUser(session?.user ?? null);
-				setLoading(false);
+				updateSession(session);
 			});
 
 		const {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange(
-			(_event: AuthChangeEvent, session: Session | null) => {
-				setSession(session);
-				setUser(session?.user ?? null);
-				setLoading(false);
+			(event: AuthChangeEvent, session: Session | null) => {
+				updateSession(session, event);
 			},
 		);
 

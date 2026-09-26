@@ -169,13 +169,9 @@ export function LoansPage() {
 		<div className="max-w-5xl mx-auto space-y-6 min-w-0 overflow-hidden">
 			<div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
 				<div>
-					<h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-semibold tracking-tight">
-						<Wallet className="h-6 w-6 text-primary" />
+					<h1 className="flex min-h-9 items-center text-xl sm:text-2xl font-semibold tracking-tight">
 						Loans
 					</h1>
-					<p className="mt-2 text-sm text-muted-foreground">
-						Track money you've lent or borrowed — settle via transactions.
-					</p>
 				</div>
 				<div className="grid grid-cols-2 gap-2">
 					<Button
@@ -198,16 +194,19 @@ export function LoansPage() {
 			</div>
 
 			{/* Summary */}
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+			<div className="loan-summary grid grid-cols-2 gap-3 md:gap-4">
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between pb-2">
 						<CardTitle className="text-sm font-medium text-muted-foreground">
-							Outstanding — lent by you
+							<span className="md:hidden">Lent out</span>
+							<span className="hidden md:inline">
+								Outstanding — lent by you
+							</span>
 						</CardTitle>
 						<ArrowUpRight className="h-4 w-4 text-ds-red-700" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold text-ds-red-700 dark:text-ds-red-900">
+						<div className="break-words text-base md:text-2xl font-bold tabular-nums text-ds-red-700 dark:text-ds-red-900">
 							{formatCurrency(totals.givenOutstanding)}
 						</div>
 						<p className="text-xs text-muted-foreground">
@@ -218,12 +217,15 @@ export function LoansPage() {
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between pb-2">
 						<CardTitle className="text-sm font-medium text-muted-foreground">
-							Outstanding — borrowed by you
+							<span className="md:hidden">Borrowed</span>
+							<span className="hidden md:inline">
+								Outstanding — borrowed by you
+							</span>
 						</CardTitle>
 						<ArrowDownLeft className="h-4 w-4 text-ds-green-700" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold text-ds-green-700 dark:text-ds-green-900">
+						<div className="break-words text-base md:text-2xl font-bold tabular-nums text-ds-green-700 dark:text-ds-green-900">
 							{formatCurrency(totals.takenOutstanding)}
 						</div>
 						<p className="text-xs text-muted-foreground">You still owe</p>
@@ -263,7 +265,7 @@ export function LoansPage() {
 					value={tab}
 					onValueChange={(value) => handleTabChange(value as LoanTab)}
 				>
-					<TabsList>
+					<TabsList className="max-md:flex max-md:w-full max-md:[&>button]:flex-1">
 						<TabsTrigger value="outstanding">
 							Outstanding
 							<span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-xs font-semibold tabular-nums">

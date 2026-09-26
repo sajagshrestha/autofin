@@ -10,7 +10,15 @@ import type {
 	SortingState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Eye, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+	ChevronRight,
+	Eye,
+	FolderTree,
+	MoreVertical,
+	Pencil,
+	Plus,
+	Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CategoryForm, type CategoryFormBody } from "@/components/CategoryForm";
@@ -32,6 +40,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NoData } from "@/components/ui/no-data";
+import { Search } from "@/components/ui/search";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Category } from "@/hooks";
 import {
 	useCreateCategory,
@@ -66,6 +77,12 @@ export function CategoriesPage() {
 	const deleteMutation = useDeleteCategory();
 
 	const categories = (categoriesData?.categories as Category[]) || [];
+
+	const mobileCategories = categories.filter((category) =>
+		`${category.name} ${category.isDefault ? "default" : category.isAiCreated ? "AI" : "custom"}`
+			.toLowerCase()
+			.includes(globalFilter.trim().toLowerCase()),
+	);
 
 	const columns: ColumnDef<Category>[] = [
 		{
@@ -220,17 +237,13 @@ export function CategoriesPage() {
 	return (
 		<>
 			{isListPage && (
-				<div className="max-w-6xl mx-auto space-y-8 min-w-0 overflow-hidden">
+				<div className="max-w-6xl mx-auto space-y-6 min-w-0 overflow-hidden">
 					<div className="flex flex-col gap-4">
-						<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+						<div className="flex flex-wrap justify-between items-center gap-3 sm:gap-4">
 							<div>
-								<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+								<h1 className="flex min-h-9 items-center text-xl sm:text-2xl font-semibold tracking-tight">
 									Categories
 								</h1>
-								<p className="text-sm text-muted-foreground mt-2">
-									Give every expense a place. Organize and find your spending
-									categories.
-								</p>
 							</div>
 							<Button
 								data-demo-action
@@ -242,32 +255,87 @@ export function CategoriesPage() {
 							</Button>
 						</div>
 					</div>
-					<DataTable
-						columns={columns}
-						data={categories}
-						isLoading={isLoading}
-						sorting={{
-							state: sorting,
-							onSortingChange: setSorting,
-						}}
-						pagination={{
-							state: pagination,
-							options: {
-								onPaginationChange: setPagination,
-								rowCount: categories.length,
-							},
-						}}
-						search={{
-							value: globalFilter,
-							onChange: setGlobalFilter,
-						}}
-						noData={{
-							title: isLoading
-								? "Loading categories..."
-								: "No categories found",
-							description: "Get started by creating your first category.",
-						}}
-					/>
+					<div className="space-y-4 md:hidden">
+						<Search
+							value={globalFilter}
+							onChange={(event) => setGlobalFilter(event.target.value)}
+							placeholder="Search categories…"
+						/>
+						{isLoading ? (
+							<Skeleton className="h-64 rounded-2xl" />
+						) : (
+							<div className="overflow-hidden rounded-2xl border border-border/60 bg-card divide-y divide-border/60">
+								{mobileCategories.map((category) => (
+									<Link
+										key={category.id}
+										to="/categories/$categoryId"
+										params={{ categoryId: category.id }}
+										className="flex min-h-18 items-center gap-3 px-4 py-3 transition-colors active:bg-muted hover:bg-muted/40"
+									>
+										<span
+											aria-hidden="true"
+											className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-lg"
+										>
+											{category.icon || (
+												<FolderTree className="size-5 text-muted-foreground" />
+											)}
+										</span>
+										<span className="min-w-0 flex-1">
+											<span className="block text-sm font-medium">
+												{category.name}
+											</span>
+											<span className="mt-1 block text-xs text-muted-foreground">
+												{category.isDefault
+													? "Default"
+													: category.isAiCreated
+														? "AI"
+														: "Custom"}
+											</span>
+										</span>
+										<ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+									</Link>
+								))}
+								{mobileCategories.length === 0 && (
+									<NoData
+										title="No categories found"
+										description={
+											globalFilter
+												? "Try a different search."
+												: "Create your first category to get started."
+										}
+									/>
+								)}
+							</div>
+						)}
+					</div>
+					<div className="hidden md:block">
+						<DataTable
+							columns={columns}
+							data={categories}
+							isLoading={isLoading}
+							sorting={{
+								state: sorting,
+								onSortingChange: setSorting,
+							}}
+							pagination={{
+								state: pagination,
+								options: {
+									onPaginationChange: setPagination,
+									rowCount: categories.length,
+								},
+							}}
+							search={{
+								value: globalFilter,
+								onChange: setGlobalFilter,
+							}}
+							noData={{
+								title: isLoading
+									? "Loading categories..."
+									: "No categories found",
+								description: "Get started by creating your first category.",
+							}}
+						/>
+					</div>
 
 					{/* Create Dialog */}
 					<CategoryForm

@@ -28,7 +28,7 @@ import {
 	Wallet,
 	X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { CreateTransactionForm } from "@/components/CreateTransactionForm";
@@ -101,7 +101,9 @@ import {
 	useDeleteTransaction,
 	useUpdateTransaction,
 } from "@/hooks/transactions/mutations";
-import { useGetAllTransactions } from "@/hooks/transactions/queries";
+import { useGetTransactionHistory } from "@/hooks/transactions/queries";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useProgressiveList } from "@/hooks/useProgressiveList";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { cn } from "@/lib/utils";
 
@@ -173,7 +175,12 @@ export function TransactionsPage() {
 
 	const navigate = useNavigate();
 	const searchNavigate = Route.useNavigate();
-	const { data: transactionsData, isLoading } = useGetAllTransactions({
+	const {
+		data: transactionsData,
+		isLoading,
+		isError,
+		refetch,
+	} = useGetTransactionHistory({
 		startDate,
 		endDate,
 	});
@@ -217,8 +224,16 @@ export function TransactionsPage() {
 	const createMutation = useCreateTransaction();
 	const createFromSmsMutation = useCreateTransactionFromSms();
 
-	const transactions = (transactionsData?.transactions as Transaction[]) || [];
-	const categories = categoriesData?.categories || [];
+	// Keep the empty loading state stable: a fresh array causes the table's
+	// automatic pagination reset to rerender this page indefinitely.
+	const transactions = useMemo(
+		() => transactionsData?.transactions ?? [],
+		[transactionsData?.transactions],
+	);
+	const categories = useMemo(
+		() => categoriesData?.categories ?? [],
+		[categoriesData?.categories],
+	);
 	const sortedCategories = useMemo(
 		() => [...categories].sort((a, b) => a.name.localeCompare(b.name)),
 		[categories],
@@ -482,20 +497,39 @@ export function TransactionsPage() {
 
 		return sorted;
 	}, [mobileSearchFilteredTransactions, sorting]);
-	const mobilePageCount = Math.max(
-		1,
-		Math.ceil(mobileSortedTransactions.length / pagination.pageSize),
+	const isMobile = useMediaQuery("(max-width: 767px)");
+	const { visibleCount, hasMore, sentinelRef, loadMore } = useProgressiveList({
+		total: mobileSortedTransactions.length,
+		enabled: isMobile && !isLoading && !isError,
+		resetKey: JSON.stringify([
+			period,
+			startDate,
+			endDate,
+			typeFilter,
+			categoryFilter,
+			bankFilter,
+			excludeLoans,
+			globalFilter,
+			sorting,
+		]),
+	});
+	const mobileVisibleTransactions = useMemo(
+		() => mobileSortedTransactions.slice(0, visibleCount),
+		[mobileSortedTransactions, visibleCount],
 	);
-	const mobilePageIndex = Math.min(pagination.pageIndex, mobilePageCount - 1);
-	useEffect(() => {
-		if (pagination.pageIndex !== mobilePageIndex) {
-			setPagination((prev) => ({ ...prev, pageIndex: mobilePageIndex }));
+
+	const mobileTransactionGroups = useMemo(() => {
+		const groups: { date: string; transactions: Transaction[] }[] = [];
+		for (const transaction of mobileVisibleTransactions) {
+			const date = transaction.transactionDate
+				? format(new Date(transaction.transactionDate), "EEEE, MMM d, yyyy")
+				: "No date";
+			const last = groups[groups.length - 1];
+			if (last?.date === date) last.transactions.push(transaction);
+			else groups.push({ date, transactions: [transaction] });
 		}
-	}, [pagination.pageIndex, mobilePageIndex]);
-	const mobilePageTransactions = useMemo(() => {
-		const start = mobilePageIndex * pagination.pageSize;
-		return mobileSortedTransactions.slice(start, start + pagination.pageSize);
-	}, [mobilePageIndex, mobileSortedTransactions, pagination.pageSize]);
+		return groups;
+	}, [mobileVisibleTransactions]);
 
 	const renderCategoryFilterCombobox = (widthClassName: string) => (
 		<CategoryCombobox
@@ -512,7 +546,7 @@ export function TransactionsPage() {
 	) => (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" className="h-9 w-9 p-0 md:h-8 md:w-8">
+				<Button variant="ghost" className="h-11 w-11 p-0 md:h-8 md:w-8">
 					<span className="sr-only">Open menu</span>
 					<MoreVertical className="h-4 w-4" />
 				</Button>
@@ -706,16 +740,33 @@ export function TransactionsPage() {
 
 	return (
 		<>
-			<div className="max-w-6xl mx-auto space-y-8 min-w-0 overflow-hidden">
+			<div className="max-w-6xl mx-auto space-y-6 min-w-0 overflow-hidden">
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-wrap justify-between items-center gap-4">
-						<div>
-							<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-								Transactions
-							</h1>
-							<p className="text-sm text-muted-foreground mt-2">
-								Every transaction, organized in one place.
-							</p>
+					<div className="flex flex-wrap justify-between items-center gap-3 sm:gap-4">
+						<div className="flex items-center justify-between gap-3 max-md:w-full">
+							<div className="flex min-w-0 items-center gap-2">
+								<h1 className="flex min-h-11 items-center text-xl sm:text-2xl font-semibold tracking-tight">
+									Transactions
+								</h1>
+								<span
+									className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground md:hidden"
+									aria-live="polite"
+								>
+									{mobileSortedTransactions.length.toLocaleString()}
+									<span className="sr-only"> transactions</span>
+								</span>
+							</div>
+							<Button
+								className="h-11 shrink-0 md:hidden"
+								aria-label="Add transaction"
+								onClick={() => setCreateOptionsOpen(true)}
+							>
+								<Plus className="size-4" />
+								<span className="min-[480px]:hidden">Add</span>
+								<span className="hidden min-[480px]:inline">
+									Add transaction
+								</span>
+							</Button>
 						</div>
 						<DateFilter
 							period={period}
@@ -860,56 +911,32 @@ export function TransactionsPage() {
 					/>
 				</div>
 
-				<div className="space-y-4 md:hidden">
-					<Card>
-						<CardContent className="space-y-3 p-4">
+				<div className="space-y-3 md:hidden">
+					<div className="space-y-3">
+						<div className="flex items-center gap-2">
 							<Search
 								value={globalFilter}
 								onChange={(event) => handleSearchChange(event.target.value)}
-								placeholder="Search..."
-								className="w-full"
+								placeholder="Search transactions…"
+								className="flex-1 [&_input]:h-11"
 							/>
-							<div className="grid grid-cols-2 gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setFiltersSheetOpen(true)}
-									className={cn(
-										activeFilterCount > 0 && "border-primary/60 text-primary",
-									)}
-								>
-									<SlidersHorizontal className="mr-2 h-4 w-4" />
-									Filters
-									{activeFilterCount > 0 && (
-										<span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
-											{activeFilterCount}
-										</span>
-									)}
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => navigate({ to: "/transactions/import" })}
-								>
-									<FileText className="mr-2 h-4 w-4" />
-									Import
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									className="col-span-2"
-									data-demo-action
-									onClick={() => setCreateOptionsOpen(true)}
-								>
-									<Plus className="mr-2 h-4 w-4" />
-									Create transaction
-								</Button>
-							</div>
-						</CardContent>
-					</Card>
+							<Button
+								variant="outline"
+								className="h-11 shrink-0 gap-2"
+								onClick={() => setFiltersSheetOpen(true)}
+							>
+								<SlidersHorizontal className="size-4" /> Filters
+								{activeFilterCount > 0 && (
+									<span className="rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
+										{activeFilterCount}
+									</span>
+								)}
+							</Button>
+						</div>
+					</div>
 
 					{isLoading ? (
-						new Array(pagination.pageSize).fill(null).map((_, index) => (
+						new Array(5).fill(null).map((_, index) => (
 							<Card key={index}>
 								<CardContent className="space-y-3 p-4">
 									<Skeleton className="h-5 w-1/2" />
@@ -918,102 +945,99 @@ export function TransactionsPage() {
 								</CardContent>
 							</Card>
 						))
-					) : mobilePageTransactions.length ? (
-						mobilePageTransactions.map((transaction) => {
-							const amount = Number(transaction.amount ?? "0");
-							const formattedAmount = formatCurrency(
-								amount,
-								transaction.currency || "NPR",
-							);
-							return (
-								<Card
-									key={transaction.id}
-									className="cursor-pointer"
-									onClick={() =>
-										navigate({
-											to: "/transactions/$transactionId",
-											params: { transactionId: transaction.id },
-										})
-									}
-								>
-									<CardContent className="space-y-3 p-4">
-										<div className="flex items-start justify-between gap-2">
-											<div className="min-w-0">
-												<p className="flex items-center gap-1 truncate font-medium">
-													{transaction.loanId && (
-														<Wallet
-															className="h-3 w-3 shrink-0 text-primary"
-															aria-label="Part of a tracked loan"
-														/>
-													)}
-													{transaction.merchant || "Unknown"}
-												</p>
-												<p className="text-xs text-muted-foreground">
-													{transaction.transactionDate
-														? format(
-																new Date(transaction.transactionDate),
-																"PPp",
-															)
-														: "N/A"}
-												</p>
-											</div>
-											<div className="flex items-start gap-1">
-												<p
-													className={`text-sm font-semibold ${
-														transaction.type === "debit"
-															? "text-ds-red-700 dark:text-ds-red-900"
-															: "text-ds-green-700 dark:text-ds-green-900"
-													}`}
+					) : isError ? (
+						<Card className="space-y-3 p-6 text-center">
+							<p role="alert" className="text-sm">
+								Could not load transactions.
+							</p>
+							<Button variant="outline" onClick={() => void refetch()}>
+								Try again
+							</Button>
+						</Card>
+					) : mobileVisibleTransactions.length ? (
+						mobileTransactionGroups.map((group) => (
+							<section
+								key={group.transactions[0].id}
+								className="space-y-2 pt-2"
+								aria-label={group.date}
+							>
+								<h2 className="px-1 text-xs font-medium text-muted-foreground">
+									{group.date}
+								</h2>
+								<div className="overflow-hidden rounded-2xl border border-border/60 bg-card divide-y divide-border/60">
+									{group.transactions.map((transaction) => (
+										<div
+											key={transaction.id}
+											className="relative transition-colors active:bg-muted/70"
+										>
+											<Link
+												to="/transactions/$transactionId"
+												params={{ transactionId: transaction.id }}
+												className="flex min-w-0 items-center gap-3 p-3 pr-12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+											>
+												<span
+													aria-hidden="true"
+													className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-lg"
 												>
-													{formattedAmount}
-												</p>
-												<div
-													onClick={(event) => event.stopPropagation()}
-													onKeyDown={(event) => event.stopPropagation()}
-													role="presentation"
-												>
-													{renderTransactionActions(transaction, "end")}
-												</div>
-											</div>
-										</div>
-										<div className="flex items-center gap-2">
-											{transaction.category ? (
-												<Badge variant="secondary" className="font-normal">
-													{transaction.category.icon && (
-														<span className="mr-1">
-															{transaction.category.icon}
-														</span>
+													{transaction.category?.icon || (
+														<Wallet className="size-4 text-muted-foreground" />
 													)}
-													{transaction.category.name}
-												</Badge>
-											) : (
-												<span className="text-muted-foreground text-sm italic">
-													Uncategorized
 												</span>
-											)}
-											<Badge variant="outline" className="uppercase">
-												{transaction.type}
-											</Badge>
+												<div className="min-w-0 flex-1 space-y-1">
+													<p className="truncate text-sm font-medium">
+														{transaction.merchant || "Unknown merchant"}
+													</p>
+													<p
+														className={cn(
+															"break-words text-base font-semibold tabular-nums",
+															transaction.type === "debit"
+																? "text-foreground"
+																: "text-ds-green-700 dark:text-ds-green-900",
+														)}
+													>
+														{transaction.type === "debit" ? "−" : "+"}
+														{formatCurrency(
+															Number(transaction.amount ?? "0"),
+															transaction.currency || "NPR",
+														)}
+													</p>
+													<p className="truncate text-xs text-muted-foreground">
+														{transaction.category?.name || "Uncategorized"}
+														{transaction.bankName
+															? ` · ${transaction.bankName}`
+															: ""}
+													</p>
+													<div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+														<time
+															dateTime={
+																transaction.transactionDate ?? undefined
+															}
+														>
+															{transaction.transactionDate
+																? format(
+																		new Date(transaction.transactionDate),
+																		"h:mm a",
+																	)
+																: "No time"}
+														</time>
+														{transaction.loanId && (
+															<>
+																<span aria-hidden="true">·</span>
+																<Wallet className="size-3" />
+																<span>Loan</span>
+															</>
+														)}
+													</div>
+												</div>
+											</Link>
+											<div className="absolute right-0.5 top-1">
+												{renderTransactionActions(transaction, "end")}
+											</div>
 										</div>
-										{transaction.bankName ? (
-											<p className="text-sm text-muted-foreground">
-												Bank: {transaction.bankName}
-											</p>
-										) : null}
-										{transaction.remarks ? (
-											<p className="text-sm text-muted-foreground line-clamp-2">
-												{transaction.remarks}
-											</p>
-										) : null}
-										{transaction.notes ? (
-											<p className="text-sm text-muted-foreground line-clamp-2">
-												{transaction.notes}
-											</p>
-										) : null}
-									</CardContent>
-								</Card>
-							);
-						})
+									))}
+								</div>
+							</section>
+						))
 					) : (
 						<Card>
 							<NoData
@@ -1024,37 +1048,23 @@ export function TransactionsPage() {
 						</Card>
 					)}
 
-					<div className="flex items-center justify-evenly border rounded-xl px-4 py-4">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() =>
-								setPagination((prev) => ({
-									...prev,
-									pageIndex: Math.max(0, mobilePageIndex - 1),
-								}))
-							}
-							disabled={mobilePageIndex === 0}
+					{!isLoading && !isError && mobileSortedTransactions.length > 0 && (
+						<div
+							ref={sentinelRef}
+							className="flex min-h-20 flex-col items-center justify-center gap-2 py-4"
 						>
-							Previous
-						</Button>
-						<span className="flex-1 text-center text-sm font-semibold text-muted-foreground">
-							Page {mobilePageIndex + 1} of {mobilePageCount.toLocaleString()}
-						</span>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() =>
-								setPagination((prev) => ({
-									...prev,
-									pageIndex: Math.min(mobilePageCount - 1, mobilePageIndex + 1),
-								}))
-							}
-							disabled={mobilePageIndex >= mobilePageCount - 1}
-						>
-							Next
-						</Button>
-					</div>
+							<p className="text-xs text-muted-foreground" role="status">
+								{hasMore
+									? `Showing ${visibleCount} of ${mobileSortedTransactions.length} transactions`
+									: `All ${mobileSortedTransactions.length} transactions shown`}
+							</p>
+							{hasMore && (
+								<Button variant="outline" onClick={loadMore}>
+									Show more transactions
+								</Button>
+							)}
+						</div>
+					)}
 				</div>
 
 				<Sheet
@@ -1063,19 +1073,19 @@ export function TransactionsPage() {
 				>
 					<SheetContent
 						side="right"
-						className="sm:max-w-md"
+						className="w-full overflow-hidden sm:max-w-md"
 						// Don't steal focus into the category combobox on open —
 						// with Headless UI's `immediate`, focusing it would pop
 						// the dropdown open before the user interacts with it.
 						onOpenAutoFocus={(event) => event.preventDefault()}
 					>
-						<SheetHeader>
+						<SheetHeader className="shrink-0 pr-14">
 							<SheetTitle>Filters</SheetTitle>
 							<SheetDescription>
 								Filter by category and control sorting for transactions.
 							</SheetDescription>
 						</SheetHeader>
-						<div className="space-y-4 p-4">
+						<div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 [&_button]:min-h-11 [&_input]:min-h-11">
 							<div className="space-y-2">
 								<p className="text-sm font-medium">Category</p>
 								{renderCategoryFilterCombobox("w-full")}
@@ -1158,12 +1168,12 @@ export function TransactionsPage() {
 								</Button>
 							</div>
 						</div>
-						<SheetFooter className="border-t">
+						<SheetFooter className="shrink-0 border-t pb-[max(1rem,env(safe-area-inset-bottom))] [&_button]:min-h-11">
 							<Button variant="outline" onClick={clearFilters}>
 								Clear filters
 							</Button>
 							<Button onClick={() => handleFiltersSheetOpenChange(false)}>
-								Apply
+								Show results
 							</Button>
 						</SheetFooter>
 					</SheetContent>
@@ -1179,7 +1189,7 @@ export function TransactionsPage() {
 						</DialogHeader>
 						<div className="grid gap-2">
 							<Button
-								className="justify-start"
+								className="min-h-12 justify-start whitespace-normal text-left"
 								data-demo-action
 								onClick={openCreateManual}
 							>
@@ -1188,7 +1198,7 @@ export function TransactionsPage() {
 							</Button>
 							<Button
 								variant="outline"
-								className="justify-start"
+								className="min-h-12 justify-start whitespace-normal text-left"
 								data-demo-action
 								onClick={openCreateFromSms}
 							>
@@ -1197,7 +1207,7 @@ export function TransactionsPage() {
 							</Button>
 							<Button
 								variant="outline"
-								className="justify-start"
+								className="min-h-12 justify-start whitespace-normal text-left"
 								data-demo-action
 								onClick={openImportStatement}
 							>

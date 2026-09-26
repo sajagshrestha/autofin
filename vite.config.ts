@@ -62,7 +62,7 @@ export default defineConfig(({mode}) => {
     },
     plugins: [
       bundleServerDeps(),
-      tanstackStart(),
+      tanstackStart({ start: { entry: "start.ts" } }),
       // react's vite plugin must come after start's vite plugin
       viteReact(),
       nitro({

@@ -90,11 +90,13 @@ function ChatMessages() {
 								<div key={index} className="w-full">
 									{done ? (
 										<ChatChart
-											output={part.output as {
-												type: string;
-												title?: string;
-												data: Array<Record<string, unknown>>;
-											}}
+											output={
+												part.output as {
+													type: string;
+													title?: string;
+													data: Array<Record<string, unknown>>;
+												}
+											}
 										/>
 									) : (
 										<div className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
@@ -271,7 +273,7 @@ export function AdvisorChatWidget() {
 				type="button"
 				onClick={openChat}
 				aria-label="Open AI advisor"
-				className={`fixed bottom-20 right-4 z-[45] md:bottom-6 md:right-6 flex h-13 w-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-xl active:scale-95 ${
+				className={`fixed bottom-20 right-4 z-[45] md:bottom-6 md:right-6 hidden md:flex h-13 w-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-xl active:scale-95 ${
 					isOpen ? "pointer-events-none scale-0 opacity-0" : ""
 				}`}
 			>

@@ -29,9 +29,8 @@ function getInitialCollapsed(): boolean {
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
 	// Lazy initializer so the first client render already has the stored
 	// preference — no post-mount state change, so motion has nothing to
-	// animate on load. Safe for hydration: on the server this returns false,
-	// and the motion-driven width leaves no trace in the SSR HTML either way,
-	// so client and server markup still match.
+	// animate on load. AppShell mounts inside client-rendered routes, so this
+	// state does not need to match server-rendered sidebar markup.
 	const [collapsed, setCollapsedState] = useState(getInitialCollapsed);
 
 	const setCollapsed = useCallback((value: boolean) => {

@@ -45,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { getSessionUserFn } from "@/server/functions/session.fns";
 
 export const Route = createFileRoute("/")({
+	ssr: true,
 	beforeLoad: async () => {
 		const { user } = await getSessionUserFn();
 		if (user) throw redirect({ to: "/dashboard" });

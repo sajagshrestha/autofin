@@ -1,11 +1,14 @@
 import { createRouter } from "@tanstack/react-router";
+import { AppLoading } from "@/components/AppLoading";
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
 	const router = createRouter({
 		routeTree,
 		defaultPreload: "intent",
-		scrollRestoration: true,
+		defaultPendingComponent: AppLoading,
+		defaultPendingMinMs: 0,
+		scrollRestoration: ({ location }) => location.pathname !== "/",
 		defaultStructuralSharing: true,
 		defaultPreloadStaleTime: 0,
 	});

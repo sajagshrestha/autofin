@@ -43,10 +43,15 @@ import {
 } from "@/components/ui/date-filter";
 import { Label } from "@/components/ui/label";
 import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+	Sheet,
+	SheetClose,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useGetAllTransactions } from "@/hooks/transactions/queries";
@@ -69,7 +74,7 @@ const searchParamsSchema = z.object({
 		.optional()
 		.default(defaultRange.endDate ?? ""),
 	category: z.string().optional().default(""),
-	excludeLoans: z.boolean().optional().default(false),
+	excludeLoans: z.boolean().optional().default(true),
 });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -510,15 +515,10 @@ export function AnalyticsDashboard() {
 		<div className="space-y-6 min-w-0 overflow-hidden">
 			<div className="space-y-6 min-w-0">
 				{/* Header - always visible */}
-				<div className="relative flex flex-wrap items-center justify-between gap-4">
-					<div>
-						<h1 className="pr-12 text-2xl sm:pr-0 sm:text-3xl font-semibold tracking-tight">
-							Your money, at a glance
-						</h1>
-						<p className="text-sm text-muted-foreground mt-2">
-							Track your cash flow and see where your money goes.
-						</p>
-					</div>
+				<div className="relative flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+					<h1 className="flex min-h-11 items-center pr-28 text-xl sm:pr-0 sm:text-2xl font-semibold tracking-tight">
+						Overview
+					</h1>
 
 					<div className="flex flex-wrap items-center gap-2 max-sm:w-full">
 						<DateFilter
@@ -528,11 +528,10 @@ export function AnalyticsDashboard() {
 							onPeriodChange={handlePeriodChange}
 							onDateRangeChange={handleDateRangeChange}
 						/>
-						<Popover>
-							<PopoverTrigger asChild>
+						<Sheet>
+							<SheetTrigger asChild>
 								<Button
 									variant="outline"
-									size="icon"
 									aria-label={
 										excludeLoans
 											? "Dashboard filters (1 active)"
@@ -541,11 +540,12 @@ export function AnalyticsDashboard() {
 									title="Dashboard filters"
 									className={
 										excludeLoans
-											? "max-sm:absolute max-sm:right-0 max-sm:top-0 relative border-primary/60 text-primary"
-											: "max-sm:absolute max-sm:right-0 max-sm:top-0 relative"
+											? "h-11 max-sm:absolute max-sm:right-0 max-sm:top-0 relative border-primary/60 text-primary"
+											: "h-11 max-sm:absolute max-sm:right-0 max-sm:top-0 relative"
 									}
 								>
 									<SlidersHorizontal aria-hidden="true" />
+									Filters
 									{excludeLoans && (
 										<span
 											aria-hidden="true"
@@ -553,42 +553,56 @@ export function AnalyticsDashboard() {
 										/>
 									)}
 								</Button>
-							</PopoverTrigger>
-							<PopoverContent
-								align="end"
-								aria-label="Dashboard filters"
-								className="w-80 max-w-[calc(100vw-2rem)] space-y-4"
+							</SheetTrigger>
+							<SheetContent
+								side="right"
+								className="w-full overflow-hidden sm:max-w-md"
 							>
-								<h2 className="text-sm font-semibold">Filters</h2>
-								<div className="flex items-center gap-3">
-									<Switch
-										id="exclude-loan-transactions"
-										className="peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
-										checked={excludeLoans}
-										onChange={(event) => {
-											const checked = event.target.checked;
-											navigate({
-												search: (prev) => ({ ...prev, excludeLoans: checked }),
-												resetScroll: false,
-											});
-										}}
-									/>
-									<Label
-										htmlFor="exclude-loan-transactions"
-										className="cursor-pointer"
-									>
-										Exclude loan-linked transactions
-									</Label>
+								<SheetHeader className="shrink-0 pr-14">
+									<SheetTitle>Filters</SheetTitle>
+									<SheetDescription>
+										Choose which transactions appear in your overview.
+									</SheetDescription>
+								</SheetHeader>
+								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+									<div className="flex items-center gap-3">
+										<Switch
+											id="exclude-loan-transactions"
+											className="peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
+											checked={excludeLoans}
+											onChange={(event) => {
+												const checked = event.target.checked;
+												navigate({
+													search: (prev) => ({
+														...prev,
+														excludeLoans: checked,
+													}),
+													resetScroll: false,
+												});
+											}}
+										/>
+										<Label
+											htmlFor="exclude-loan-transactions"
+											className="flex min-h-11 cursor-pointer items-center"
+										>
+											Exclude loan-linked transactions
+										</Label>
+									</div>
 								</div>
-							</PopoverContent>
-						</Popover>
+								<SheetFooter className="shrink-0 border-t pb-[max(1rem,env(safe-area-inset-bottom))]">
+									<SheetClose asChild>
+										<Button className="min-h-11">Show results</Button>
+									</SheetClose>
+								</SheetFooter>
+							</SheetContent>
+						</Sheet>
 					</div>
 				</div>
 
 				{isLoading ? (
 					<>
 						{/* Summary cards skeleton */}
-						<div className="grid grid-cols-1 min-[380px]:grid-cols-2 xl:grid-cols-4 gap-4">
+						<div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
 							{Array.from({ length: 4 }).map((_, i) => (
 								<Card key={i} className="hover:shadow-md transition-shadow">
 									<CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -663,7 +677,7 @@ export function AnalyticsDashboard() {
 				) : (
 					<>
 						{/* Summary Cards */}
-						<div className="grid grid-cols-1 min-[380px]:grid-cols-2 xl:grid-cols-4 gap-4">
+						<div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
 							<Card
 								className="summary-card [--summary-accent:var(--ds-red-700)] hover:border-primary/40 transition-colors cursor-pointer min-w-0 focus-visible:ring-2 focus-visible:ring-ring"
 								role="button"
@@ -686,7 +700,7 @@ export function AnalyticsDashboard() {
 								</CardHeader>
 								<CardContent>
 									<div className="text-xl xl:text-2xl font-bold text-ds-red-700 truncate tabular-nums">
-										{formatCurrency(stats.totalExpenses)}
+										<DashboardAmount value={stats.totalExpenses} />
 									</div>
 									<p className="text-xs text-muted-foreground">
 										{excludeLoans
@@ -718,7 +732,7 @@ export function AnalyticsDashboard() {
 								</CardHeader>
 								<CardContent>
 									<div className="text-xl xl:text-2xl font-bold text-ds-green-700 truncate tabular-nums">
-										{formatCurrency(stats.totalIncome)}
+										<DashboardAmount value={stats.totalIncome} />
 									</div>
 									<p className="text-xs text-muted-foreground">
 										{excludeLoans
@@ -754,7 +768,7 @@ export function AnalyticsDashboard() {
 									<div
 										className={`text-xl xl:text-2xl font-bold truncate tabular-nums ${stats.savings >= 0 ? "text-ds-green-700" : "text-ds-red-700"}`}
 									>
-										{formatCurrency(stats.savings)}
+										<DashboardAmount value={stats.savings} />
 									</div>
 									<p className="text-xs text-muted-foreground">
 										{stats.savings >= 0 ? "Net positive" : "Net negative"}
@@ -880,5 +894,22 @@ export function AnalyticsDashboard() {
 				)}
 			</div>
 		</div>
+	);
+}
+
+function DashboardAmount({ value }: { value: number }) {
+	return (
+		<>
+			<span className="hidden md:inline">{formatCurrency(value)}</span>
+			<span className="md:hidden">
+				<span className="mb-0.5 block text-[10px] font-medium tracking-wide text-muted-foreground">
+					NPR
+				</span>{" "}
+				{value.toLocaleString("en", {
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 2,
+				})}
+			</span>
+		</>
 	);
 }

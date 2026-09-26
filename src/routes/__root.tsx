@@ -17,6 +17,8 @@ import { queryClient } from "@/lib/query-client";
 import appStyles from "./__root.css?url";
 
 export const Route = createRootRoute({
+	// Render the shared document on the server so the homepage can opt into SSR.
+	ssr: true,
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },

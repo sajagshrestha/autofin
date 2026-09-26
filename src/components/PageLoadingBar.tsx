@@ -11,16 +11,18 @@ export function PageLoadingBar() {
 
 		if (isLoading) {
 			// Start from a small value (or restart if we just completed).
-			setProgress((prev) => (prev === 0 || prev >= 90 ? 12 : prev));
-			// Trickle toward 90% so the bar reflects real, slow progress.
-			interval = setInterval(() => {
-				setProgress((prev) =>
-					prev >= 90 ? prev : prev + Math.max(0.5, (90 - prev) * 0.08),
-				);
+			// Cached tab switches finish before this; avoid a page-load flash.
+			timeout = setTimeout(() => {
+				setProgress(12);
+				interval = setInterval(() => {
+					setProgress((prev) =>
+						prev >= 90 ? prev : prev + Math.max(0.5, (90 - prev) * 0.08),
+					);
+				}, 200);
 			}, 200);
 		} else {
 			// Finished: snap to 100%, then hide and reset.
-			setProgress(100);
+			setProgress((prev) => (prev === 0 ? 0 : 100));
 			timeout = setTimeout(() => setProgress(0), 250);
 		}
 

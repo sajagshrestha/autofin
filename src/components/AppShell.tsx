@@ -5,6 +5,7 @@ import { AdvisorChatWidget } from "@/components/ai-chat/AdvisorChatWidget";
 import { AdvisorChatProvider } from "@/components/ai-chat/advisor-chat-context";
 import Header from "@/components/Header";
 import { SidebarProvider, useSidebar } from "@/contexts/SidebarContext";
+import { useWarmAppData } from "@/hooks/useWarmAppData";
 import { cn } from "@/lib/utils";
 
 function AppMain({ children }: { children: ReactNode }) {
@@ -15,7 +16,7 @@ function AppMain({ children }: { children: ReactNode }) {
 	return (
 		<main
 			className={cn(
-				"app-main flex-1 min-w-0 pt-16 md:pt-0 pb-24 md:pb-10 transition-[margin] duration-200 ease-in-out",
+				"app-main flex-1 min-w-0 pt-[env(safe-area-inset-top)] md:pt-0 pb-24 md:pb-10 transition-[margin] duration-200 ease-in-out",
 				collapsed ? "md:ml-20" : "md:ml-60",
 			)}
 		>
@@ -48,6 +49,7 @@ export function AppShell({
 	children: ReactNode;
 	showAdvisor?: boolean;
 }) {
+	useWarmAppData();
 	return (
 		<AdvisorChatProvider>
 			<SidebarProvider>

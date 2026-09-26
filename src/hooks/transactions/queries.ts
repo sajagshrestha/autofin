@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { unwrap } from "@/lib/api-client";
 import { useApiClient } from "@/lib/api-context";
+import { fetchTransactionHistory, type TransactionPage } from "./fetch-history";
 import type { ListTransactionsFilters } from "./types";
 
 export const TRANSACTIONS_QUERY_KEYS = {
@@ -31,8 +32,15 @@ export function useGetAllTransactions(
 	params?: Partial<ListTransactionsFilters>,
 ) {
 	const rpc = useApiClient();
+	return useQuery(allTransactionsQueryOptions(rpc, params));
+}
+
+export function allTransactionsQueryOptions(
+	rpc: ReturnType<typeof useApiClient>,
+	params?: Partial<ListTransactionsFilters>,
+) {
 	const clean = compactParams(params);
-	return useQuery({
+	return queryOptions({
 		queryKey: TRANSACTIONS_QUERY_KEYS.list(clean),
 		queryFn: async () => {
 			const res = await rpc.api.transactions.$get({
@@ -45,6 +53,33 @@ export function useGetAllTransactions(
 				offset: number;
 			}>(res);
 		},
+	});
+}
+
+/** Complete history for the transaction screen's local search and sorting. */
+export function useGetTransactionHistory(params: {
+	startDate?: string;
+	endDate?: string;
+}) {
+	const rpc = useApiClient();
+	return useQuery(transactionHistoryQueryOptions(rpc, params));
+}
+
+export function transactionHistoryQueryOptions(
+	rpc: ReturnType<typeof useApiClient>,
+	params: { startDate?: string; endDate?: string },
+) {
+	const clean = compactParams(params);
+	return queryOptions({
+		queryKey: [...TRANSACTIONS_QUERY_KEYS.list(clean), "complete"],
+		queryFn: ({ signal }) =>
+			fetchTransactionHistory(async (offset) => {
+				const res = await rpc.api.transactions.$get(
+					{ query: { ...clean, limit: 500, offset } },
+					{ init: { signal } },
+				);
+				return unwrap<TransactionPage>(res);
+			}),
 	});
 }
 

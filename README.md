@@ -40,7 +40,7 @@ See [the demo architecture and isolation checks](src/demo/README.md).
 
 | Layer      | Tech                                                                                  |
 | ---------- | ------------------------------------------------------------------------------------- |
-| Framework  | TanStack Start (SSR) + TanStack Router / Query / Form / Table                          |
+| Framework  | TanStack Start (client-rendered app, SSR homepage) + TanStack Router / Query / Form / Table |
 | API        | **Hono** mounted inside Start via one catch-all server route, consumed with **typed RPC clients** (`hc<AppType>`) |
 | Charts     | **`@tanstack/charts`** (`defineChart` grammar, React SVG host, polar donut)            |
 | UI         | Tailwind CSS v4 + shadcn/ui-style components, Radix primitives, sonner                 |
@@ -63,7 +63,7 @@ src/
 │   │   ├── middleware.ts            requireUser, same-origin CSRF guard, logger
 │   │   └── routes/                  auth · transactions · categories · insights · statements · gmail · public-infra
 │   ├── auth/                # Hono-bound Supabase cookie client, session resolver
-│   ├── functions/session.fns.ts     SSR route-guard check (no HTTP hop)
+│   ├── functions/session.fns.ts     server-verified session check for route guards
 │   ├── services/            # business logic (gmail, extractors, insights, discord)
 │   ├── repositories/        # Drizzle data access
 │   ├── inngest/             # background jobs
@@ -74,6 +74,25 @@ src/
 ├── contexts/                # theme + client auth-state providers
 └── lib/, schemas/, env.ts   # shared utils, zod schemas, validated env
 ```
+
+### Rendering
+
+Pages default to client-side rendering through `src/start.ts`. The root document
+and `/` explicitly enable SSR, keeping homepage content in the initial HTML.
+All other pages, including login, signup, legal pages, and authenticated app
+screens, render in the browser. Direct links receive the shared document and
+loading screen until the client route is ready. New pages inherit this default.
+
+The authenticated layout verifies the session through a server function on
+first entry, then reuses it for tab switches. Stale sessions revalidate in the
+background; sign-out and account changes clear cached session and financial
+data. Visible navigation links preload route code, and the shell warms the
+primary tabs' default queries without blocking navigation. Visited data stays
+cached for 30 minutes and refreshes in the background when stale.
+Rendering does not change API authorization:
+every protected API request still verifies the session on the server.
+The deployment still needs the Start/Nitro server for the homepage, API,
+server functions, OAuth callbacks, and background integrations.
 
 ### How the API works
 
@@ -88,9 +107,9 @@ src/
   (CSRF). Public routes (health, inngest, Pub/Sub webhook, Gmail OAuth
   callback) are mounted before the protected domain routers.
 - One exception remains a TanStack server function:
-  `src/server/functions/session.fns.ts` — the `_authenticated` layout guard
-  runs during SSR, so it resolves the user straight from request cookies
-  instead of making an HTTP call.
+  `src/server/functions/session.fns.ts` — the browser's `_authenticated` layout
+  guard caches its HTTP result; the SSR homepage calls it directly on the server.
+  Both resolve the user from request cookies on the server.
 - **Cookie-based auth.** Sessions are stored in cookies via `@supabase/ssr`;
   the `_authenticated` layout guard resolves the user **on the server**
   before any protected page or data loads.

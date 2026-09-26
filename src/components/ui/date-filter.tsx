@@ -190,7 +190,7 @@ export function DateFilter({
 	}, [isAllTime, endDate]);
 
 	return (
-		<div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-1.5 shadow-xs max-sm:w-full">
+		<div className="date-filter flex flex-wrap items-center gap-2 rounded-xl border bg-card p-1.5 shadow-xs max-sm:w-full">
 			<Select value={period} onValueChange={handlePeriodChange}>
 				<SelectTrigger
 					aria-label="Date period"

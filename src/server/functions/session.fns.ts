@@ -3,12 +3,12 @@ import { getRequestHeader } from "@tanstack/react-start/server";
 import { getSessionUserFromCookieHeader } from "@/server/auth/session";
 
 /**
- * Server-authoritative session check for the `_authenticated` route guard.
+ * Server-authoritative session check for the homepage and app route guards.
  *
- * This is intentionally still a TanStack server function (not a Hono RPC
- * call): beforeLoad runs during SSR, not in the browser, so there is no HTTP
- * round-trip to make — it resolves the user straight from the incoming
- * request's cookies.
+ * The SSR homepage calls this directly on the server. Client-rendered app
+ * routes cache its HTTP result for navigation and revalidate in the background.
+ * In both cases,
+ * the session is verified on the server using the incoming request's cookies.
  */
 export const getSessionUserFn = createServerFn({ method: "GET" }).handler(
 	async () => {

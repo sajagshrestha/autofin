@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { rpc, unwrap } from "@/lib/api-client";
+import { queryClient } from "@/lib/query-client";
 import { type LoginFormData, loginSchema } from "@/schemas/auth";
 
 const searchParamsSchema = z.object({
@@ -51,6 +52,7 @@ function LoginPage() {
 				setServerError(result.error);
 				return;
 			}
+			queryClient.clear();
 			navigate({ href: redirectTo || "/dashboard" });
 		} catch (error) {
 			setServerError(

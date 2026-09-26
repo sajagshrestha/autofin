@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { unwrap } from "@/lib/api-client";
 import { useApiClient } from "@/lib/api-context";
 import type { Loan, LoanSettlement } from "./types";
@@ -14,7 +14,11 @@ export const LOANS_QUERY_KEYS = {
  */
 export function useGetLoans() {
 	const rpc = useApiClient();
-	return useQuery({
+	return useQuery(loansQueryOptions(rpc));
+}
+
+export function loansQueryOptions(rpc: ReturnType<typeof useApiClient>) {
+	return queryOptions({
 		queryKey: LOANS_QUERY_KEYS.list,
 		queryFn: async () => {
 			const res = await rpc.api.loans.$get();

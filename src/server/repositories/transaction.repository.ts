@@ -104,7 +104,11 @@ export class TransactionRepository extends BaseRepository {
 			.from(transactions)
 			.leftJoin(categories, eq(transactions.categoryId, categories.id))
 			.where(and(...conditions))
-			.orderBy(desc(transactions.transactionDate), desc(transactions.createdAt))
+			.orderBy(
+				desc(transactions.transactionDate),
+				desc(transactions.createdAt),
+				desc(transactions.id),
+			)
 			.limit(limit)
 			.offset(offset);
 

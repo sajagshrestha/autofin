@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { unwrap } from "@/lib/api-client";
 import { useApiClient } from "@/lib/api-context";
 import type { Category } from "./types";
@@ -14,7 +14,11 @@ export const CATEGORIES_QUERY_KEYS = {
  */
 export function useGetAllCategories() {
 	const rpc = useApiClient();
-	return useQuery({
+	return useQuery(categoriesQueryOptions(rpc));
+}
+
+export function categoriesQueryOptions(rpc: ReturnType<typeof useApiClient>) {
+	return queryOptions({
 		queryKey: CATEGORIES_QUERY_KEYS.list,
 		queryFn: async () => {
 			const res = await rpc.api.categories.$get();

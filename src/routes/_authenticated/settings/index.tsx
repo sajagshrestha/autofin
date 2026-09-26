@@ -41,15 +41,12 @@ function SettingsIndexPage() {
 	}, [gmailCallbackStatus, gmailCallbackDetail]);
 
 	return (
-		<div className="mx-auto max-w-6xl space-y-8">
+		<div className="mx-auto max-w-6xl space-y-6">
 			<div className="flex flex-wrap justify-between gap-4 items-center">
 				<div>
-					<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+					<h1 className="flex min-h-9 items-center text-xl sm:text-2xl font-semibold tracking-tight">
 						Settings
 					</h1>
-					<p className="mt-2 text-sm text-muted-foreground">
-						Manage your account, integrations, and preferences.
-					</p>
 				</div>
 				<Badge variant="outline" className="px-3 py-1 w-fit">
 					{user?.email}
@@ -96,19 +93,22 @@ function SettingsIndexPage() {
 			</div>
 
 			{/* Mobile: intermediary list of settings sections */}
-			<nav aria-label="Settings sections" className="space-y-3 md:hidden">
+			<nav
+				aria-label="Settings sections"
+				className="overflow-hidden rounded-2xl border border-border/60 bg-card divide-y divide-border/60 md:hidden"
+			>
 				{SETTINGS_SECTIONS.map(({ to, label, description, icon: Icon }) => (
 					<Link
 						key={to}
 						to={to as never}
-						className="flex items-center gap-4 rounded-lg border border-border p-4 transition-colors hover:border-primary/50 hover:bg-muted/40"
+						className="flex min-h-20 items-center gap-3 p-4 transition-colors hover:bg-muted/40 active:bg-muted"
 					>
 						<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
 							<Icon className="h-5 w-5" />
 						</span>
 						<span className="min-w-0 flex-1">
 							<span className="block text-sm font-semibold">{label}</span>
-							<span className="block truncate text-xs text-muted-foreground">
+							<span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
 								{description}
 							</span>
 						</span>

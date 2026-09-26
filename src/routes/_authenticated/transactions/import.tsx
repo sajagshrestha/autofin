@@ -273,13 +273,9 @@ function ImportStatementPage() {
 					Back to Transactions
 				</BackButton>
 				<div>
-					<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-						Import from statement
+					<h1 className="flex min-h-9 items-center text-xl sm:text-2xl font-semibold tracking-tight">
+						Import statement
 					</h1>
-					<p className="text-sm text-muted-foreground mt-2">
-						Upload a bank statement (PDF or photo). AI reads it, you review and
-						edit, then import everything at once.
-					</p>
 				</div>
 			</div>
 

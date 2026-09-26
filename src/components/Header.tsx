@@ -99,6 +99,7 @@ export default function Header() {
 			<Link
 				key={item.to}
 				to={item.to}
+				preload="viewport"
 				data-demo-action={demo && item.to === "/settings" ? "" : undefined}
 				onClick={() => setMobileOpen(false)}
 				aria-label={item.label}
@@ -310,145 +311,130 @@ export default function Header() {
 					</DropdownMenu>
 				</div>
 			</motion.aside>
-			<header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b bg-card/95 px-4 backdrop-blur-xl md:hidden">
-				<Link to="/dashboard" aria-label="AutoFin home">
-					<Logo className="h-8" />
-				</Link>
-				<div className="flex items-center gap-2">
-					<Drawer
-						open={mobileOpen}
-						onOpenChange={setMobileOpen}
-						direction="right"
-					>
-						<DrawerContent className="h-dvh overflow-hidden bg-card pt-[env(safe-area-inset-top)] shadow-2xl data-[vaul-drawer-direction=right]:w-[min(88vw,24rem)] data-[vaul-drawer-direction=right]:max-w-[24rem]">
-							<div className="flex shrink-0 items-center justify-between gap-4 px-5 py-6">
-								<div>
-									<DrawerTitle className="text-xl font-semibold tracking-tight">
-										Your workspace
-									</DrawerTitle>
-									<DrawerDescription className="mt-1 text-xs">
-										Everything you need, in one place.
-									</DrawerDescription>
-								</div>
-							</div>
-							<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-5">
-								<p className="px-3.5 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-									Navigate
-								</p>
-								<nav
-									aria-label="Mobile navigation"
-									className="w-full space-y-1"
-								>
-									{navigation(false, true)}
-									<Button
-										variant="ghost"
-										onClick={() => {
-											setMobileOpen(false);
-											void handleSignOut();
-										}}
-										className="min-h-12 w-full justify-start gap-3 rounded-xl px-3.5 text-sm font-medium text-muted-foreground"
-									>
-										<LogOut className="size-[18px] shrink-0" />
-										Sign out
-									</Button>
-								</nav>
-								<div className="mt-6 space-y-2 border-t px-1 pt-5">
-									<p className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-										Tools
-									</p>
-									<Button
-										variant="outline"
-										className="h-auto min-h-16 w-full justify-start gap-3 rounded-xl border-primary/15 bg-primary/5 px-3 py-3 text-left whitespace-normal hover:bg-primary/10"
-										onClick={() => {
-											setMobileOpen(false);
-											if (demo) demo.requestAccess();
-											else openChat();
-										}}
-									>
-										<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-											<Sparkles className="size-4" />
-										</span>
-										<span className="min-w-0 flex-1">
-											<span className="block text-sm font-medium">
-												AI advisor
-											</span>
-											<span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-												Make sense of your spending
-											</span>
-										</span>
-									</Button>
-									<Button
-										variant="ghost"
-										className="h-auto min-h-16 w-full justify-start gap-3 rounded-xl px-3 py-3 text-left whitespace-normal"
-										asChild
-									>
-										<Link
-											to="/transactions/import"
-											onClick={() => setMobileOpen(false)}
-										>
-											<span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background">
-												<Upload className="size-4" />
-											</span>
-											<span className="min-w-0 flex-1">
-												<span className="block text-sm font-medium">
-													Import statement
-												</span>
-												<span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-													Add transactions from a file
-												</span>
-											</span>
-										</Link>
-									</Button>
-								</div>
-							</div>
-							<div className="flex shrink-0 items-center gap-3 border-t bg-muted/20 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-								<Link
-									to="/settings"
-									onClick={() => setMobileOpen(false)}
-									aria-label="Account settings"
-									className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 transition-colors hover:bg-muted"
-								>
-									<span className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-sm font-semibold">
-										{accountEmail?.charAt(0).toUpperCase() || "A"}
+			<Drawer open={mobileOpen} onOpenChange={setMobileOpen} direction="right">
+				<DrawerContent className="h-dvh overflow-hidden bg-card pt-[env(safe-area-inset-top)] shadow-2xl data-[vaul-drawer-direction=right]:w-[min(88vw,24rem)] data-[vaul-drawer-direction=right]:max-w-[24rem]">
+					<div className="flex shrink-0 items-center justify-between gap-4 px-5 py-6">
+						<div>
+							<DrawerTitle className="text-xl font-semibold tracking-tight">
+								Your workspace
+							</DrawerTitle>
+							<DrawerDescription className="mt-1 text-xs">
+								Everything you need, in one place.
+							</DrawerDescription>
+						</div>
+					</div>
+					<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-5">
+						<p className="px-3.5 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+							Navigate
+						</p>
+						<nav aria-label="Mobile navigation" className="w-full space-y-1">
+							{navigation(false, true)}
+							<Button
+								variant="ghost"
+								onClick={() => {
+									setMobileOpen(false);
+									void handleSignOut();
+								}}
+								className="min-h-12 w-full justify-start gap-3 rounded-xl px-3.5 text-sm font-medium text-muted-foreground"
+							>
+								<LogOut className="size-[18px] shrink-0" />
+								Sign out
+							</Button>
+						</nav>
+						<div className="mt-6 space-y-2 border-t px-1 pt-5">
+							<p className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+								Tools
+							</p>
+							<Button
+								variant="outline"
+								className="h-auto min-h-16 w-full justify-start gap-3 rounded-xl border-primary/15 bg-primary/5 px-3 py-3 text-left whitespace-normal hover:bg-primary/10"
+								onClick={() => {
+									setMobileOpen(false);
+									if (demo) demo.requestAccess();
+									else openChat();
+								}}
+							>
+								<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+									<Sparkles className="size-4" />
+								</span>
+								<span className="min-w-0 flex-1">
+									<span className="block text-sm font-medium">AI advisor</span>
+									<span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+										Make sense of your spending
 									</span>
-									<span className="min-w-0">
-										<span className="block text-xs font-semibold">
-											{demo ? "Demo account" : "Personal account"}
+								</span>
+							</Button>
+							<Button
+								variant="ghost"
+								className="h-auto min-h-16 w-full justify-start gap-3 rounded-xl px-3 py-3 text-left whitespace-normal"
+								asChild
+							>
+								<Link
+									to="/transactions/import"
+									onClick={() => setMobileOpen(false)}
+								>
+									<span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background">
+										<Upload className="size-4" />
+									</span>
+									<span className="min-w-0 flex-1">
+										<span className="block text-sm font-medium">
+											Import statement
 										</span>
-										<span className="mt-0.5 block break-all text-xs text-muted-foreground">
-											{accountEmail}
+										<span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+											Add transactions from a file
 										</span>
 									</span>
 								</Link>
-								<DrawerClose asChild>
-									<Button
-										variant="ghost"
-										size="icon"
-										aria-label="Close menu"
-										className="size-11 shrink-0 rounded-full border bg-background text-muted-foreground"
-									>
-										<X className="size-5" />
-									</Button>
-								</DrawerClose>
-							</div>
-						</DrawerContent>
-					</Drawer>
-				</div>
-			</header>
+							</Button>
+						</div>
+					</div>
+					<div className="flex shrink-0 items-center gap-3 border-t bg-muted/20 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+						<Link
+							to="/settings"
+							onClick={() => setMobileOpen(false)}
+							aria-label="Account settings"
+							className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 transition-colors hover:bg-muted"
+						>
+							<span className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-sm font-semibold">
+								{accountEmail?.charAt(0).toUpperCase() || "A"}
+							</span>
+							<span className="min-w-0">
+								<span className="block text-xs font-semibold">
+									{demo ? "Demo account" : "Personal account"}
+								</span>
+								<span className="mt-0.5 block break-all text-xs text-muted-foreground">
+									{accountEmail}
+								</span>
+							</span>
+						</Link>
+						<DrawerClose asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								aria-label="Close menu"
+								className="size-11 shrink-0 rounded-full border bg-background text-muted-foreground"
+							>
+								<X className="size-5" />
+							</Button>
+						</DrawerClose>
+					</div>
+				</DrawerContent>
+			</Drawer>
 			<nav
 				aria-label="Quick navigation"
-				className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-sidebar/95 px-3 pt-2 shadow-[0_-8px_24px_-16px_#0005] backdrop-blur-xl md:hidden"
+				className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-card/95 px-3 pt-2 shadow-[0_-4px_24px_-12px_#0003] backdrop-blur-xl md:hidden"
 			>
 				<div className="mx-auto grid w-full max-w-lg grid-cols-4 gap-1 pb-2">
 					{[NAV_ITEMS[0], NAV_ITEMS[1], NAV_ITEMS[3]].map((item) => (
 						<Link
 							key={item.to}
 							to={item.to}
+							preload="viewport"
 							aria-current={active(item.to) ? "page" : undefined}
 							className={cn(
-								"relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg px-1 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+								"relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 								active(item.to)
-									? "font-semibold text-foreground before:pointer-events-none before:absolute before:-top-2 before:left-1/2 before:h-0.5 before:w-8 before:-translate-x-1/2 before:rounded-full before:bg-foreground"
+									? "font-semibold text-primary bg-primary/10"
 									: "font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
 							)}
 						>
@@ -467,9 +453,9 @@ export default function Header() {
 						aria-haspopup="dialog"
 						aria-expanded={mobileOpen}
 						className={cn(
-							"relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg px-1 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+							"relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 							mobileOpen || active("/categories") || active("/settings")
-								? "font-semibold text-foreground before:pointer-events-none before:absolute before:-top-2 before:left-1/2 before:h-0.5 before:w-8 before:-translate-x-1/2 before:rounded-full before:bg-foreground"
+								? "font-semibold text-primary bg-primary/10"
 								: "font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
 						)}
 					>
