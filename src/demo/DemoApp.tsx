@@ -36,7 +36,9 @@ import {
 	TransactionsPage,
 	Route as TransactionsRoute,
 } from "@/routes/_authenticated/transactions/index";
+import { createDemoAdvisorTransport } from "./advisor";
 import { createDemoClient, createDemoQueryClient } from "./client";
+import { createDemoData } from "./data";
 
 function AccountRequired() {
 	const demo = useDemo();
@@ -66,7 +68,7 @@ function createDemoRouter() {
 		getParentRoute: () => root,
 		id: "_authenticated",
 		component: () => (
-			<AppShell showAdvisor={false}>
+			<AppShell>
 				<Outlet />
 			</AppShell>
 		),
@@ -135,8 +137,13 @@ function createDemoRouter() {
 export function DemoApp() {
 	const [accessOpen, setAccessOpen] = useState(false);
 	const requestAccess = useCallback(() => setAccessOpen(true), []);
-	const [demo] = useState(() => ({ requestAccess }));
-	const [client] = useState(() => createDemoClient(requestAccess));
+	const [demoNow] = useState(() => new Date());
+	const [data] = useState(() => createDemoData(demoNow));
+	const [demo] = useState(() => ({
+		requestAccess,
+		advisorTransport: createDemoAdvisorTransport(demoNow),
+	}));
+	const [client] = useState(() => createDemoClient(requestAccess, data));
 	const [queryClient] = useState(() => createDemoQueryClient(requestAccess));
 	const [router] = useState(createDemoRouter);
 

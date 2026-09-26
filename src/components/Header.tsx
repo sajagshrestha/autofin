@@ -224,7 +224,7 @@ export default function Header() {
 							"h-auto min-h-11 w-full justify-start gap-3 rounded-xl border border-border/70 bg-background/50 p-3 text-foreground hover:bg-background",
 							collapsed && "justify-center px-0",
 						)}
-						onClick={demo?.requestAccess ?? openChat}
+						onClick={openChat}
 						aria-label="Ask AI advisor"
 						title={collapsed ? "AI advisor" : undefined}
 					>
@@ -350,8 +350,7 @@ export default function Header() {
 								className="h-auto min-h-16 w-full justify-start gap-3 rounded-xl border-primary/15 bg-primary/5 px-3 py-3 text-left whitespace-normal hover:bg-primary/10"
 								onClick={() => {
 									setMobileOpen(false);
-									if (demo) demo.requestAccess();
-									else openChat();
+									openChat();
 								}}
 							>
 								<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

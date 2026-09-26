@@ -136,9 +136,9 @@ export function createDemoFetch(
 	};
 }
 
-export function createDemoClient(requestAccess: () => void) {
+export function createDemoClient(requestAccess: () => void, data?: DemoData) {
 	return hc<AppType>("https://demo.autofin.invalid", {
-		fetch: createDemoFetch(requestAccess),
+		fetch: createDemoFetch(requestAccess, data),
 	});
 }
 

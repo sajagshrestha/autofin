@@ -14,6 +14,7 @@ import {
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
+import { useDemo } from "@/contexts/DemoContext";
 import { useAdvisorChat } from "./advisor-chat-context";
 import { ChatChart } from "./ChatChart";
 
@@ -40,11 +41,14 @@ const markdownClass =
 	"prose prose-sm dark:prose-invert max-w-none [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold [&_p]:leading-relaxed [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_strong]:font-semibold [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:text-[0.85em] [&_table]:my-2 [&_table]:w-full [&_table]:text-xs [&_th]:border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:px-2 [&_td]:py-1";
 
 function ChatMessages() {
+	const demo = useDemo();
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [input, setInput] = useState("");
 
 	const chat = useChat({
-		transport: new DefaultChatTransport({ api: "/api/chat" }),
+		transport: demo
+			? demo.advisorTransport
+			: new DefaultChatTransport({ api: "/api/chat" }),
 	});
 
 	const { messages, sendMessage, status, stop, error, setMessages } = chat;
@@ -142,8 +146,9 @@ function ChatMessages() {
 						<div className="space-y-1">
 							<p className="font-medium">Your money, on demand</p>
 							<p className="max-w-xs text-sm text-muted-foreground">
-								Ask about spending, trends, budgets — the advisor queries your
-								actual transactions to answer.
+								{demo
+									? "Ask the AI about sample spending, trends, and loans. Replies use demo data. Your messages are sent to our AI provider."
+									: "Ask about spending, trends, budgets — the advisor queries your actual transactions to answer."}
 							</p>
 						</div>
 						<div className="flex max-w-xs flex-wrap justify-center gap-2">
@@ -211,6 +216,7 @@ function ChatMessages() {
 						onChange={(e) => setInput(e.target.value)}
 						rows={1}
 						placeholder="Ask about your money…"
+						aria-label="Message the AI advisor"
 						className="max-h-28 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
 						onKeyDown={(e) => {
 							if (e.key === "Enter" && !e.shiftKey) {
@@ -263,6 +269,7 @@ function ChatMessages() {
  * conversation persists across navigation.
  */
 export function AdvisorChatWidget() {
+	const demo = useDemo();
 	const { isOpen, isFullscreen, openChat, closeChat, toggleFullscreen } =
 		useAdvisorChat();
 
@@ -273,7 +280,7 @@ export function AdvisorChatWidget() {
 				type="button"
 				onClick={openChat}
 				aria-label="Open AI advisor"
-				className={`fixed bottom-20 right-4 z-[45] md:bottom-6 md:right-6 hidden md:flex h-13 w-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-xl active:scale-95 ${
+				className={`fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 z-[45] md:bottom-6 md:right-6 flex h-13 w-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-xl active:scale-95 ${
 					isOpen ? "pointer-events-none scale-0 opacity-0" : ""
 				}`}
 			>
@@ -292,7 +299,9 @@ export function AdvisorChatWidget() {
 			{/* Panel */}
 			<section
 				aria-label="AI financial advisor"
-				className={`fixed z-[70] flex flex-col overflow-hidden bg-background shadow-2xl transition-transform duration-300 ease-out ${
+				aria-hidden={!isOpen}
+				inert={!isOpen}
+				className={`fixed z-[70] flex flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-2xl transition-transform duration-300 ease-out ${
 					isFullscreen
 						? "inset-0"
 						: "inset-y-0 right-0 w-full sm:w-[420px] border-l rounded-none sm:rounded-l-2xl"
@@ -306,7 +315,9 @@ export function AdvisorChatWidget() {
 						<div>
 							<p className="text-sm font-semibold leading-tight">AI Advisor</p>
 							<p className="text-xs leading-tight text-muted-foreground">
-								Answers from your real transactions
+								{demo
+									? "Live AI · demo data"
+									: "Answers from your real transactions"}
 							</p>
 						</div>
 					</div>

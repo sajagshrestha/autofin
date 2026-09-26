@@ -10,6 +10,7 @@ import { authRouter } from "@/server/hono/routes/auth";
 import { categoriesRouter } from "@/server/hono/routes/categories";
 import { chatRouter } from "@/server/hono/routes/chat";
 import { counterpartiesRouter } from "@/server/hono/routes/counterparties";
+import { demoChatRouter } from "@/server/hono/routes/demo-chat";
 import { gmailRouter } from "@/server/hono/routes/gmail";
 import { integrationsRouter } from "@/server/hono/routes/integrations";
 import { loansRouter } from "@/server/hono/routes/loans";
@@ -68,6 +69,7 @@ export const apiApp = new Hono()
 	// Public: health, inngest, pub/sub webhook, gmail oauth callback, MCP server
 	.route("/api", publicInfraRouter)
 	.route("/api/mcp", mcpRouter)
+	.route("/api/demo", demoChatRouter)
 	// Protected domain API
 	.route("/api", api);
 
