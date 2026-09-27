@@ -133,7 +133,7 @@ export function TransactionDetailPage() {
 	const isDebit = transaction.type === "debit";
 
 	return (
-		<div className="max-w-3xl mx-auto space-y-6">
+		<div className="min-w-0 max-w-3xl mx-auto space-y-6">
 			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 				<BackButton
 					fallback="/transactions"
@@ -143,7 +143,7 @@ export function TransactionDetailPage() {
 				>
 					Back to Transactions
 				</BackButton>
-				<div className="flex items-center gap-2">
+				<div className="flex flex-wrap items-center gap-2">
 					<Button
 						variant="outline"
 						size="sm"
@@ -217,29 +217,15 @@ export function TransactionDetailPage() {
 			</div>
 
 			<Card>
-				<CardHeader className="pb-2">
-					<div className="flex items-start justify-between gap-4">
-						<div>
-							<CardTitle className="text-2xl">
-								{transaction.merchant ?? "Unknown merchant"}
-							</CardTitle>
-							<CardDescription>
-								{transaction.transactionDate
-									? format(new Date(transaction.transactionDate), "PPP")
-									: "No date"}
-							</CardDescription>
-						</div>
-						<span
-							className={`text-xl font-semibold ${
-								isDebit
-									? "text-destructive"
-									: "text-ds-green-700 dark:text-ds-green-900"
-							}`}
-						>
-							{isDebit ? "-" : "+"}
-							{formattedAmount}
-						</span>
-					</div>
+				<CardHeader className="min-w-0 space-y-2 pb-2">
+					<CardTitle className="text-xl leading-snug [overflow-wrap:anywhere] sm:text-2xl">
+						{transaction.merchant ?? "Unknown merchant"}
+					</CardTitle>
+					<CardDescription>
+						{transaction.transactionDate
+							? format(new Date(transaction.transactionDate), "PPP")
+							: "No date"}
+					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-6">
 					<Separator />
@@ -460,7 +446,7 @@ function DetailRow({
 	value: React.ReactNode;
 }) {
 	return (
-		<div className="space-y-1">
+		<div className="min-w-0 space-y-1 [overflow-wrap:anywhere]">
 			<p className="text-sm font-medium text-muted-foreground">{label}</p>
 			<div className="text-foreground">{value}</div>
 		</div>

@@ -991,7 +991,7 @@ export function TransactionsPage() {
 														className={cn(
 															"break-words text-base font-semibold tabular-nums",
 															transaction.type === "debit"
-																? "text-foreground"
+																? "text-destructive"
 																: "text-ds-green-700 dark:text-ds-green-900",
 														)}
 													>
