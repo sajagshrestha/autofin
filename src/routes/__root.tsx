@@ -15,6 +15,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { env } from "@/env";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { queryClient } from "@/lib/query-client";
+import { socialMeta } from "@/lib/social-meta";
 import appStyles from "./__root.css?url";
 
 export const Route = createRootRoute({
@@ -22,6 +23,7 @@ export const Route = createRootRoute({
 	ssr: true,
 	head: () => ({
 		meta: [
+			...socialMeta(),
 			{ charSet: "utf-8" },
 			{
 				name: "viewport",
