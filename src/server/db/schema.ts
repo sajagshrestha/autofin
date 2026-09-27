@@ -440,3 +440,51 @@ export const pushSubscriptionsRelations = relations(
 		}),
 	}),
 );
+
+// Effective-month versions preserve historical limits without a monthly cron.
+export const budgetVersions = pgTable(
+	"budget_versions",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		categoryId: text("category_id")
+			.notNull()
+			.references(() => categories.id, { onDelete: "restrict" }),
+		month: text("month").notNull(),
+		amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+		enabled: boolean("enabled").notNull().default(true),
+		notifications: boolean("notifications").notNull().default(true),
+		thresholds: jsonb("thresholds")
+			.$type<number[]>()
+			.notNull()
+			.default([80, 100]),
+	},
+	(t) => [
+		uniqueIndex("budget_version_unique").on(t.userId, t.categoryId, t.month),
+	],
+);
+
+export const budgetAlerts = pgTable(
+	"budget_alerts",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		categoryId: text("category_id")
+			.notNull()
+			.references(() => categories.id, { onDelete: "cascade" }),
+		month: text("month").notNull(),
+		threshold: numeric("threshold").notNull(),
+	},
+	(t) => [
+		uniqueIndex("budget_alert_unique").on(
+			t.userId,
+			t.categoryId,
+			t.month,
+			t.threshold,
+		),
+	],
+);

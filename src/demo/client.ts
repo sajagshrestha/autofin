@@ -1,5 +1,10 @@
 import { MutationCache, QueryClient } from "@tanstack/react-query";
 import { hc } from "hono/client";
+import {
+	budgetMonthStart,
+	currentBudgetMonth,
+	shiftBudgetMonth,
+} from "@/lib/budgets";
 import type { AppType } from "@/server/hono/app";
 import { createDemoData, type DemoData } from "./data";
 
@@ -73,6 +78,31 @@ export function createDemoFetch(
 					transactionCount: filtered.length,
 					netAmount: totalCredit - totalDebit,
 				},
+			});
+		}
+		if (path === "/api/budgets") {
+			const month = params.get("month") ?? currentBudgetMonth();
+			const start = budgetMonthStart(month).getTime();
+			const end = budgetMonthStart(shiftBudgetMonth(month, 1)).getTime();
+			return Response.json({
+				firstMonth: shiftBudgetMonth(currentBudgetMonth(), -2),
+				budgets: data.categories.slice(0, 3).map((c, i) => ({
+					categoryId: c.id,
+					name: c.name,
+					amount: [12000, 8000, 3000][i],
+					spent: data.transactions
+						.filter(
+							(t) =>
+								t.categoryId === c.id &&
+								t.type === "debit" &&
+								Date.parse(t.transactionDate ?? "") >= start &&
+								Date.parse(t.transactionDate ?? "") < end,
+						)
+						.reduce((sum, t) => sum + Number(t.amount), 0),
+					notifications: true,
+					thresholds: [80, 100],
+					stopping: false,
+				})),
 			});
 		}
 		if (path === "/api/categories")

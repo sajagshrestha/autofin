@@ -17,6 +17,10 @@ income, and money lent or borrowed. Built as a full-stack TanStack Start app.
 - **Search and organization:** filter transactions by date, bank, category, and
   type; edit details and notes; manage categories, categorization rules, bank
   sources, and source aliases.
+- **Budgets:** recurring category limits in NPR using AD calendar months in Nepal
+  time, with historical limits, live spending totals, and configurable per-category
+  push thresholds. Budgets stop from the following month. AI suggestions use up to
+  three completed months and require review before saving.
 - **Loans:** track money lent and borrowed, counterparties, due dates, linked
   transactions, repayments, and outstanding balances.
 - **AI assistance:** ask about recorded finances in the app or connect a compatible
@@ -244,3 +248,19 @@ Use `pnpm db:check` to verify database connectivity when setting up a project.
 | `pnpm exec vitest run src/demo/client.test.ts` | Demo isolation and filtering tests |
 | `pnpm db:*`       | drizzle-kit generate/migrate/push/studio |
 | `pnpm db:seed`    | Seed default categories (idempotent) |
+
+## Budget setup
+
+Apply the generated migration with `pnpm db:migrate` before using budgets.
+Budget push alerts use the existing VAPID configuration and device subscriptions.
+The configured AI provider powers suggestions; only category spending aggregates
+and existing limits are sent. Suggestions never save budgets automatically.
+A full history month begins at the first calendar-month boundary on or after the
+oldest recorded transaction. Partial initial months are excluded. Undated expenses
+use their creation date. All categorized debit amounts count, including loans;
+amounts are treated as NPR (no currency conversion).
+
+Budget versions preserve prior limits without a month-end job. Editing a stopped
+budget resumes it. Categories with budget history cannot be deleted. Alerts are
+claimed once per user/category/month/threshold before sending via the existing
+best-effort push service; browser delivery is not guaranteed.

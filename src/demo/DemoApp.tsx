@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { DemoContext, useDemo } from "@/contexts/DemoContext";
 import { ApiClientContext } from "@/lib/api-context";
+import { BudgetsPage } from "@/routes/_authenticated/budgets";
 import { CategoryDetailPage } from "@/routes/_authenticated/categories/$categoryId";
 import { CategoriesPage } from "@/routes/_authenticated/categories/index";
 import {
@@ -106,6 +107,11 @@ function createDemoRouter() {
 		component: LoansPage,
 		validateSearch: LoansRoute.options.validateSearch,
 	});
+	const budgets = createRoute({
+		getParentRoute: () => shell,
+		path: "/budgets",
+		component: BudgetsPage,
+	});
 	const settings = createRoute({
 		getParentRoute: () => shell,
 		path: "/settings",
@@ -125,6 +131,7 @@ function createDemoRouter() {
 				categories,
 				category,
 				loans,
+				budgets,
 				settings,
 				imports,
 			]),

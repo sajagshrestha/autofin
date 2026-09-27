@@ -69,6 +69,7 @@ export function useBulkCreateTransactions() {
 				queryKey: TRANSACTIONS_QUERY_KEYS.root,
 			});
 			queryClient.invalidateQueries({ queryKey: ["categories"] });
+			queryClient.invalidateQueries({ queryKey: ["budgets"] });
 		},
 	});
 }

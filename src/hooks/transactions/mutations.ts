@@ -27,6 +27,7 @@ export function useCreateTransaction() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEYS.root });
+			queryClient.invalidateQueries({ queryKey: ["budgets"] });
 			queryClient.invalidateQueries({ queryKey: ["categories"] });
 		},
 	});
@@ -48,6 +49,7 @@ export function useCreateTransactionFromSms() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEYS.root });
+			queryClient.invalidateQueries({ queryKey: ["budgets"] });
 			queryClient.invalidateQueries({ queryKey: ["categories"] });
 		},
 	});
@@ -71,6 +73,7 @@ export function useUpdateTransaction() {
 		onSuccess: (_data, variables) => {
 			void variables;
 			queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEYS.root });
+			queryClient.invalidateQueries({ queryKey: ["budgets"] });
 		},
 	});
 }
@@ -90,6 +93,7 @@ export function useDeleteTransaction() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEYS.root });
+			queryClient.invalidateQueries({ queryKey: ["budgets"] });
 		},
 	});
 }

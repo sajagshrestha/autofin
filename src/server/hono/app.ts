@@ -21,6 +21,7 @@ import { pushRouter } from "@/server/hono/routes/push";
 import { sourcesRouter } from "@/server/hono/routes/sources";
 import { statementsRouter } from "@/server/hono/routes/statements";
 import { transactionsRouter } from "@/server/hono/routes/transactions";
+import { budgetsRouter } from "./routes/budgets";
 
 /**
  * The whole HTTP API as one chained Hono app.
@@ -31,6 +32,7 @@ import { transactionsRouter } from "@/server/hono/routes/transactions";
  *     every `.route()` link must stay in this chain or the client loses it.
  */
 const api = new Hono()
+	.route("/budgets", budgetsRouter)
 	.route("/auth", authRouter)
 	.route("/transactions", transactionsRouter)
 	.route("/categories", categoriesRouter)

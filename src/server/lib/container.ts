@@ -22,6 +22,7 @@ import type { UserRepository } from "@/server/repositories/user.repository";
 import { UserRepository as UserRepositoryImpl } from "@/server/repositories/user.repository";
 import type { UserPreferenceRepository } from "@/server/repositories/user-preference.repository";
 import { UserPreferenceRepository as UserPreferenceRepositoryImpl } from "@/server/repositories/user-preference.repository";
+import { BudgetService } from "@/server/services/budget.service";
 import type { DiscordService } from "@/server/services/discord.service";
 import { DiscordServiceImpl } from "@/server/services/discord.service";
 import type { GmailService } from "@/server/services/gmail.service";
@@ -41,6 +42,7 @@ import { TransactionExtractorService as TransactionExtractorServiceImpl } from "
  */
 export interface Container {
 	readonly db: Database;
+	readonly budgetService: BudgetService;
 	// Repositories
 	readonly userRepo: UserRepository;
 	readonly userPreferenceRepo: UserPreferenceRepository;
@@ -87,6 +89,9 @@ export function createContainer(db: Database): Container {
 	const loggerService: LoggerService = new LoggerServiceImpl();
 	const discordService: DiscordService = new DiscordServiceImpl();
 	const pushService: PushService = new PushServiceImpl(pushSubscriptionRepo);
+	const budgetService = new BudgetService(db, pushService);
+	transactionRepo.onBudgetChange = (userId) =>
+		budgetService.checkAlerts(userId);
 	const transactionExtractor: TransactionExtractorService =
 		new TransactionExtractorServiceImpl(loggerService, discordService);
 	const statementExtractor: StatementExtractorService =
@@ -104,6 +109,7 @@ export function createContainer(db: Database): Container {
 		sourceRepo,
 	);
 	return {
+		budgetService,
 		db,
 		userRepo,
 		userPreferenceRepo,

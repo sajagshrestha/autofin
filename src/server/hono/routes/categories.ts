@@ -1,7 +1,9 @@
 import { zValidator as zv } from "@hono/zod-validator";
+import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
+import { budgetVersions } from "@/server/db/schema";
 import type { ApiEnv } from "@/server/hono/middleware";
 import { requireUser } from "@/server/hono/middleware";
 import { getContainer } from "@/server/lib/container";
@@ -116,6 +118,21 @@ export const categoriesRouter = new Hono<ApiEnv>()
 		const id = c.req.param("id");
 		const container = getContainer();
 
+		const budget = await container.db
+			.select({ id: budgetVersions.id })
+			.from(budgetVersions)
+			.where(
+				and(
+					eq(budgetVersions.categoryId, id),
+					eq(budgetVersions.userId, user.id),
+				),
+			)
+			.limit(1);
+		if (budget.length)
+			throw new HTTPException(409, {
+				message:
+					"This category has budget history and cannot be deleted. You can stop its budget instead.",
+			});
 		const deleted = await container.categoryRepo.delete(id, user.id);
 		if (!deleted) {
 			throw new HTTPException(404, {

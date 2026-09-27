@@ -37,6 +37,12 @@ export interface DuplicateMatch {
 }
 
 export class TransactionRepository extends BaseRepository {
+	onBudgetChange?: (userId: string) => Promise<void>;
+	private async notifyBudgets(userId: string) {
+		await this.onBudgetChange?.(userId).catch((e) =>
+			console.error("Budget alerts failed", e),
+		);
+	}
 	/**
 	 * Find all transactions for a user with optional filters
 	 */
@@ -187,6 +193,7 @@ export class TransactionRepository extends BaseRepository {
 	 */
 	async create(data: NewTransaction): Promise<Transaction> {
 		const result = await this.db.insert(transactions).values(data).returning();
+		await this.notifyBudgets(data.userId);
 		return result[0];
 	}
 
@@ -208,6 +215,7 @@ export class TransactionRepository extends BaseRepository {
 			.set({ ...data, updatedAt: new Date() })
 			.where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
 			.returning();
+		if (result[0]) await this.notifyBudgets(userId);
 		return result[0] || null;
 	}
 

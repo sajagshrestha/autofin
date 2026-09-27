@@ -10,6 +10,7 @@ import {
 	PanelLeftOpen,
 	Settings,
 	Sparkles,
+	Target,
 	Upload,
 	Wallet,
 	X,
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
 	{ to: "/dashboard", icon: LayoutDashboard, label: "Overview" },
 	{ to: "/transactions", icon: CreditCard, label: "Transactions" },
 	{ to: "/categories", icon: FolderTree, label: "Categories" },
+	{ to: "/budgets", icon: Target, label: "Budgets" },
 	{ to: "/loans", icon: Wallet, label: "Loans" },
 	{ to: "/settings", icon: Settings, label: "Settings" },
 ];
@@ -453,7 +455,10 @@ export default function Header() {
 						aria-expanded={mobileOpen}
 						className={cn(
 							"relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-							mobileOpen || active("/categories") || active("/settings")
+							mobileOpen ||
+								active("/categories") ||
+								active("/settings") ||
+								active("/loans")
 								? "font-semibold text-primary bg-primary/10"
 								: "font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
 						)}
