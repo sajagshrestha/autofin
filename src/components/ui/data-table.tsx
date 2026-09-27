@@ -16,11 +16,12 @@ import {
 	type TableOptions,
 	useReactTable,
 } from "@tanstack/react-table";
-import { ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { Card } from "./card";
+import { Input } from "./input";
 import { NoData } from "./no-data";
 import { Search } from "./search";
 import { Skeleton } from "./skeleton";
@@ -152,7 +153,7 @@ export function DataTable<TData, TValue>({
 	const table = useReactTable(tableConfig);
 
 	const renderLoading = () => {
-		return new Array(pagination?.state.pageSize || 10)
+		return new Array(Math.min(pagination?.state.pageSize || 10, 20))
 			.fill(null)
 			.map((_, index) => (
 				<TableRow key={index}>
@@ -277,27 +278,85 @@ export function DataTable<TData, TValue>({
 		}
 
 		return (
-			<div className="flex items-center justify-evenly border-t px-4 py-4 sm:px-6">
-				<Button
-					variant="outline"
-					size="sm"
-					onClick={() => table.previousPage()}
-					disabled={!table.getCanPreviousPage()}
-				>
-					Previous
-				</Button>
-				<span className="flex-1 text-center text-sm font-semibold text-muted-foreground">
-					Page {table.getState().pagination.pageIndex + 1} of{" "}
-					{Math.max(1, table.getPageCount()).toLocaleString()}
-				</span>
-				<Button
-					variant="outline"
-					size="sm"
-					onClick={() => table.nextPage()}
-					disabled={!table.getCanNextPage()}
-				>
-					Next
-				</Button>
+			<div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t bg-muted/20 px-3 py-3 sm:px-6">
+				<div className="justify-self-start">
+					<Button
+						variant="outline"
+						size="sm"
+						aria-label="Previous page"
+						className="h-10 px-3 sm:h-9"
+						onClick={() => table.previousPage()}
+						disabled={!table.getCanPreviousPage()}
+					>
+						<ChevronLeft className="size-4" aria-hidden="true" />
+						<span className="hidden sm:inline">Previous</span>
+					</Button>
+				</div>
+				<div className="flex flex-col items-center gap-1.5">
+					<div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
+						<label className="flex items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
+							Rows per page
+							<Input
+								key={pagination.state.pageSize}
+								type="number"
+								min={1}
+								max={1000}
+								step={1}
+								defaultValue={pagination.state.pageSize}
+								className="h-9 w-16 bg-background text-center text-sm font-medium tabular-nums shadow-none sm:h-8"
+								title="Enter a whole number from 1 to 1,000"
+								onBlur={(event) => {
+									const input = event.currentTarget;
+									const value = input.valueAsNumber;
+									if (
+										!input.value ||
+										!input.validity.valid ||
+										!Number.isSafeInteger(value)
+									) {
+										input.value = String(pagination.state.pageSize);
+										return;
+									}
+									if (value !== pagination.state.pageSize) {
+										table.setPagination({ pageIndex: 0, pageSize: value });
+									}
+								}}
+								onKeyDown={(event) => {
+									if (event.key === "Enter") {
+										event.preventDefault();
+										if (
+											event.currentTarget.reportValidity() &&
+											event.currentTarget.value
+										)
+											event.currentTarget.blur();
+									}
+									if (event.key === "Escape") {
+										event.currentTarget.value = String(
+											pagination.state.pageSize,
+										);
+										event.currentTarget.blur();
+									}
+								}}
+							/>
+						</label>
+						<span className="whitespace-nowrap text-xs text-muted-foreground tabular-nums sm:border-l sm:pl-4">
+							Page {table.getState().pagination.pageIndex + 1} of{" "}
+							{Math.max(1, table.getPageCount()).toLocaleString()}
+						</span>
+					</div>
+				</div>
+				<div className="justify-self-end">
+					<Button
+						variant="outline"
+						size="sm"
+						aria-label="Next page"
+						className="h-10 px-3 sm:h-9"
+						onClick={() => table.nextPage()}
+						disabled={!table.getCanNextPage()}
+					>
+						<span className="hidden sm:inline">Next</span>
+						<ChevronRight className="size-4" aria-hidden="true" />
+					</Button>
+				</div>
 			</div>
 		);
 	};
