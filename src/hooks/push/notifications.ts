@@ -58,7 +58,7 @@ function usePushState() {
  */
 export function usePushNotifications() {
 	const queryClient = useQueryClient();
-	const { data, isLoading, isError } = usePushState();
+	const { data, isPending, isFetching, isError, refetch } = usePushState();
 
 	const refresh = () =>
 		queryClient.invalidateQueries({ queryKey: PUSH_QUERY_KEYS.state });
@@ -76,7 +76,9 @@ export function usePushNotifications() {
 	return {
 		enabled: data?.enabled ?? false,
 		supported: data?.supported ?? false,
-		isLoading,
+		isLoading: isPending,
+		isFetching,
+		refetch,
 		isError,
 		subscriptions: data?.subscriptions ?? [],
 		subscribe,
