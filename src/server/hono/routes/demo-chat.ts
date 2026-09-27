@@ -49,6 +49,7 @@ export function demoAdvisorContext(demoDate: string) {
 			date: `${month}-${String(date.getDate()).padStart(2, "0")}`,
 			amount,
 			type: transaction.type,
+			loanId: transaction.loanId ?? null,
 			merchant: transaction.merchant,
 			category,
 		};

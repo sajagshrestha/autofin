@@ -1,3 +1,4 @@
+import { DashboardBudgets } from "@/components/DashboardBudgets";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	eachDayOfInterval,
@@ -859,6 +860,7 @@ export function AnalyticsDashboard() {
 						)}
 
 						{/* Daily spending line chart - full width */}
+						<DashboardBudgets />
 						<SpendingLineChart
 							data={spendingData}
 							periodLabel={chartPeriodLabel}

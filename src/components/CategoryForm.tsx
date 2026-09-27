@@ -18,7 +18,11 @@ import { Input } from "@/components/ui/input";
 import type { Category } from "@/hooks";
 import { categorySchema } from "@/schemas/category";
 
-export type CategoryFormBody = { name: string; icon?: string };
+export type CategoryFormBody = {
+	name: string;
+	icon?: string;
+	bucket?: "needs" | "wants" | "unassigned";
+};
 
 export function CategoryForm({
 	category,
@@ -41,9 +45,11 @@ export function CategoryForm({
 		defaultValues: {
 			name: category?.name ?? "",
 			icon: category?.icon ?? "",
+			bucket: category?.bucket ?? "unassigned",
 		},
 		onSubmit: async ({ value }) => {
 			onSubmit({
+				bucket: value.bucket,
 				name: value.name.trim(),
 				icon: value.icon?.trim() || undefined,
 			});
@@ -110,6 +116,29 @@ export function CategoryForm({
 										onChange={(e) => field.handleChange(e.target.value)}
 										placeholder="e.g. 🛒"
 									/>
+								</Field>
+							)}
+						</form.Field>
+						<form.Field name="bucket">
+							{(field) => (
+								<Field>
+									<FieldLabel htmlFor="category-bucket">
+										Need or want
+									</FieldLabel>
+									<select
+										id="category-bucket"
+										className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+										value={field.state.value}
+										onChange={(event) =>
+											field.handleChange(
+												event.target.value as "needs" | "wants" | "unassigned",
+											)
+										}
+									>
+										<option value="unassigned">Unassigned</option>
+										<option value="needs">Need</option>
+										<option value="wants">Want</option>
+									</select>
 								</Field>
 							)}
 						</form.Field>

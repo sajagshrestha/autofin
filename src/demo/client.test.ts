@@ -31,6 +31,51 @@ describe("read-only app demo", () => {
 		expect(network).not.toHaveBeenCalled();
 	});
 
+	it("serves classified budgets, fixed rent, and category averages locally", async () => {
+		const network = vi.fn();
+		vi.stubGlobal("fetch", network);
+		const fetchDemo = createDemoFetch(vi.fn(), data);
+		const { budgets } = await (
+			await fetchDemo("/api/budgets?month=2026-09")
+		).json();
+		expect(budgets).toHaveLength(6);
+		expect(
+			budgets.find((b: { categoryId: string }) => b.categoryId === "rent"),
+		).toMatchObject({
+			amount: 18000,
+			spent: 18000,
+			bucket: "needs",
+			mode: "fixed",
+		});
+		expect(
+			budgets.find((b: { categoryId: string }) => b.categoryId === "dining")
+				.bucket,
+		).toBe("wants");
+		const averages = await (
+			await fetchDemo("/api/budgets/category-averages")
+		).json();
+		expect(averages.months).toBe(5);
+		expect(
+			averages.categories.find(
+				(c: { categoryId: string }) => c.categoryId === "rent",
+			).average,
+		).toBe(18000);
+		expect(network).not.toHaveBeenCalled();
+	});
+	it("provides navigable linked-loan transactions", async () => {
+		const fetchDemo = createDemoFetch(vi.fn(), data);
+		const { transaction } = await (
+			await fetchDemo("/api/transactions/demo-loan-origin")
+		).json();
+		const { loan, settlements } = await (
+			await fetchDemo(`/api/loans/${transaction.loanId}`)
+		).json();
+		expect(loan.originTransactionId).toBe(transaction.id);
+		const repayment = await (
+			await fetchDemo(`/api/transactions/${settlements[0].id}`)
+		).json();
+		expect(repayment.transaction.loanId).toBe(loan.id);
+	});
 	it("serves detail pages and returns isolated copies of the fixtures", async () => {
 		const fetchDemo = createDemoFetch(vi.fn(), data);
 		const first = data.transactions[0];

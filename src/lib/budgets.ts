@@ -3,7 +3,9 @@ import { z } from "zod";
 export const BUDGET_TIMEZONE = "Asia/Kathmandu";
 export const budgetMonthSchema = z.string().regex(/^20\d{2}-(0[1-9]|1[0-2])$/);
 export const budgetInputSchema = z.object({
+	mode: z.enum(["fixed", "dynamic"]).default("dynamic"),
 	categoryId: z.string().min(1),
+	bucket: z.enum(["needs", "wants", "unassigned"]).default("unassigned"),
 	amount: z.number().positive().max(9999999999.99).multipleOf(0.01),
 	notifications: z.boolean().default(true),
 	thresholds: z
@@ -24,6 +26,22 @@ export function shiftBudgetMonth(month: string, offset: number) {
 export function budgetMonthStart(month: string) {
 	return fromZonedTime(`${month}-01T00:00:00`, BUDGET_TIMEZONE);
 }
+export function budgetTransactionsSearch(
+	categoryId: string,
+	month = currentBudgetMonth(),
+) {
+	return {
+		period: "monthly" as const,
+		startDate: budgetMonthStart(month).toISOString(),
+		endDate: new Date(
+			budgetMonthStart(shiftBudgetMonth(month, 1)).getTime() - 1,
+		).toISOString(),
+		type: "debit" as const,
+		category: categoryId,
+		bank: "",
+		excludeLoans: false,
+	};
+}
 export function crossedThresholds(
 	spent: number,
 	limit: number,
@@ -42,7 +60,33 @@ export function effectiveBudgets<
 			latest.set(v.categoryId, v);
 	return [...latest.values()].filter((v) => v.enabled);
 }
+export type BudgetBucket = "needs" | "wants" | "unassigned";
+export const BUDGET_GROUPS = [
+	{
+		key: "needs",
+		label: "Needs",
+		description: "Essentials and fixed payments",
+	},
+	{
+		key: "wants",
+		label: "Wants",
+		description: "Flexible and discretionary spending",
+	},
+	{
+		key: "unassigned",
+		label: "Unassigned",
+		description: "Edit these budgets to choose Needs or Wants",
+	},
+] as const;
+export function groupBudgets<T extends { bucket?: string }>(items: T[]) {
+	return BUDGET_GROUPS.map((group) => ({
+		...group,
+		items: items.filter((item) => (item.bucket ?? "unassigned") === group.key),
+	})).filter((group) => group.items.length > 0);
+}
 export interface BudgetRow {
+	mode?: "fixed" | "dynamic";
+	bucket?: BudgetBucket;
 	categoryId: string;
 	name: string;
 	amount: number;
@@ -56,6 +100,10 @@ export interface BudgetList {
 	firstMonth: string;
 }
 export interface BudgetProposal {
+	mode?: "fixed" | "dynamic";
+	latestMonthly?: number;
+	latestMonth?: string;
+	bucket?: "needs" | "wants";
 	categoryId: string;
 	name: string;
 	average: number;

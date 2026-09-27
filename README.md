@@ -20,7 +20,7 @@ income, and money lent or borrowed. Built as a full-stack TanStack Start app.
 - **Budgets:** recurring category limits in NPR using AD calendar months in Nepal
   time, with historical limits, live spending totals, and configurable per-category
   push thresholds. Budgets stop from the following month. AI suggestions use up to
-  three completed months and require review before saving.
+  six completed months and require review before saving.
 - **Loans:** track money lent and borrowed, counterparties, due dates, linked
   transactions, repayments, and outstanding balances.
 - **AI assistance:** ask about recorded finances in the app or connect a compatible
@@ -253,8 +253,9 @@ Use `pnpm db:check` to verify database connectivity when setting up a project.
 
 Apply the generated migration with `pnpm db:migrate` before using budgets.
 Budget push alerts use the existing VAPID configuration and device subscriptions.
-The configured AI provider powers suggestions; only category spending aggregates
-and existing limits are sent. Suggestions never save budgets automatically.
+Budget suggestions use OpenAI GPT-6 Luna (`gpt-6-luna`) via the Responses API
+and require `OPENAI_API_KEY`. Only category spending aggregates, existing limits,
+and the optional savings plan are sent. Suggestions never save budgets automatically.
 A full history month begins at the first calendar-month boundary on or after the
 oldest recorded transaction. Partial initial months are excluded. Undated expenses
 use their creation date. All categorized debit amounts count, including loans;
@@ -264,3 +265,17 @@ Budget versions preserve prior limits without a month-end job. Editing a stopped
 budget resumes it. Categories with budget history cannot be deleted. Alerts are
 claimed once per user/category/month/threshold before sending via the existing
 best-effort push service; browser delivery is not guaranteed.
+
+Budget AI analysis excludes loan-linked transactions and categories named for tax,
+VAT, or TDS from both spending and income.
+Rent and loan-category suggestions cannot fall below the latest recorded monthly fixed-payment total; missing
+months do not reduce this fixed-cost minimum. These exclusions affect suggestions,
+not actual spending tracked against an existing budget.
+
+AI suggestions also exclude Other/Others and Uncategorized/Uncategorised categories,
+blank category names, and transactions without a category. No uncategorized reserve
+is deducted from the savings-based spending allowance.
+
+Suggestions use 50/30/20 needs/wants/savings targets based on eligible average income.
+An explicit savings goal overrides 20%; remaining spending uses a 5:3 needs/wants split.
+Loan categories remain eligible; only loan-linked transactions are excluded.

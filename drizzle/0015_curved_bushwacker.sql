@@ -1,0 +1,1 @@
+ALTER TABLE "budget_versions" ADD COLUMN "mode" text DEFAULT 'dynamic' NOT NULL;

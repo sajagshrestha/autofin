@@ -1,0 +1,1 @@
+ALTER TABLE "budget_versions" ADD COLUMN "bucket" text DEFAULT 'unassigned' NOT NULL;

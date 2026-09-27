@@ -72,3 +72,8 @@ export function getAdvisorModel() {
 		DEFAULT_PROVIDER) as AIProviderName;
 	return getAIProvider()(ADIVISOR_MODEL_IDS[providerName]);
 }
+
+/** Budget suggestions use GPT-6 Luna through OpenAI's Responses API. */
+export function getBudgetSuggestionModel() {
+	return createOpenAI().responses("gpt-6-luna");
+}

@@ -10,6 +10,11 @@ import { type ApiEnv, requireUser } from "@/server/hono/middleware";
 import { getContainer } from "@/server/lib/container";
 export const budgetsRouter = new Hono<ApiEnv>()
 	.use("*", requireUser)
+	.get("/category-averages", async (c) =>
+		c.json(
+			await getContainer().budgetService.categoryAverages(c.get("user").id),
+		),
+	)
 	.get(
 		"/",
 		zv("query", z.object({ month: budgetMonthSchema.optional() })),
@@ -39,13 +44,26 @@ export const budgetsRouter = new Hono<ApiEnv>()
 		"/suggest",
 		zv(
 			"json",
-			z.object({ target: z.number().positive().max(9999999999.99).optional() }),
+			z.object({
+				selectedCategoryIds: z
+					.array(z.string().uuid())
+					.min(1)
+					.max(100)
+					.optional(),
+				savingsTarget: z
+					.number()
+					.nonnegative()
+					.max(9999999999.99)
+					.multipleOf(0.01)
+					.optional(),
+			}),
 		),
 		async (c) =>
 			c.json(
 				await getContainer().budgetService.suggest(
 					c.get("user").id,
-					c.req.valid("json").target,
+					c.req.valid("json").savingsTarget,
+					c.req.valid("json").selectedCategoryIds,
 				),
 			),
 	)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	budgetInputSchema,
+	budgetTransactionsSearch,
 	budgetMonthStart,
 	crossedThresholds,
 	currentBudgetMonth,
@@ -57,5 +58,54 @@ describe("calendar budgets", () => {
 				thresholds: [0],
 			}).success,
 		).toBe(false);
+	});
+});
+
+describe("budget grouping", () => {
+	it("keeps needs and wants separate and preserves unclassified budgets", async () => {
+		const { groupBudgets } = await import("./budgets");
+		const rows = [
+			{ categoryId: "fun", bucket: "wants" },
+			{ categoryId: "rent", bucket: "needs" },
+			{ categoryId: "old" },
+		];
+		expect(
+			groupBudgets(rows).map((g) => ({
+				key: g.key,
+				ids: g.items.map((i) => i.categoryId),
+			})),
+		).toEqual([
+			{ key: "needs", ids: ["rent"] },
+			{ key: "wants", ids: ["fun"] },
+			{ key: "unassigned", ids: ["old"] },
+		]);
+	});
+	it("accepts and preserves classifications when saving", () => {
+		expect(
+			budgetInputSchema.parse({
+				categoryId: "rent",
+				amount: 25000,
+				bucket: "needs",
+			}).bucket,
+		).toBe("needs");
+		expect(
+			budgetInputSchema.safeParse({
+				categoryId: "rent",
+				amount: 25000,
+				bucket: "invalid",
+			}).success,
+		).toBe(false);
+	});
+});
+
+it("links budget categories to matching Nepal calendar-month expenses", () => {
+	expect(budgetTransactionsSearch("rent", "2026-09")).toEqual({
+		period: "monthly",
+		startDate: "2026-08-31T18:15:00.000Z",
+		endDate: "2026-09-30T18:14:59.999Z",
+		category: "rent",
+		type: "debit",
+		bank: "",
+		excludeLoans: false,
 	});
 });

@@ -113,7 +113,7 @@ export class CategoryRepository extends BaseRepository {
 	async update(
 		id: string,
 		userId: string,
-		data: Partial<Pick<NewCategory, "name" | "icon">>,
+		data: Partial<Pick<NewCategory, "name" | "icon" | "bucket">>,
 	): Promise<Category | null> {
 		const result = await this.db
 			.update(categories)

@@ -100,6 +100,9 @@ export const categories = pgTable("categories", {
 	id: text("id").primaryKey(),
 	userId: text("user_id").references(() => users.id, { onDelete: "cascade" }), // null for predefined categories
 	name: text("name").notNull(),
+	bucket: text("bucket", { enum: ["needs", "wants", "unassigned"] })
+		.notNull()
+		.default("unassigned"),
 	icon: text("icon"), // emoji or icon name
 	isDefault: boolean("is_default").default(false).notNull(), // predefined vs custom
 	isAiCreated: boolean("is_ai_created").default(false).notNull(), // true if created by AI, false if created by user
@@ -449,10 +452,17 @@ export const budgetVersions = pgTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
+		mode: text("mode", { enum: ["fixed", "dynamic"] })
+			.notNull()
+			.default("dynamic"),
 		categoryId: text("category_id")
 			.notNull()
 			.references(() => categories.id, { onDelete: "restrict" }),
 		month: text("month").notNull(),
+		bucket: text("bucket")
+			.$type<"needs" | "wants" | "unassigned">()
+			.notNull()
+			.default("unassigned"),
 		amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
 		enabled: boolean("enabled").notNull().default(true),
 		notifications: boolean("notifications").notNull().default(true),

@@ -16,6 +16,11 @@ export function createDemoData(now = new Date()) {
 		id,
 		name,
 		icon,
+		bucket: (["groceries", "transport", "health", "rent"].includes(id)
+			? "needs"
+			: id === "income"
+				? "unassigned"
+				: "wants") as Category["bucket"],
 		userId: "demo",
 		isDefault: false,
 		isAiCreated: true,
@@ -98,7 +103,7 @@ export function createDemoData(now = new Date()) {
 			issuedDate: month.toISOString(),
 			dueDate: null,
 			notes: "Shared trip expenses",
-			originTransactionId: null,
+			originTransactionId: "demo-loan-origin",
 			settledAmount: 4000,
 			remainingAmount: 6000,
 			settlementCount: 1,
@@ -107,7 +112,16 @@ export function createDemoData(now = new Date()) {
 			createdAt: month.toISOString(),
 		},
 	];
-	return { transactions, categories, loans };
+	add("demo-loan-origin", 10000, month, 2, "Shared trip with Alex");
+	add("demo-loan-repayment", 4000, month, 6, "Repayment from Alex", "credit");
+	for (const transaction of transactions) {
+		if (transaction.id.startsWith("demo-loan-"))
+			transaction.loanId = "demo-loan";
+	}
+	transactions.sort((a, b) =>
+		(b.transactionDate ?? "").localeCompare(a.transactionDate ?? ""),
+	);
+	return { transactions, categories, loans, now };
 }
 
 export type DemoData = ReturnType<typeof createDemoData>;

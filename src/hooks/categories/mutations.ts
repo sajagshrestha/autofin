@@ -13,7 +13,7 @@ export function useCreateCategory() {
 	return useMutation({
 		mutationFn: async (input: CategoryFormBody) => {
 			const res = await rpc.api.categories.$post({
-				json: { name: input.name, icon: input.icon },
+				json: { name: input.name, icon: input.icon, bucket: input.bucket },
 			});
 			return unwrap<{ category: Category }>(res);
 		},
@@ -41,6 +41,7 @@ export function useUpdateCategory() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEYS.root });
 			queryClient.invalidateQueries({ queryKey: ["transactions"] });
+			queryClient.invalidateQueries({ queryKey: ["budgets"] });
 		},
 	});
 }
@@ -61,6 +62,7 @@ export function useDeleteCategory() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEYS.root });
 			queryClient.invalidateQueries({ queryKey: ["transactions"] });
+			queryClient.invalidateQueries({ queryKey: ["budgets"] });
 		},
 	});
 }

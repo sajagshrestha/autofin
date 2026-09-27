@@ -80,29 +80,65 @@ export function createDemoFetch(
 				},
 			});
 		}
+		if (path === "/api/budgets/category-averages") {
+			const month = currentBudgetMonth(data.now);
+			const history = data.transactions.filter(
+				(t) =>
+					t.type === "debit" &&
+					!t.loanId &&
+					t.transactionDate &&
+					Date.parse(t.transactionDate) < budgetMonthStart(month).getTime() &&
+					Date.parse(t.transactionDate) >=
+						budgetMonthStart(shiftBudgetMonth(month, -6)).getTime(),
+			);
+			const firstMonth = history
+				.map((t) => currentBudgetMonth(new Date(t.transactionDate!)))
+				.sort()[0];
+			let months = 0;
+			if (firstMonth)
+				for (let m = firstMonth; m < month; m = shiftBudgetMonth(m, 1))
+					months++;
+			return Response.json({
+				months,
+				categories: data.categories
+					.filter((c) => c.id !== "income")
+					.map((c) => ({
+						categoryId: c.id,
+						average: months
+							? history
+									.filter((t) => t.categoryId === c.id)
+									.reduce((sum, t) => sum + Number(t.amount), 0) / months
+							: 0,
+					})),
+			});
+		}
 		if (path === "/api/budgets") {
-			const month = params.get("month") ?? currentBudgetMonth();
+			const month = params.get("month") ?? currentBudgetMonth(data.now);
 			const start = budgetMonthStart(month).getTime();
 			const end = budgetMonthStart(shiftBudgetMonth(month, 1)).getTime();
 			return Response.json({
-				firstMonth: shiftBudgetMonth(currentBudgetMonth(), -2),
-				budgets: data.categories.slice(0, 3).map((c, i) => ({
-					categoryId: c.id,
-					name: c.name,
-					amount: [12000, 8000, 3000][i],
-					spent: data.transactions
-						.filter(
-							(t) =>
-								t.categoryId === c.id &&
-								t.type === "debit" &&
-								Date.parse(t.transactionDate ?? "") >= start &&
-								Date.parse(t.transactionDate ?? "") < end,
-						)
-						.reduce((sum, t) => sum + Number(t.amount), 0),
-					notifications: true,
-					thresholds: [80, 100],
-					stopping: false,
-				})),
+				firstMonth: shiftBudgetMonth(currentBudgetMonth(data.now), -2),
+				budgets: data.categories
+					.filter((c) => c.id !== "income")
+					.map((c, i) => ({
+						categoryId: c.id,
+						name: c.name,
+						amount: [12000, 4500, 12000, 10000, 6000, 18000][i],
+						mode: c.id === "rent" ? "fixed" : "dynamic",
+						bucket: c.bucket,
+						spent: data.transactions
+							.filter(
+								(t) =>
+									t.categoryId === c.id &&
+									t.type === "debit" &&
+									Date.parse(t.transactionDate ?? "") >= start &&
+									Date.parse(t.transactionDate ?? "") < end,
+							)
+							.reduce((sum, t) => sum + Number(t.amount), 0),
+						notifications: true,
+						thresholds: [80, 100],
+						stopping: false,
+					})),
 			});
 		}
 		if (path === "/api/categories")
@@ -145,7 +181,7 @@ export function createDemoFetch(
 					loan,
 					settlements: [
 						{
-							id: "demo-repayment",
+							id: "demo-loan-repayment",
 							amount: "4000",
 							type: "credit",
 							currency: "NPR",

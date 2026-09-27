@@ -46,12 +46,15 @@ import { useGetAllCategories } from "@/hooks/categories/queries";
 import { unwrap } from "@/lib/api-client";
 import { useApiClient } from "@/lib/api-context";
 import {
+	type BudgetBucket,
 	type BudgetInput,
 	type BudgetList,
 	type BudgetProposal,
+	budgetTransactionsSearch,
 	type BudgetRow,
 	budgetInputSchema,
 	currentBudgetMonth,
+	groupBudgets,
 	shiftBudgetMonth,
 } from "@/lib/budgets";
 import { cn } from "@/lib/utils";
@@ -61,6 +64,13 @@ export const Route = createFileRoute("/_authenticated/budgets")({
 });
 const money = (n: number) =>
 	`NPR ${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+type SavingsPlan = {
+	averageIncome: number;
+	savingsTarget: number;
+	spendingAllowance: number;
+	needsTarget: number;
+	wantsTarget: number;
+};
 export function BudgetsPage() {
 	const rpc = useApiClient();
 	const client = useQueryClient();
@@ -68,11 +78,14 @@ export function BudgetsPage() {
 	const [month, setMonth] = useState(current);
 	const [editor, setEditor] = useState<BudgetRow | "new" | null>(null);
 	const [aiOpen, setAiOpen] = useState(false);
-	const [target, setTarget] = useState("");
+	const [savingsTarget, setSavingsTarget] = useState("");
 	const [proposals, setProposals] = useState<
 		(BudgetProposal & { selected: boolean })[]
 	>([]);
+	const [categorySearch, setCategorySearch] = useState("");
+	const [analysisCategoryIds, setAnalysisCategoryIds] = useState<string[]>([]);
 	const [historyMonths, setHistoryMonths] = useState(0);
+	const [savingsPlan, setSavingsPlan] = useState<SavingsPlan | null>(null);
 	const categories = useGetAllCategories();
 	const query = useQuery({
 		queryKey: ["budgets", month],
@@ -118,15 +131,33 @@ export function BudgetsPage() {
 		onError: (e) => toast.error(e.message),
 	});
 	const suggest = useMutation({
-		mutationFn: async () =>
-			unwrap<{ proposals: BudgetProposal[]; months: number }>(
+		mutationFn: async (selectedCategoryIds?: string[]) =>
+			unwrap<{
+				proposals: BudgetProposal[];
+				months: number;
+				savingsPlan: SavingsPlan | null;
+			}>(
 				await rpc.api.budgets.suggest.$post({
-					json: { target: target ? Number(target) : undefined },
+					json: {
+						selectedCategoryIds,
+						savingsTarget:
+							savingsTarget !== "" ? Number(savingsTarget) : undefined,
+					},
 				}),
 			),
-		onSuccess: (d) => {
-			setProposals(d.proposals.map((p) => ({ ...p, selected: true })));
+		onSuccess: (d, selectedCategoryIds) => {
+			setProposals((previous) => [
+				...d.proposals.map((p) => ({ ...p, selected: true })),
+				...(selectedCategoryIds
+					? previous.filter(
+							(p) =>
+								!p.selected &&
+								!d.proposals.some((next) => next.categoryId === p.categoryId),
+						)
+					: []),
+			]);
 			setHistoryMonths(d.months);
+			setSavingsPlan(d.savingsPlan);
 		},
 		onError: (e) => toast.error(e.message),
 	});
@@ -141,6 +172,42 @@ export function BudgetsPage() {
 		year: "numeric",
 		timeZone: "UTC",
 	}).format(new Date(`${month}-01T00:00:00Z`));
+	const averages = useQuery({
+		queryKey: ["budget-category-averages"],
+		enabled: aiOpen,
+		queryFn: async () =>
+			unwrap<{
+				months: number;
+				categories: { categoryId: string; average: number }[];
+			}>(await rpc.api.budgets["category-averages"].$get()),
+	});
+	const averageByCategory = new Map(
+		averages.data?.categories.map((c) => [c.categoryId, c.average]),
+	);
+	const analysisCategories = (
+		categories.data?.categories.filter(
+			(c) =>
+				c.name.trim() &&
+				!/(^|[^a-z0-9])(tax(es|ation)?|vat|tds|others?|uncategori[sz]ed)([^a-z0-9]|$)/i.test(
+					c.name,
+				),
+		) ?? []
+	).sort(
+		(a, b) =>
+			(averageByCategory.get(b.id) ?? 0) - (averageByCategory.get(a.id) ?? 0) ||
+			a.name.localeCompare(b.name),
+	);
+	const visibleAnalysisCategories = analysisCategories.filter((category) =>
+		category.name
+			.toLocaleLowerCase()
+			.includes(categorySearch.trim().toLocaleLowerCase()),
+	);
+	const changeAnalysisCategories = (ids: string[]) => {
+		setAnalysisCategoryIds(ids);
+		setProposals([]);
+		setSavingsPlan(null);
+		suggest.reset();
+	};
 	const available =
 		categories.data?.categories.filter(
 			(c) => !rows.some((b) => b.categoryId === c.id),
@@ -316,142 +383,207 @@ export function BudgetsPage() {
 								{month !== current ? " · History" : ""}
 							</span>
 						</div>
-						<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-							{rows.map((b) => {
-								const percent = Math.round((b.spent / b.amount) * 100);
-								const over = b.spent > b.amount;
-								const near = !over && b.spent >= b.amount * 0.8;
-								const category = categories.data?.categories.find(
-									(c) => c.id === b.categoryId,
-								);
-								return (
-									<article
-										key={b.categoryId}
-										className="flex flex-col overflow-hidden rounded-xl border bg-card shadow-xs"
-									>
-										<div className="space-y-5 p-5">
-											<div className="flex items-start justify-between gap-3">
-												<div className="flex min-w-0 items-center gap-3">
-													<span
-														aria-hidden="true"
-														className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-muted/60 text-lg"
-													>
-														{category?.icon || (
-															<Target className="size-4 text-muted-foreground" />
-														)}
-													</span>
-													<div className="min-w-0">
-														<h3 className="break-words text-sm font-semibold">
-															{b.name}
-														</h3>
-														<div className="mt-1.5">
-															<Badge
-																size="sm"
-																variant={
-																	over ? "red" : near ? "amber" : "secondary"
-																}
+						{groupBudgets(rows).map((group) => (
+							<section
+								key={group.key}
+								aria-label={`${group.label} budgets`}
+								className="space-y-3"
+							>
+								<div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+									<div>
+										<h3 className="font-semibold">
+											{group.label}{" "}
+											<span className="ml-1 text-xs font-normal text-muted-foreground">
+												{group.items.length}
+											</span>
+										</h3>
+										<p className="mt-1 text-xs text-muted-foreground">
+											{group.description}
+										</p>
+									</div>
+									<p className="text-xs text-muted-foreground tabular-nums">
+										{money(group.items.reduce((sum, b) => sum + b.spent, 0))}{" "}
+										spent /{" "}
+										{money(group.items.reduce((sum, b) => sum + b.amount, 0))}{" "}
+										budgeted
+									</p>
+								</div>
+								<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+									{group.items.map((b) => {
+										const percent =
+											b.spent < b.amount
+												? Math.min(
+														99.9,
+														Math.round((b.spent / b.amount) * 1000) / 10,
+													)
+												: Math.round((b.spent / b.amount) * 100);
+										const over = b.spent > b.amount;
+										const near = !over && b.spent >= b.amount * 0.8;
+										const category = categories.data?.categories.find(
+											(c) => c.id === b.categoryId,
+										);
+										return (
+											<article
+												key={b.categoryId}
+												className="relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-xs transition-colors hover:border-primary/50 focus-within:border-primary/50"
+											>
+												<div className="space-y-5 p-5">
+													<div className="flex items-start justify-between gap-3">
+														<div className="flex min-w-0 items-center gap-3">
+															<span
+																aria-hidden="true"
+																className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-muted/60 text-lg"
 															>
-																{over
-																	? "Over budget"
-																	: b.spent === b.amount
-																		? "Limit reached"
-																		: near
-																			? "Near limit"
-																			: "Within budget"}
-															</Badge>
+																{category?.icon || (
+																	<Target className="size-4 text-muted-foreground" />
+																)}
+															</span>
+															<div className="min-w-0">
+																<h3 className="break-words text-sm font-semibold">
+																	<Link
+																		to="/transactions"
+																		search={budgetTransactionsSearch(
+																			b.categoryId,
+																			month,
+																		)}
+																		aria-label={`View ${b.name} transactions for ${monthLabel}`}
+																		className="after:absolute after:inset-0 focus-visible:outline-none after:focus-visible:ring-2 after:focus-visible:ring-inset after:focus-visible:ring-ring"
+																	>
+																		{b.name}
+																	</Link>
+																</h3>
+																<div className="mt-1.5">
+																	<Badge
+																		size="sm"
+																		variant={
+																			over
+																				? "red"
+																				: near
+																					? "amber"
+																					: "secondary"
+																		}
+																	>
+																		{over
+																			? "Over budget"
+																			: b.spent === b.amount
+																				? "Limit reached"
+																				: near
+																					? "Near limit"
+																					: "Within budget"}
+																	</Badge>
+																</div>
+															</div>
+														</div>
+														{month === current && (
+															<DropdownMenu>
+																<DropdownMenuTrigger asChild>
+																	<Button
+																		variant="ghost"
+																		size="icon-sm"
+																		className="relative z-10"
+																		aria-label={`Manage ${b.name} budget`}
+																	>
+																		<MoreHorizontal className="size-4" />
+																	</Button>
+																</DropdownMenuTrigger>
+																<DropdownMenuContent align="end">
+																	<DropdownMenuItem
+																		onSelect={() => setEditor(b)}
+																	>
+																		<Pencil className="size-4" />
+																		Edit budget
+																	</DropdownMenuItem>
+																	<DropdownMenuItem
+																		disabled={b.stopping || stop.isPending}
+																		onSelect={() => stop.mutate(b.categoryId)}
+																	>
+																		{b.stopping
+																			? "Stops next month"
+																			: "Stop from next month"}
+																	</DropdownMenuItem>
+																</DropdownMenuContent>
+															</DropdownMenu>
+														)}
+													</div>
+													<dl className="grid grid-cols-2 gap-3 rounded-xl border bg-muted/20 p-4">
+														<div className="min-w-0">
+															<dt className="text-xs font-medium text-muted-foreground">
+																Monthly budget
+															</dt>
+															<dd className="mt-2 break-words text-xl font-semibold tracking-tight tabular-nums">
+																{money(b.amount)}
+															</dd>
+														</div>
+														<div className="min-w-0 border-l pl-3">
+															<dt className="text-xs font-medium text-muted-foreground">
+																Spent this month
+															</dt>
+															<dd
+																className={cn(
+																	"mt-2 break-words text-xl font-semibold tracking-tight tabular-nums",
+																	over ? "text-ds-red-900" : "text-ds-blue-900",
+																)}
+															>
+																{money(b.spent)}
+															</dd>
+														</div>
+													</dl>
+													<div className="space-y-2.5">
+														<BudgetProgress
+															spent={b.spent}
+															limit={b.amount}
+															name={b.name}
+														/>
+														<div className="flex items-center justify-between gap-2 text-xs">
+															<span
+																className={cn(
+																	"font-medium tabular-nums",
+																	over ? "text-destructive" : "text-foreground",
+																)}
+															>
+																{money(Math.abs(b.amount - b.spent))}{" "}
+																{over ? "over budget" : "remaining"}
+															</span>
+															<span className="text-muted-foreground tabular-nums">
+																{percent}% used
+															</span>
 														</div>
 													</div>
 												</div>
-												{month === current && (
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<Button
-																variant="ghost"
-																size="icon-sm"
-																aria-label={`Manage ${b.name} budget`}
-															>
-																<MoreHorizontal className="size-4" />
-															</Button>
-														</DropdownMenuTrigger>
-														<DropdownMenuContent align="end">
-															<DropdownMenuItem onSelect={() => setEditor(b)}>
-																<Pencil className="size-4" />
-																Edit budget
-															</DropdownMenuItem>
-															<DropdownMenuItem
-																disabled={b.stopping || stop.isPending}
-																onSelect={() => stop.mutate(b.categoryId)}
-															>
-																{b.stopping
-																	? "Stops next month"
-																	: "Stop from next month"}
-															</DropdownMenuItem>
-														</DropdownMenuContent>
-													</DropdownMenu>
-												)}
-											</div>
-											<div>
-												<p className="text-2xl font-semibold tracking-tight tabular-nums">
-													{money(b.spent)}
-												</p>
-												<p className="mt-1 text-xs text-muted-foreground">
-													spent of {money(b.amount)}
-												</p>
-											</div>
-											<div className="space-y-2.5">
-												<BudgetProgress
-													spent={b.spent}
-													limit={b.amount}
-													name={b.name}
-												/>
-												<div className="flex items-center justify-between gap-2 text-xs">
-													<span
-														className={cn(
-															"font-medium tabular-nums",
-															over ? "text-destructive" : "text-foreground",
+												<div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-5 py-3 text-xs text-muted-foreground">
+													<span className="flex items-center gap-1.5">
+														{b.notifications ? (
+															<Bell className="size-3.5" />
+														) : (
+															<BellOff className="size-3.5" />
 														)}
-													>
-														{money(Math.abs(b.amount - b.spent))}{" "}
-														{over ? "over" : "left"}
+														{b.notifications
+															? `Alerts at ${b.thresholds.join("%, ")}%`
+															: "Alerts off"}
 													</span>
-													<span className="text-muted-foreground tabular-nums">
-														{percent}% used
-													</span>
+													{b.stopping && (
+														<Badge size="sm" variant="outline">
+															Stops next month
+														</Badge>
+													)}
+													{month === current && (
+														<Button
+															variant="ghost"
+															size="sm"
+															className="relative z-10 h-7 px-2 text-xs"
+															aria-label={`Edit ${b.name} budget`}
+															onClick={() => setEditor(b)}
+														>
+															Edit
+														</Button>
+													)}
 												</div>
-											</div>
-										</div>
-										<div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-5 py-3 text-xs text-muted-foreground">
-											<span className="flex items-center gap-1.5">
-												{b.notifications ? (
-													<Bell className="size-3.5" />
-												) : (
-													<BellOff className="size-3.5" />
-												)}
-												{b.notifications
-													? `Alerts at ${b.thresholds.join("%, ")}%`
-													: "Alerts off"}
-											</span>
-											{b.stopping && (
-												<Badge size="sm" variant="outline">
-													Stops next month
-												</Badge>
-											)}
-											{month === current && (
-												<Button
-													variant="ghost"
-													size="sm"
-													className="h-7 px-2 text-xs"
-													aria-label={`Edit ${b.name} budget`}
-													onClick={() => setEditor(b)}
-												>
-													Edit
-												</Button>
-											)}
-										</div>
-									</article>
-								);
-							})}
-						</div>
+											</article>
+										);
+									})}
+								</div>
+							</section>
+						))}
 					</div>
 				</>
 			)}
@@ -503,97 +635,409 @@ export function BudgetsPage() {
 					<DialogHeader>
 						<DialogTitle>Suggest budgets</DialogTitle>
 						<DialogDescription>
-							AI analyzes up to three completed months. At least one full month
-							of history is required. Review and edit before applying to the
-							current month.
+							AI analyzes up to six completed months, excluding loan-linked
+							transactions and tax, Others, and Uncategorized categories. Rent
+							and loan payments use their latest recorded monthly totals. At
+							least one full month of history is required. Review and edit
+							before applying to the current month.
 						</DialogDescription>
 					</DialogHeader>
+					<fieldset
+						disabled={suggest.isPending || save.isPending}
+						className="space-y-3 rounded-xl border p-4"
+					>
+						<legend className="px-1 text-sm font-medium">
+							Categories to analyze
+						</legend>
+						<Input
+							type="search"
+							aria-label="Search categories"
+							placeholder="Search categories…"
+							value={categorySearch}
+							onChange={(event) => setCategorySearch(event.target.value)}
+						/>
+						<div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+							<span>
+								{analysisCategoryIds.length} selected · Highest average spend
+								first
+							</span>
+							<div className="flex gap-2">
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={() =>
+										changeAnalysisCategories([
+											...new Set([
+												...analysisCategoryIds,
+												...visibleAnalysisCategories.map((c) => c.id),
+											]),
+										])
+									}
+								>
+									{categorySearch.trim() ? "Select matches" : "Select all"}
+								</Button>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={() => changeAnalysisCategories([])}
+								>
+									Clear
+								</Button>
+							</div>
+						</div>
+						{categories.isLoading ? (
+							<p className="text-sm text-muted-foreground">
+								Loading categories…
+							</p>
+						) : categories.isError ? (
+							<p role="alert" className="text-sm text-destructive">
+								Could not load categories.{" "}
+								<button type="button" onClick={() => categories.refetch()}>
+									Retry
+								</button>
+							</p>
+						) : (
+							<div className="grid max-h-48 grid-cols-2 gap-3 overflow-y-auto">
+								{visibleAnalysisCategories.length === 0 && (
+									<p
+										role="status"
+										className="col-span-2 py-4 text-center text-sm text-muted-foreground"
+									>
+										No categories match your search.
+									</p>
+								)}
+								{visibleAnalysisCategories.map((category) => (
+									<label
+										key={category.id}
+										className="flex items-center gap-2 text-sm"
+									>
+										<input
+											type="checkbox"
+											className="size-4 shrink-0 accent-primary"
+											checked={analysisCategoryIds.includes(category.id)}
+											onChange={(event) =>
+												changeAnalysisCategories(
+													event.target.checked
+														? [...analysisCategoryIds, category.id]
+														: analysisCategoryIds.filter(
+																(id) => id !== category.id,
+															),
+												)
+											}
+										/>
+										<span aria-hidden="true" className="shrink-0 text-lg">
+											{category.icon || "🏷️"}
+										</span>
+										<span className="min-w-0">
+											<span className="block truncate">{category.name}</span>
+											<span className="block text-xs text-muted-foreground tabular-nums">
+												{averages.isPending
+													? "Loading average…"
+													: averages.isError
+														? "Average unavailable"
+														: `${money(averageByCategory.get(category.id) ?? 0)}/month`}
+											</span>
+										</span>
+									</label>
+								))}
+							</div>
+						)}
+						<p className="text-xs text-muted-foreground">
+							{averages.data &&
+								`Averages cover ${averages.data.months} completed months. `}
+							Only selected categories’ eligible expenses are analyzed.
+							Categories without completed-month expenses are skipped. Income is
+							analyzed separately for your savings goal.
+						</p>
+					</fieldset>
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
-							suggest.mutate();
+							suggest.mutate(analysisCategoryIds);
 						}}
 						className="flex flex-wrap items-end gap-3"
 					>
 						<label htmlFor="budget-target" className="flex-1 space-y-2 text-sm">
-							Optional monthly spending target (NPR)
+							Monthly savings goal (NPR, optional override)
 							<Input
 								type="number"
-								min="0.01"
+								min="0"
 								step="0.01"
 								max="9999999999.99"
 								id="budget-target"
-								value={target}
-								onChange={(e) => setTarget(e.target.value)}
+								value={savingsTarget}
+								onChange={(e) => {
+									setSavingsTarget(e.target.value);
+									setProposals([]);
+									setSavingsPlan(null);
+								}}
+								disabled={suggest.isPending || save.isPending}
+								aria-describedby="savings-goal-help"
 							/>
 						</label>
-						<Button disabled={suggest.isPending || save.isPending}>
+						<Button
+							disabled={
+								suggest.isPending ||
+								save.isPending ||
+								!analysisCategoryIds.length
+							}
+						>
 							{suggest.isPending ? "Analyzing…" : "Generate suggestions"}
 						</Button>
 					</form>
+					<p id="savings-goal-help" className="text-xs text-muted-foreground">
+						How much would you like to save each month? We’ll subtract this from
+						your average eligible recorded income. Others and uncategorized
+						transactions are excluded. Leave blank for 50% needs, 30% wants, and
+						20% savings. A custom goal changes the savings amount; the remaining
+						spending is split 5:3 between needs and wants.
+					</p>
+					{suggest.isError && (
+						<p
+							role="alert"
+							className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+						>
+							{suggest.error.message}
+						</p>
+					)}
 					{proposals.length > 0 && (
 						<>
 							<p className="text-sm text-muted-foreground">
 								Based on {historyMonths} completed months. Changes apply only to
 								selected categories.
 							</p>
-							{proposals.map((p, i) => (
-								<div
-									key={p.categoryId}
-									className={cn(
-										"space-y-3 rounded-xl border p-4 transition-colors",
-										p.selected
-											? "border-primary/30 bg-primary/5"
-											: "bg-muted/20",
-									)}
-								>
-									<label className="flex items-center gap-2 font-medium">
-										<input
-											type="checkbox"
-											className="size-4 shrink-0 rounded border-input accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-											checked={p.selected}
-											onChange={(e) =>
-												setProposals((old) =>
-													old.map((v, j) =>
-														j === i ? { ...v, selected: e.target.checked } : v,
-													),
-												)
-											}
-										/>
-										{p.name}
-									</label>
-									<p className="text-sm text-muted-foreground">
-										Average: {money(p.average)}
-										{currentRows.find((b) => b.categoryId === p.categoryId)
-											? ` · Existing limit: ${money(currentRows.find((b) => b.categoryId === p.categoryId)?.amount ?? 0)}`
-											: ""}
-									</p>
-									<label
-										htmlFor={`proposal-${p.categoryId}`}
-										className="block space-y-2 text-sm"
-									>
-										Proposed limit (NPR)
-										<Input
-											type="number"
-											min="0.01"
-											step="0.01"
-											id={`proposal-${p.categoryId}`}
-											value={p.amount}
-											onChange={(e) =>
-												setProposals((old) =>
-													old.map((v, j) =>
-														j === i
-															? { ...v, amount: Number(e.target.value) }
-															: v,
-													),
-												)
-											}
-										/>
-									</label>
-									<p className="text-sm text-muted-foreground">
-										{p.explanation}
+							{savingsPlan && (
+								<div className="space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
+									<div className="flex justify-between gap-4">
+										<span className="text-muted-foreground">
+											Average monthly income
+										</span>
+										<span className="tabular-nums">
+											{money(savingsPlan.averageIncome)}
+										</span>
+									</div>
+									<div className="flex justify-between gap-4">
+										<span className="text-muted-foreground">Savings goal</span>
+										<span className="tabular-nums">
+											{money(savingsPlan.savingsTarget)}
+										</span>
+									</div>
+									<div className="flex justify-between gap-4 border-t pt-2 font-medium">
+										<span>Available for needs and wants</span>
+										<span className="tabular-nums">
+											{money(savingsPlan.spendingAllowance)}
+										</span>
+									</div>
+									<p className="text-xs text-muted-foreground">
+										An estimate from recorded credits, excluding linked loans
+										and tax, Others, and Uncategorized categories. Unlinked
+										transfers may still be included. Your income and actual
+										spending may vary. Editing or applying only some suggestions
+										can change the savings outcome.
 									</p>
 								</div>
+							)}
+							{savingsPlan && (
+								<div className="rounded-xl border bg-muted/30 p-4 text-sm space-y-2">
+									<p className="font-medium">50/30/20 guide</p>
+									<p>
+										Needs: {money(savingsPlan.needsTarget)} · Wants:{" "}
+										{money(savingsPlan.wantsTarget)}
+									</p>
+									<p className="text-xs text-muted-foreground">
+										Fixed rent and loan payments are protected. The needs target
+										is a guideline, not a reduction in your obligations.
+									</p>
+									{proposals
+										.filter((p) => p.selected && p.bucket === "needs")
+										.reduce((sum, p) => sum + p.amount, 0) >
+										savingsPlan.needsTarget && (
+										<p className="text-ds-amber-900 text-xs">
+											Selected needs exceed the guideline. Review discretionary
+											spending before applying.
+										</p>
+									)}
+								</div>
+							)}
+							{proposals.some((p) => !p.selected) && (
+								<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 p-4">
+									<p className="text-sm text-muted-foreground">
+										Reallocate the budget across selected categories with the
+										same savings goal. Selected amounts will be replaced for
+										review.
+									</p>
+									<Button
+										type="button"
+										variant="outline"
+										disabled={
+											suggest.isPending ||
+											save.isPending ||
+											!proposals.some((p) => p.selected)
+										}
+										onClick={() =>
+											suggest.mutate(
+												proposals
+													.filter((p) => p.selected)
+													.map((p) => p.categoryId),
+											)
+										}
+									>
+										{suggest.isPending && suggest.variables
+											? "Reevaluating…"
+											: "Reevaluate"}
+									</Button>
+									{!proposals.some((p) => p.selected) && (
+										<p className="text-xs text-muted-foreground">
+											Select at least one category to reevaluate.
+										</p>
+									)}
+								</div>
+							)}
+							{groupBudgets(
+								[...proposals].sort(
+									(a, b) =>
+										b.average - a.average || a.name.localeCompare(b.name),
+								),
+							).map((group) => (
+								<section
+									key={group.key}
+									aria-label={`${group.label} suggestions`}
+									className="space-y-3"
+								>
+									<div className="flex items-center justify-between gap-3 border-b pb-2">
+										<h3 className="font-semibold">{group.label}</h3>
+										<span className="text-xs text-muted-foreground tabular-nums">
+											{money(
+												group.items
+													.filter((p) => p.selected)
+													.reduce((sum, p) => sum + p.amount, 0),
+											)}{" "}
+											selected
+										</span>
+									</div>
+									{group.items.map((p) => (
+										<div
+											key={p.categoryId}
+											className={cn(
+												"space-y-3 rounded-xl border p-4 transition-colors",
+												p.selected
+													? "border-primary/30 bg-primary/5"
+													: "bg-muted/20",
+											)}
+										>
+											<label className="flex items-center gap-2 font-medium">
+												<input
+													type="checkbox"
+													className="size-4 shrink-0 rounded border-input accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+													checked={p.selected}
+													disabled={suggest.isPending || save.isPending}
+													onChange={(e) =>
+														setProposals((old) =>
+															old.map((v) =>
+																v.categoryId === p.categoryId
+																	? { ...v, selected: e.target.checked }
+																	: v,
+															),
+														)
+													}
+												/>
+												<span aria-hidden="true">
+													{categories.data?.categories.find(
+														(c) => c.id === p.categoryId,
+													)?.icon || "🏷️"}
+												</span>
+												{p.name}
+												{p.mode === "fixed" && (
+													<Badge variant="outline">Fixed</Badge>
+												)}
+												{p.bucket && (
+													<Badge size="sm" variant="secondary">
+														{p.bucket === "needs" ? "Need" : "Want"}
+													</Badge>
+												)}
+											</label>
+											<p className="text-sm text-muted-foreground">
+												Average: {money(p.average)}
+												{currentRows.find((b) => b.categoryId === p.categoryId)
+													? ` · Existing limit: ${money(currentRows.find((b) => b.categoryId === p.categoryId)?.amount ?? 0)}`
+													: ""}
+											</p>
+											<label
+												htmlFor={`proposal-${p.categoryId}`}
+												className="block space-y-2 text-sm"
+											>
+												Proposed limit (NPR)
+												<Input
+													type="number"
+													min="0.01"
+													step="0.01"
+													id={`proposal-${p.categoryId}`}
+													value={p.amount}
+													disabled={
+														suggest.isPending ||
+														save.isPending ||
+														!p.selected ||
+														p.mode === "fixed"
+													}
+													onChange={(e) =>
+														setProposals((old) =>
+															old.map((v) =>
+																v.categoryId === p.categoryId
+																	? { ...v, amount: Number(e.target.value) }
+																	: v,
+															),
+														)
+													}
+												/>
+											</label>
+											{p.latestMonth &&
+												p.latestMonthly !== undefined &&
+												p.latestMonthly > 0 && (
+													<div className="flex flex-wrap items-center justify-between gap-2">
+														<span className="text-xs text-muted-foreground">
+															Latest recorded month ({p.latestMonth}):{" "}
+															{money(p.latestMonthly)}
+														</span>
+														<Button
+															type="button"
+															variant="outline"
+															size="sm"
+															disabled={
+																!p.selected ||
+																p.mode === "fixed" ||
+																suggest.isPending ||
+																save.isPending ||
+																p.amount === p.latestMonthly
+															}
+															aria-label={`Use latest month for ${p.name}`}
+															onClick={() =>
+																setProposals((old) =>
+																	old.map((item) =>
+																		item.categoryId === p.categoryId
+																			? {
+																					...item,
+																					amount: p.latestMonthly!,
+																					explanation: `Uses eligible expenses recorded in ${p.latestMonth}. Review this amount before applying.`,
+																				}
+																			: item,
+																	),
+																)
+															}
+														>
+															{p.amount === p.latestMonthly
+																? "Using latest month"
+																: "Use latest month"}
+														</Button>
+													</div>
+												)}
+											<p className="text-sm text-muted-foreground">
+												{p.explanation}
+											</p>
+										</div>
+									))}
+								</section>
 							))}
 							<p className="rounded-xl border bg-muted/30 p-4 text-sm font-medium tabular-nums">
 								Selected total:{" "}
@@ -603,6 +1047,16 @@ export function BudgetsPage() {
 										.reduce((s, p) => s + p.amount, 0),
 								)}
 							</p>
+							{savingsPlan &&
+								proposals
+									.filter((p) => p.selected)
+									.reduce((sum, p) => sum + p.amount, 0) >
+									savingsPlan.spendingAllowance && (
+									<p role="status" className="text-sm text-ds-amber-900">
+										Selected budgets exceed the spending allowance for your
+										savings goal. Review the amounts before applying.
+									</p>
+								)}
 							<Button
 								disabled={
 									save.isPending ||
@@ -610,7 +1064,7 @@ export function BudgetsPage() {
 									!proposals.some((p) => p.selected)
 								}
 								onClick={() => {
-									const inputs = proposals
+									const inputs: BudgetInput[] = proposals
 										.filter((p) => p.selected)
 										.map((p) => {
 											const existing = currentRows.find(
@@ -618,7 +1072,9 @@ export function BudgetsPage() {
 											);
 											return {
 												categoryId: p.categoryId,
+												bucket: p.bucket ?? "unassigned",
 												amount: p.amount,
+												mode: existing?.mode ?? "dynamic",
 												notifications: existing?.notifications ?? true,
 												thresholds: existing?.thresholds ?? [80, 100],
 											};
@@ -650,7 +1106,7 @@ function BudgetEditor({
 	onSave,
 }: {
 	budget?: BudgetRow;
-	categories: { id: string; name: string }[];
+	categories: { id: string; name: string; bucket?: BudgetBucket }[];
 	pending: boolean;
 	onSave: (b: BudgetInput) => void;
 }) {
@@ -658,6 +1114,9 @@ function BudgetEditor({
 		budget?.categoryId ?? categories[0]?.id ?? "",
 	);
 	const [amount, setAmount] = useState(String(budget?.amount ?? ""));
+	const [mode, setMode] = useState<"fixed" | "dynamic">(
+		budget?.mode ?? "dynamic",
+	);
 	const [notifications, setNotifications] = useState(
 		budget?.notifications ?? true,
 	);
@@ -671,7 +1130,12 @@ function BudgetEditor({
 				e.preventDefault();
 				const parsed = budgetInputSchema.safeParse({
 					categoryId,
+					bucket:
+						categories.find((c) => c.id === categoryId)?.bucket ??
+						budget?.bucket ??
+						"unassigned",
 					amount: Number(amount),
+					mode,
 					notifications,
 					thresholds: thresholds.split(",").map((v) => Number(v.trim())),
 				});
@@ -702,6 +1166,25 @@ function BudgetEditor({
 						</SelectContent>
 					</Select>
 				)}
+			</label>
+			<label className="block space-y-2 text-sm">
+				Budget mode
+				<Select
+					value={mode}
+					onValueChange={(value) => setMode(value as "fixed" | "dynamic")}
+				>
+					<SelectTrigger className="w-full">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="dynamic">Dynamic — AI can adjust</SelectItem>
+						<SelectItem value="fixed">Fixed — keep my saved amount</SelectItem>
+					</SelectContent>
+				</Select>
+				<span className="block text-xs text-muted-foreground">
+					Fixed budgets keep their saved amount during suggestions and
+					reevaluation. You can still edit them here.
+				</span>
 			</label>
 			<label htmlFor="budget-amount" className="block space-y-2 text-sm">
 				Monthly limit (NPR)

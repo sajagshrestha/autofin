@@ -11,17 +11,24 @@ config({ path: '.env' });
  * These are system-wide defaults available to all users
  */
 const PREDEFINED_CATEGORIES = [
-  { name: 'Food and Dining', icon: '🍽️' },
-  { name: 'Transportation', icon: '🚗' },
-  { name: 'Shopping', icon: '🛍️' },
-  { name: 'Bills and Utilities', icon: '📱' },
-  { name: 'Entertainment', icon: '🎬' },
-  { name: 'Healthcare', icon: '🏥' },
-  { name: 'Travel', icon: '✈️' },
-  { name: 'Groceries', icon: '🛒' },
-  { name: 'Transfers', icon: '💸' },
-  { name: 'Salary/Income', icon: '💰' },
-  { name: 'Uncategorized', icon: '❓' }, // Default fallback category
+ { name: 'Rent', icon: '🏠', bucket: 'needs' as const },
+ { name: 'Loan', icon: '🤝', bucket: 'needs' as const },
+ { name: 'Internet', icon: '🛜', bucket: 'needs' as const },
+ { name: 'Mobile topup', icon: '📶', bucket: 'needs' as const },
+ { name: 'Insurance', icon: '📑', bucket: 'needs' as const },
+ { name: 'Gifts', icon: '🎁', bucket: 'wants' as const },
+
+  { name: 'Food and Dining', icon: '🍽️', bucket: 'wants' as const },
+  { name: 'Transportation', icon: '🚗', bucket: 'needs' as const },
+  { name: 'Shopping', icon: '🛍️', bucket: 'wants' as const },
+  { name: 'Bills and Utilities', icon: '📱', bucket: 'needs' as const },
+  { name: 'Entertainment', icon: '🎬', bucket: 'wants' as const },
+  { name: 'Healthcare', icon: '🏥', bucket: 'needs' as const },
+  { name: 'Travel', icon: '✈️', bucket: 'wants' as const },
+  { name: 'Groceries', icon: '🛒', bucket: 'needs' as const },
+  { name: 'Transfers', icon: '💸', bucket: 'unassigned' as const },
+  { name: 'Salary/Income', icon: '💰', bucket: 'unassigned' as const },
+  { name: 'Uncategorized', icon: '❓', bucket: 'unassigned' as const }, // Default fallback category
 ];
 
 async function seedCategories() {
@@ -54,6 +61,7 @@ async function seedCategories() {
           userId: null, // null for predefined categories
           name: cat.name,
           icon: cat.icon,
+          bucket: cat.bucket,
           isDefault: true,
           isAiCreated: false, // Predefined categories are not AI-created
         }));
@@ -75,6 +83,7 @@ async function seedCategories() {
         userId: null, // null for predefined categories
         name: cat.name,
         icon: cat.icon,
+          bucket: cat.bucket,
         isDefault: true,
         isAiCreated: false, // Predefined categories are not AI-created
       }));
@@ -87,6 +96,11 @@ async function seedCategories() {
       });
     }
 
+    for (const preset of PREDEFINED_CATEGORIES) {
+      for (const existing of existingCategories.filter((c) => c.name === preset.name && c.userId === null && c.bucket === 'unassigned')) {
+        await db.update(categories).set({ bucket: preset.bucket }).where(eq(categories.id, existing.id));
+      }
+    }
     console.log('\n✓ Category seeding completed successfully');
   } catch (error) {
     console.error('✗ Failed to seed categories:', error);

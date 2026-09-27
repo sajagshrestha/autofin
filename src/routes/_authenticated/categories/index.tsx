@@ -103,6 +103,19 @@ export function CategoriesPage() {
 			),
 		},
 		{
+			accessorKey: "bucket",
+			header: "Need or want",
+			cell: ({ row }) => (
+				<Badge variant="secondary">
+					{row.original.bucket === "needs"
+						? "Need"
+						: row.original.bucket === "wants"
+							? "Want"
+							: "Unassigned"}
+				</Badge>
+			),
+		},
+		{
 			id: "type",
 			header: "Type",
 			cell: ({ row }) => {
@@ -283,6 +296,13 @@ export function CategoriesPage() {
 										<span className="min-w-0 flex-1">
 											<span className="block text-sm font-medium">
 												{category.name}
+												<Badge variant="secondary">
+													{category.bucket === "needs"
+														? "Need"
+														: category.bucket === "wants"
+															? "Want"
+															: "Unassigned"}
+												</Badge>
 											</span>
 											<span className="mt-1 block text-xs text-muted-foreground">
 												{category.isDefault

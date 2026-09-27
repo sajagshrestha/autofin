@@ -81,13 +81,14 @@ describe("public demo AI", () => {
 	it("keeps precomputed sample totals consistent with transaction details", () => {
 		const context = demoAdvisorContext("2026-09-26");
 		const current = context.transactions.filter(
-			(t) => t.date.startsWith("2026-09") && t.type === "debit",
+			(t) => t.date.startsWith("2026-09") && t.type === "debit" && !t.loanId,
 		);
 		expect(context.monthlySummaries["2026-09"].expenses).toBe(
 			current.reduce((sum, t) => sum + t.amount, 0),
 		);
 		expect(Object.keys(context.monthlySummaries)).toHaveLength(6);
 		expect(context.loans[0].remaining).toBe(6000);
+		expect(context.transactions.filter((t) => t.loanId)).toHaveLength(2);
 	});
 	it("limits repeated and distributed requests and resets the hourly window", () => {
 		const limit = createDemoChatLimiter();

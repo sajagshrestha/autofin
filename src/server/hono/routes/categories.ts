@@ -11,11 +11,13 @@ import { getContainer } from "@/server/lib/container";
 const createSchema = z.object({
 	name: z.string().min(1).max(50),
 	icon: z.string().max(10).optional(),
+	bucket: z.enum(["needs", "wants", "unassigned"]).optional(),
 });
 
 const updateSchema = z.object({
 	name: z.string().min(1).max(50).optional(),
 	icon: z.string().max(10).optional(),
+	bucket: z.enum(["needs", "wants", "unassigned"]).optional(),
 });
 
 /** Protected categories API (predefined + user's custom categories). */
@@ -73,6 +75,7 @@ export const categoriesRouter = new Hono<ApiEnv>()
 				userId: user.id,
 				name: body.name,
 				icon: body.icon || null,
+				bucket: body.bucket ?? "unassigned",
 				isDefault: false,
 				isAiCreated: false,
 			});
