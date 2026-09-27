@@ -69,6 +69,7 @@ import {
 import { formatCurrency } from "@/lib/formatCurrency";
 
 const loansSearchSchema = z.object({
+	loanId: z.string().min(1).optional(),
 	tab: z.enum(["outstanding", "settled"]).optional().default("outstanding"),
 });
 
@@ -108,17 +109,25 @@ function statusBadge(loan: Loan) {
 }
 
 export function LoansPage() {
-	const { tab } = Route.useSearch();
+	const { tab, loanId } = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const { data, isLoading } = useGetLoans();
 
 	const [createOpen, setCreateOpen] = useState(false);
 	const [counterpartiesOpen, setCounterpartiesOpen] = useState(false);
-	const [detailLoan, setDetailLoan] = useState<Loan | null>(null);
+	const [selectedDetailLoan, setDetailLoan] = useState<Loan | null>(null);
 	const [combineTarget, setCombineTarget] = useState<Loan | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<Loan | null>(null);
 
 	const loans = useMemo(() => data?.loans ?? [], [data]);
+	const detailLoan = loanId
+		? (loans.find((loan) => loan.id === loanId) ?? null)
+		: selectedDetailLoan;
+	const closeLoanDetail = () => {
+		setDetailLoan(null);
+		if (loanId)
+			navigate({ search: { tab }, replace: true, resetScroll: false });
+	};
 
 	const { outstandingLoans, settledLoans } = useMemo(() => {
 		const outstandingLoans: Loan[] = [];
@@ -348,11 +357,19 @@ export function LoansPage() {
 				onClose={() => setCounterpartiesOpen(false)}
 			/>
 
+			{loanId && data && !detailLoan && (
+				<p
+					role="alert"
+					className="rounded-xl border p-4 text-sm text-muted-foreground"
+				>
+					This linked loan is no longer available.
+				</p>
+			)}
 			{detailLoan && (
 				<LoanDetailDialog
 					key={detailLoan.id + detailLoan.settlementCount}
 					loan={detailLoan}
-					onClose={() => setDetailLoan(null)}
+					onClose={closeLoanDetail}
 				/>
 			)}
 

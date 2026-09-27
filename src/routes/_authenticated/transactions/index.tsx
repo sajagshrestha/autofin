@@ -568,6 +568,17 @@ export function TransactionsPage() {
 					<Pencil className="mr-2 h-4 w-4" />
 					Edit
 				</DropdownMenuItem>
+				{transaction.loanId && (
+					<DropdownMenuItem asChild>
+						<Link
+							to="/loans"
+							search={{ tab: "outstanding", loanId: transaction.loanId }}
+						>
+							<HandCoins className="mr-2 h-4 w-4" />
+							View linked loan
+						</Link>
+					</DropdownMenuItem>
+				)}
 				{!transaction.loanId && (
 					<>
 						<DropdownMenuSeparator />
