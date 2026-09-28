@@ -111,12 +111,14 @@ export function SpendingLineChart({
 	return (
 		<Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">
 			<CardHeader className="flex flex-row items-start justify-between gap-3 max-sm:p-4">
-				<div className="min-w-0 flex-1">
-					<CardTitle className="flex items-center gap-2 leading-tight">
+				<div className="flex min-w-0 flex-1 items-start gap-2">
+					<div className="shrink-0">
 						<TrendingUp className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
-						Spending {perLabel}
-					</CardTitle>
-					<p className="text-sm text-muted-foreground">{periodLabel}</p>
+					</div>
+					<div className="min-w-0">
+						<CardTitle className="leading-tight">Spending {perLabel}</CardTitle>
+						<p className="text-sm text-muted-foreground">{periodLabel}</p>
+					</div>
 				</div>
 				{categories && categories.length > 0 && (
 					<CategoryCombobox

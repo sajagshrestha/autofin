@@ -37,16 +37,18 @@ export function DashboardBudgets() {
 		timeZone: "UTC",
 	}).format(new Date(`${month}-01T00:00:00Z`));
 	return (
-		<Card>
-			<CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-				<div>
-					<CardTitle className="flex items-center gap-2">
+		<Card className="min-w-0">
+			<CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 px-4 pb-4 sm:px-6">
+				<div className="flex items-start gap-2">
+					<div className="shrink-0 rounded-full bg-ds-blue-500/10 p-1.5">
 						<Target className="size-4 text-ds-blue-900" />
-						Monthly budgets
-					</CardTitle>
-					<p className="mt-1 text-xs text-muted-foreground">
-						{monthLabel} · All expenses in budgeted categories
-					</p>
+					</div>
+					<div>
+						<CardTitle className="text-sm font-medium">
+							Monthly budgets
+						</CardTitle>
+						<p className="mt-1 text-xs text-muted-foreground">{monthLabel}</p>
+					</div>
 				</div>
 				<Button asChild variant="ghost" size="sm">
 					<Link to="/budgets">
@@ -55,7 +57,7 @@ export function DashboardBudgets() {
 					</Link>
 				</Button>
 			</CardHeader>
-			<CardContent>
+			<CardContent className="px-4 sm:px-6">
 				{query.isPending ? (
 					<div className="grid grid-cols-3 gap-4" aria-label="Loading budgets">
 						{[0, 1, 2].map((i) => (
@@ -85,85 +87,119 @@ export function DashboardBudgets() {
 						</Button>
 					</div>
 				) : (
-					<div className="space-y-5">
-						<dl className="grid gap-4 sm:grid-cols-3">
-							{[
-								{ label: "Monthly budget", value: limit },
-								{ label: "Spent so far", value: spent },
-								{
-									label: spent > limit ? "Over budget" : "Remaining",
-									value: Math.abs(limit - spent),
-								},
-							].map((item, i) => (
-								<div
-									key={item.label}
-									className="rounded-xl border bg-muted/20 p-4"
+					<div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-8">
+						<div className="min-w-0 space-y-5">
+							<div>
+								<p className="text-xs text-muted-foreground">
+									{spent > limit ? "Over budget" : "Left to spend"}
+								</p>
+								<p
+									className={cn(
+										"mt-1 text-3xl font-bold tracking-tight tabular-nums sm:text-4xl",
+										spent > limit ? "text-ds-red-900" : "text-foreground",
+									)}
 								>
+									{formatCurrency(Math.abs(limit - spent))}
+								</p>
+							</div>
+							<dl className="grid grid-cols-2 gap-4">
+								<div>
 									<dt className="text-xs text-muted-foreground">
-										{item.label}
+										Spent so far
 									</dt>
-									<dd
-										className={cn(
-											"mt-2 text-xl font-semibold tabular-nums",
-											i === 2 && spent > limit && "text-ds-red-900",
-										)}
-									>
-										{formatCurrency(item.value)}
+									<dd className="mt-1 text-lg font-semibold tabular-nums">
+										{formatCurrency(spent)}
 									</dd>
 								</div>
-							))}
-						</dl>
-						<div className="space-y-2">
-							<div
-								className="h-2 overflow-hidden rounded-full bg-muted"
-								role="progressbar"
-								aria-label="Monthly budget used"
-								aria-valuemin={0}
-								aria-valuemax={100}
-								aria-valuenow={Math.min(100, Math.round((spent / limit) * 100))}
-								aria-valuetext={`${formatCurrency(spent)} spent of ${formatCurrency(limit)}`}
-							>
-								<div
-									className={cn(
-										"h-full rounded-full",
-										spent > limit ? "bg-ds-red-700" : "bg-ds-blue-700",
-									)}
-									style={{
-										width: `${Math.min(100, Math.max(0, (spent / limit) * 100))}%`,
-									}}
-								/>
-							</div>
-							<p className="text-xs text-muted-foreground">
-								{budgets.length} categories ·{" "}
-								{over ? `${over} over budget` : "No categories over budget"}
-							</p>
-						</div>
-						{attention.length > 0 && (
+								<div className="border-l pl-4">
+									<dt className="text-xs text-muted-foreground">
+										Monthly budget
+									</dt>
+									<dd className="mt-1 text-lg font-semibold tabular-nums">
+										{formatCurrency(limit)}
+									</dd>
+								</div>
+							</dl>
 							<div className="space-y-2">
-								<h3 className="text-sm font-medium">Keep an eye on</h3>
-								<div className="grid gap-2 sm:grid-cols-3">
+								<div className="flex justify-between gap-3 text-xs text-muted-foreground">
+									<span>{budgets.length} budgeted categories</span>
+									<span className="tabular-nums">
+										{limit > 0 ? Math.round((spent / limit) * 100) : 0}% used
+									</span>
+								</div>
+								<div
+									className="h-2 overflow-hidden rounded-full bg-muted"
+									role="progressbar"
+									aria-label="Monthly budget used"
+									aria-valuemin={0}
+									aria-valuemax={100}
+									aria-valuenow={
+										limit > 0
+											? Math.min(100, Math.round((spent / limit) * 100))
+											: 0
+									}
+									aria-valuetext={`${formatCurrency(spent)} spent of ${formatCurrency(limit)}`}
+								>
+									<div
+										className={cn(
+											"h-full rounded-full",
+											spent > limit ? "bg-ds-red-700" : "bg-ds-blue-700",
+										)}
+										style={{
+											width: `${limit > 0 ? Math.min(100, Math.max(0, (spent / limit) * 100)) : 0}%`,
+										}}
+									/>
+								</div>
+								<p className="text-xs text-muted-foreground">
+									Includes all expenses in budgeted categories, including linked
+									loans.
+								</p>
+							</div>
+						</div>
+
+						{attention.length > 0 ? (
+							<div className="min-w-0 border-t pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+								<div className="mb-2 flex items-center justify-between gap-2">
+									<h3 className="text-sm font-medium">Needs attention</h3>
+									<span className="text-xs text-muted-foreground">
+										{over ? `${over} over budget` : "Approaching limits"}
+									</span>
+								</div>
+								<div className="divide-y">
 									{attention.map((b) => (
 										<Link
 											key={b.categoryId}
 											to="/transactions"
 											search={budgetTransactionsSearch(b.categoryId, month)}
-											className="rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+											className="group flex items-center justify-between gap-3 rounded-md px-2 py-3 text-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 										>
-											<span className="font-medium">{b.name}</span>
-											<span
-												className={cn(
-													"mt-1 block text-xs tabular-nums",
-													b.spent > b.amount
-														? "text-ds-red-900"
-														: "text-muted-foreground",
-												)}
-											>
-												{formatCurrency(Math.abs(b.amount - b.spent))}{" "}
-												{b.spent > b.amount ? "over budget" : "remaining"}
+											<span className="min-w-0 flex-1">
+												<span className="block font-medium">{b.name}</span>
+												<span
+													className={cn(
+														"mt-1 block text-xs tabular-nums",
+														b.spent > b.amount
+															? "text-ds-red-900"
+															: "text-muted-foreground",
+													)}
+												>
+													{formatCurrency(Math.abs(b.amount - b.spent))}{" "}
+													{b.spent > b.amount ? "over budget" : "remaining"}
+												</span>
 											</span>
+											<ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
 										</Link>
 									))}
 								</div>
+							</div>
+						) : (
+							<div className="flex flex-col justify-center border-t pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+								<p className="text-sm font-medium">
+									Your category budgets are on track
+								</p>
+								<p className="mt-1 text-sm text-muted-foreground">
+									Every category is below 80% of its limit.
+								</p>
 							</div>
 						)}
 					</div>
