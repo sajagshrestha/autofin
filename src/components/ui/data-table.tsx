@@ -70,6 +70,7 @@ interface DataTableProps<TData, TValue> {
 	};
 	search?: {
 		value: string;
+		filterValue?: string;
 		onChange: (value: string) => void;
 	};
 	noData?: {
@@ -107,7 +108,7 @@ export function DataTable<TData, TValue>({
 			...(sorting && { sorting: sorting.state }),
 			...(columnPinning && { columnPinning: columnPinning.state }),
 			...(expanding && { expanded: expanding.state }),
-			...(search && { globalFilter: search.value }),
+			...(search && { globalFilter: search.filterValue ?? search.value }),
 		},
 		manualPagination: false,
 		manualSorting: sorting?.manualSorting ?? false,
@@ -173,7 +174,7 @@ export function DataTable<TData, TValue>({
 					<NoData
 						title={noData?.title || "No data found"}
 						description={noData?.description || ""}
-						isSearchResults={!!search?.value}
+						isSearchResults={!!(search?.filterValue ?? search?.value)}
 						className="min-h-64 whitespace-normal"
 					>
 						{noData?.actionButtons && noData.actionButtons}

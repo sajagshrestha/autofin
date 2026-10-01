@@ -28,7 +28,7 @@ import {
 	Wallet,
 	X,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { CreateTransactionForm } from "@/components/CreateTransactionForm";
@@ -154,6 +154,7 @@ export function TransactionsPage() {
 	const categoryFilter = category ?? ALL_CATEGORIES_FILTER;
 	const bankFilter = bank ?? "";
 	const [sorting, setSorting] = useState<SortingState>([]);
+	const [searchInput, setSearchInput] = useState("");
 	const [globalFilter, setGlobalFilter] = useState("");
 	const [pagination, setPagination] = useState<PaginationState>({
 		pageIndex: 0,
@@ -338,13 +339,14 @@ export function TransactionsPage() {
 		},
 		[searchNavigate],
 	);
-	const handleSearchChange = useCallback((value: string) => {
-		setGlobalFilter(value);
-		setPagination((prev) => ({
-			...prev,
-			pageIndex: 0,
-		}));
-	}, []);
+	useEffect(() => {
+		if (searchInput === globalFilter) return;
+		const timeout = setTimeout(() => {
+			setGlobalFilter(searchInput);
+			setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+		}, 300);
+		return () => clearTimeout(timeout);
+	}, [searchInput, globalFilter]);
 	const handleSortingChange = useCallback<OnChangeFn<SortingState>>(
 		(updater) => {
 			setSorting((prev) =>
@@ -847,8 +849,9 @@ export function TransactionsPage() {
 							},
 						}}
 						search={{
-							value: globalFilter,
-							onChange: handleSearchChange,
+							value: searchInput,
+							filterValue: globalFilter,
+							onChange: setSearchInput,
 						}}
 						headerClassName="w-full sm:w-full justify-between"
 						headerButtons={
@@ -926,8 +929,8 @@ export function TransactionsPage() {
 					<div className="space-y-3">
 						<div className="flex items-center gap-2">
 							<Search
-								value={globalFilter}
-								onChange={(event) => handleSearchChange(event.target.value)}
+								value={searchInput}
+								onChange={(event) => setSearchInput(event.target.value)}
 								placeholder="Search transactions…"
 								className="flex-1 [&_input]:h-11"
 							/>
