@@ -57,6 +57,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useGetAllTransactions } from "@/hooks/transactions/queries";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import {
+	dashboardTransactionAmounts,
+	summarizeDashboardTransactions,
+} from "@/lib/dashboard-totals";
 import { formatCurrency } from "@/lib/formatCurrency";
 
 import { isTaxCategory } from "@/lib/transaction-filters";
@@ -247,46 +251,33 @@ export function AnalyticsDashboard() {
 		};
 	}, [transactions]);
 
-	// Calculate summary stats for the filtered transactions.
-	const stats = useMemo(() => {
-		let totalExpenses = 0;
-		let totalIncome = 0;
-
-		transactions.forEach((t) => {
-			const amount = parseFloat(t.amount || "0");
-			if (t.type === "credit") {
-				totalIncome += amount;
-			} else {
-				totalExpenses += amount;
-			}
-		});
-
-		return {
-			totalExpenses,
-			totalIncome,
-			savings: totalIncome - totalExpenses,
-			transactionCount: transactions.length,
-		};
-	}, [transactions]);
+	const stats = useMemo(
+		() =>
+			summarizeDashboardTransactions(transactionsData?.transactions ?? [], {
+				excludeLoans,
+				excludeTax,
+			}),
+		[transactionsData, excludeLoans, excludeTax],
+	);
 
 	// Monthly spending data for area chart
 	const monthlyData = useMemo(() => {
-		if (!transactions.length) return [];
+		const entries = transactionsData?.transactions ?? [];
 
 		const monthMap = new Map<string, { expenses: number; income: number }>();
 
-		transactions.forEach((t) => {
+		entries.forEach((t) => {
+			const amounts = dashboardTransactionAmounts(t, {
+				excludeLoans,
+				excludeTax,
+			});
+			if (!amounts.count && !amounts.income) return;
 			const date = t.transactionDate ? new Date(t.transactionDate) : new Date();
 			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 
 			const existing = monthMap.get(monthKey) || { expenses: 0, income: 0 };
-			const amount = parseFloat(t.amount || "0");
-
-			if (t.type === "credit") {
-				existing.income += amount;
-			} else {
-				existing.expenses += amount;
-			}
+			existing.income += amounts.income;
+			existing.expenses += amounts.expenses;
 
 			monthMap.set(monthKey, existing);
 		});
@@ -302,7 +293,7 @@ export function AnalyticsDashboard() {
 				income: data.income,
 				key: month,
 			}));
-	}, [transactions]);
+	}, [transactionsData, excludeLoans, excludeTax]);
 
 	// Net savings per month for the current calendar year (Jan through the
 	// current month), using the same loan and tax filters as the summary cards.
@@ -317,12 +308,13 @@ export function AnalyticsDashboard() {
 
 		const savingsByMonth = new Map<string, number>();
 		for (const t of transactions) {
-			if (excludeLoans && t.loanId) continue;
-			if (excludeTax && isTaxCategory(t.category?.name)) continue;
+			const amounts = dashboardTransactionAmounts(t, {
+				excludeLoans,
+				excludeTax,
+			});
 			const date = t.transactionDate ? new Date(t.transactionDate) : null;
 			if (!date || date.getFullYear() !== year) continue;
-			const amount = parseFloat(t.amount || "0");
-			const signed = t.type === "credit" ? amount : -amount;
+			const signed = amounts.income - amounts.expenses;
 			const key = format(date, "yyyy-MM");
 			savingsByMonth.set(key, (savingsByMonth.get(key) ?? 0) + signed);
 		}
@@ -772,7 +764,9 @@ export function AnalyticsDashboard() {
 										<DashboardAmount value={stats.totalIncome} />
 									</div>
 									<p className="text-xs text-muted-foreground">
-										{filterDescription}
+										{excludeTax
+											? `After tax payments${excludeLoans ? "; excludes loan transfers" : ""}`
+											: filterDescription}
 									</p>
 								</CardContent>
 							</Card>
