@@ -105,6 +105,7 @@ import { useGetTransactionHistory } from "@/hooks/transactions/queries";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useProgressiveList } from "@/hooks/useProgressiveList";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { isTaxCategory } from "@/lib/transaction-filters";
 import { cn } from "@/lib/utils";
 
 const defaultRange = getDateRangeForPeriod("last7d");
@@ -140,6 +141,7 @@ const searchParamsSchema = z.object({
 	category: z.string().optional().default(ALL_CATEGORIES_FILTER),
 	bank: z.string().optional().default(""),
 	excludeLoans: z.boolean().optional().default(false),
+	excludeTax: z.boolean().optional().default(false),
 });
 
 export const Route = createFileRoute("/_authenticated/transactions/")({
@@ -148,8 +150,16 @@ export const Route = createFileRoute("/_authenticated/transactions/")({
 });
 
 export function TransactionsPage() {
-	const { period, startDate, endDate, type, category, bank, excludeLoans } =
-		Route.useSearch();
+	const {
+		period,
+		startDate,
+		endDate,
+		type,
+		category,
+		bank,
+		excludeLoans,
+		excludeTax,
+	} = Route.useSearch();
 	const typeFilter = type ?? "all";
 	const categoryFilter = category ?? ALL_CATEGORIES_FILTER;
 	const bankFilter = bank ?? "";
@@ -291,14 +301,23 @@ export function TransactionsPage() {
 		return categoryFiltered.filter(
 			(transaction) =>
 				(bankFilter === "" || transaction.bankName === bankFilter) &&
-				(!excludeLoans || !transaction.loanId),
+				(!excludeLoans || !transaction.loanId) &&
+				(!excludeTax || !isTaxCategory(transaction.category?.name)),
 		);
-	}, [transactions, categoryFilter, typeFilter, bankFilter, excludeLoans]);
+	}, [
+		transactions,
+		categoryFilter,
+		typeFilter,
+		bankFilter,
+		excludeLoans,
+		excludeTax,
+	]);
 	const noDataDescription =
 		categoryFilter === ALL_CATEGORIES_FILTER &&
 		typeFilter === "all" &&
 		bankFilter === "" &&
-		!excludeLoans
+		!excludeLoans &&
+		!excludeTax
 			? "Get started by adding a transaction or creating one from SMS."
 			: "Try changing your filters, or add/create a transaction.";
 
@@ -371,6 +390,7 @@ export function TransactionsPage() {
 				category: ALL_CATEGORIES_FILTER,
 				bank: "",
 				excludeLoans: false,
+				excludeTax: false,
 			}),
 		});
 		setPagination((prev) => ({
@@ -385,8 +405,16 @@ export function TransactionsPage() {
 		if (bankFilter !== "") count++;
 		if (sorting[0]) count++;
 		if (excludeLoans) count++;
+		if (excludeTax) count++;
 		return count;
-	}, [categoryFilter, typeFilter, bankFilter, sorting, excludeLoans]);
+	}, [
+		categoryFilter,
+		typeFilter,
+		bankFilter,
+		sorting,
+		excludeLoans,
+		excludeTax,
+	]);
 	const categoryLabel = useMemo(
 		() =>
 			categoryFilterOptions.find((option) => option.id === categoryFilter)
@@ -511,6 +539,7 @@ export function TransactionsPage() {
 			categoryFilter,
 			bankFilter,
 			excludeLoans,
+			excludeTax,
 			globalFilter,
 			sorting,
 		]),
@@ -801,6 +830,18 @@ export function TransactionsPage() {
 								onClear={() => {
 									searchNavigate({
 										search: (prev) => ({ ...prev, excludeLoans: false }),
+										resetScroll: false,
+									});
+									setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+								}}
+							/>
+						)}
+						{excludeTax && (
+							<FilterChip
+								label="Excludes tax transactions"
+								onClear={() => {
+									searchNavigate({
+										search: (prev) => ({ ...prev, excludeTax: false }),
 										resetScroll: false,
 									});
 									setPagination((prev) => ({ ...prev, pageIndex: 0 }));

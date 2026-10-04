@@ -1,4 +1,3 @@
-import { DashboardBudgets } from "@/components/DashboardBudgets";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	eachDayOfInterval,
@@ -34,6 +33,7 @@ import {
 	SpendingLineChart,
 } from "@/components/charts";
 import { pickChartColor, useChartTheme } from "@/components/charts/chart-theme";
+import { DashboardBudgets } from "@/components/DashboardBudgets";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -59,6 +59,8 @@ import { useGetAllTransactions } from "@/hooks/transactions/queries";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { formatCurrency } from "@/lib/formatCurrency";
 
+import { isTaxCategory } from "@/lib/transaction-filters";
+
 const defaultRange = getDateRangeForPeriod("monthly");
 
 const searchParamsSchema = z.object({
@@ -76,6 +78,7 @@ const searchParamsSchema = z.object({
 		.default(defaultRange.endDate ?? ""),
 	category: z.string().optional().default(""),
 	excludeLoans: z.boolean().optional().default(true),
+	excludeTax: z.boolean().optional().default(true),
 });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -84,9 +87,19 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 export function AnalyticsDashboard() {
-	const { period, startDate, endDate, category, excludeLoans } =
+	const { period, startDate, endDate, category, excludeLoans, excludeTax } =
 		Route.useSearch();
 	const navigate = Route.useNavigate();
+	const activeFilterCount = Number(excludeLoans) + Number(excludeTax);
+	const exclusions = [
+		excludeLoans ? "loan transfers" : null,
+		excludeTax ? "tax transactions" : null,
+	]
+		.filter(Boolean)
+		.join(" and ");
+	const filterDescription = exclusions
+		? `Excludes ${exclusions}`
+		: "Includes all transactions";
 	// Chart click-to-filter is a pointer-heavy interaction; keep it desktop-only
 	// to avoid accidental navigations while scrolling on touch devices.
 	const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -166,11 +179,12 @@ export function AnalyticsDashboard() {
 					category: opts.category ?? "all",
 					bank: opts.bank ?? "",
 					excludeLoans,
+					excludeTax,
 				},
 				resetScroll: false,
 			});
 		},
-		[navigate, period, startDate, endDate, excludeLoans],
+		[navigate, period, startDate, endDate, excludeLoans, excludeTax],
 	);
 
 	const handleSpendingPointClick = useCallback(
@@ -207,8 +221,12 @@ export function AnalyticsDashboard() {
 
 	const transactions = useMemo(() => {
 		const entries = transactionsData?.transactions ?? [];
-		return excludeLoans ? entries.filter((t) => !t.loanId) : entries;
-	}, [transactionsData, excludeLoans]);
+		return entries.filter(
+			(t) =>
+				(!excludeLoans || !t.loanId) &&
+				(!excludeTax || !isTaxCategory(t.category?.name)),
+		);
+	}, [transactionsData, excludeLoans, excludeTax]);
 
 	// Loan activity follows the same filter as the summary cards and charts.
 	const { loanFlows } = useMemo(() => {
@@ -287,7 +305,7 @@ export function AnalyticsDashboard() {
 	}, [transactions]);
 
 	// Net savings per month for the current calendar year (Jan through the
-	// current month), using the same loan filter as the summary cards.
+	// current month), using the same loan and tax filters as the summary cards.
 	const savingsData = useMemo(() => {
 		const transactions = yearTransactionsData?.transactions ?? [];
 		const year = new Date().getFullYear();
@@ -300,6 +318,7 @@ export function AnalyticsDashboard() {
 		const savingsByMonth = new Map<string, number>();
 		for (const t of transactions) {
 			if (excludeLoans && t.loanId) continue;
+			if (excludeTax && isTaxCategory(t.category?.name)) continue;
 			const date = t.transactionDate ? new Date(t.transactionDate) : null;
 			if (!date || date.getFullYear() !== year) continue;
 			const amount = parseFloat(t.amount || "0");
@@ -316,7 +335,7 @@ export function AnalyticsDashboard() {
 				key,
 			};
 		});
-	}, [yearTransactionsData, excludeLoans]);
+	}, [yearTransactionsData, excludeLoans, excludeTax]);
 
 	const categoryData = useMemo(() => {
 		if (!transactions.length) return [];
@@ -534,20 +553,20 @@ export function AnalyticsDashboard() {
 								<Button
 									variant="outline"
 									aria-label={
-										excludeLoans
-											? "Dashboard filters (1 active)"
+										activeFilterCount > 0
+											? `Dashboard filters (${activeFilterCount} active)`
 											: "Dashboard filters"
 									}
 									title="Dashboard filters"
 									className={
-										excludeLoans
+										activeFilterCount > 0
 											? "h-11 max-sm:absolute max-sm:right-0 max-sm:top-0 relative border-primary/60 text-primary"
 											: "h-11 max-sm:absolute max-sm:right-0 max-sm:top-0 relative"
 									}
 								>
 									<SlidersHorizontal aria-hidden="true" />
 									Filters
-									{excludeLoans && (
+									{activeFilterCount > 0 && (
 										<span
 											aria-hidden="true"
 											className="absolute right-1 top-1 size-1.5 rounded-full bg-primary"
@@ -565,7 +584,7 @@ export function AnalyticsDashboard() {
 										Choose which transactions appear in your overview.
 									</SheetDescription>
 								</SheetHeader>
-								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-3 p-4">
 									<div className="flex items-center gap-3">
 										<Switch
 											id="exclude-loan-transactions"
@@ -587,6 +606,25 @@ export function AnalyticsDashboard() {
 											className="flex min-h-11 cursor-pointer items-center"
 										>
 											Exclude loan-linked transactions
+										</Label>
+									</div>
+									<div className="flex items-center gap-3">
+										<Switch
+											id="exclude-tax-transactions"
+											checked={excludeTax}
+											onChange={(event) => {
+												const checked = event.target.checked;
+												navigate({
+													search: (prev) => ({ ...prev, excludeTax: checked }),
+													resetScroll: false,
+												});
+											}}
+										/>
+										<Label
+											htmlFor="exclude-tax-transactions"
+											className="flex min-h-11 cursor-pointer items-center"
+										>
+											Exclude tax transactions
 										</Label>
 									</div>
 								</div>
@@ -704,9 +742,7 @@ export function AnalyticsDashboard() {
 										<DashboardAmount value={stats.totalExpenses} />
 									</div>
 									<p className="text-xs text-muted-foreground">
-										{excludeLoans
-											? "Excludes loan transfers"
-											: "Includes loan transfers"}
+										{filterDescription}
 									</p>
 								</CardContent>
 							</Card>
@@ -736,9 +772,7 @@ export function AnalyticsDashboard() {
 										<DashboardAmount value={stats.totalIncome} />
 									</div>
 									<p className="text-xs text-muted-foreground">
-										{excludeLoans
-											? "Excludes loan transfers"
-											: "Includes loan transfers"}
+										{filterDescription}
 									</p>
 								</CardContent>
 							</Card>
@@ -804,9 +838,7 @@ export function AnalyticsDashboard() {
 									<p className="text-xs text-muted-foreground">
 										{loanFlows.count > 0
 											? `Includes ${loanFlows.count} loan transfer${loanFlows.count !== 1 ? "s" : ""}`
-											: excludeLoans
-												? "Excludes loan transfers"
-												: "Total tracked"}
+											: filterDescription}
 									</p>
 								</CardContent>
 							</Card>
