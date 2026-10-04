@@ -91,7 +91,7 @@ describe("JEV transaction categorization", () => {
 		expect(generate).not.toHaveBeenCalled();
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-		expect(body.state).toEqual({ remarks: "REF 12345" });
+		expect(body.state).toEqual({ ...transaction, remarks: "REF 12345" });
 		expect(body.questions.eligibility.instructions.userMappingRules).toBe(
 			"Gym fees → Fitness",
 		);
@@ -99,6 +99,35 @@ describe("JEV transaction categorization", () => {
 			"jev_remarks_eligibility",
 		]);
 	});
+	it.each([null, "", "REF 12345", "Transfer to Alex"])(
+		"evaluates custom rules against full transaction context for ambiguous remarks: %s",
+		async (remarks) => {
+			const rules = "Payments to Alex belong to Food; otherwise use Food.";
+			const mappedTransaction = {
+				...transaction,
+				merchant: "Alex",
+				remarks,
+			};
+			answer("category_0");
+			expect(
+				await categorizeTransaction(mappedTransaction, categories, rules),
+			).toEqual({
+				categoryId: "food-id",
+				categoryName: "Food",
+				newCategory: null,
+			});
+			const eligibility = JSON.parse(fetchMock.mock.calls[0][1].body);
+			expect(eligibility.state).toEqual(mappedTransaction);
+			expect(
+				eligibility.questions.eligibility.instructions.userMappingRules,
+			).toBe(rules);
+			const classification = JSON.parse(fetchMock.mock.calls[1][1].body);
+			expect(
+				classification.questions.category.instructions.userMappingRules,
+			).toBe(rules);
+			expect(generate).not.toHaveBeenCalled();
+		},
+	);
 	it.each([null, "", "   "])(
 		"skips all APIs for empty remarks: %s",
 		async (remarks) => {
