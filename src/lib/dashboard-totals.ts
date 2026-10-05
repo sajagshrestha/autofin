@@ -36,16 +36,30 @@ export function summarizeDashboardTransactions(
 	let totalIncome = 0;
 	let totalExpenses = 0;
 	let transactionCount = 0;
+	let savings = 0;
 	for (const transaction of transactions) {
 		const amounts = dashboardTransactionAmounts(transaction, filters);
 		totalIncome += amounts.income;
 		totalExpenses += amounts.expenses;
 		transactionCount += amounts.count;
+		savings += dashboardTransactionSavings(transaction, filters.excludeTax);
 	}
 	return {
 		totalIncome,
 		totalExpenses,
-		savings: totalIncome - totalExpenses,
+		savings,
 		transactionCount,
 	};
+}
+
+/** Savings includes loan cash flows regardless of the overview's loan filter. */
+export function dashboardTransactionSavings(
+	transaction: DashboardTransaction,
+	excludeTax: boolean,
+) {
+	const amounts = dashboardTransactionAmounts(transaction, {
+		excludeLoans: false,
+		excludeTax,
+	});
+	return amounts.income - amounts.expenses;
 }

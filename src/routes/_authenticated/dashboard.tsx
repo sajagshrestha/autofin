@@ -59,6 +59,7 @@ import { useGetAllTransactions } from "@/hooks/transactions/queries";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
 	dashboardTransactionAmounts,
+	dashboardTransactionSavings,
 	summarizeDashboardTransactions,
 } from "@/lib/dashboard-totals";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -296,7 +297,7 @@ export function AnalyticsDashboard() {
 	}, [transactionsData, excludeLoans, excludeTax]);
 
 	// Net savings per month for the current calendar year (Jan through the
-	// current month), using the same loan and tax filters as the summary cards.
+	// current month). Savings includes loan cash flows regardless of the loan filter.
 	const savingsData = useMemo(() => {
 		const transactions = yearTransactionsData?.transactions ?? [];
 		const year = new Date().getFullYear();
@@ -308,13 +309,9 @@ export function AnalyticsDashboard() {
 
 		const savingsByMonth = new Map<string, number>();
 		for (const t of transactions) {
-			const amounts = dashboardTransactionAmounts(t, {
-				excludeLoans,
-				excludeTax,
-			});
 			const date = t.transactionDate ? new Date(t.transactionDate) : null;
 			if (!date || date.getFullYear() !== year) continue;
-			const signed = amounts.income - amounts.expenses;
+			const signed = dashboardTransactionSavings(t, excludeTax);
 			const key = format(date, "yyyy-MM");
 			savingsByMonth.set(key, (savingsByMonth.get(key) ?? 0) + signed);
 		}
@@ -327,7 +324,7 @@ export function AnalyticsDashboard() {
 				key,
 			};
 		});
-	}, [yearTransactionsData, excludeLoans, excludeTax]);
+	}, [yearTransactionsData, excludeTax]);
 
 	const categoryData = useMemo(() => {
 		if (!transactions.length) return [];
@@ -801,6 +798,7 @@ export function AnalyticsDashboard() {
 									</div>
 									<p className="text-xs text-muted-foreground">
 										{stats.savings >= 0 ? "Net positive" : "Net negative"}
+										{" · Includes loan transfers"}
 									</p>
 								</CardContent>
 							</Card>
