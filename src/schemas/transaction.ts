@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const editTransactionSchema = z.object({
+	type: z.enum(["debit", "credit"]),
 	merchant: z.string().min(1, "Merchant name is required"),
 	categoryId: z.string(),
 	remarks: z.string(),

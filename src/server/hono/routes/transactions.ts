@@ -31,6 +31,7 @@ const smsSchema = z.object({
 });
 
 const updateSchema = z.object({
+	type: transactionTypeSchema.optional(),
 	categoryId: z.string().optional(),
 	merchant: z.string().max(255).optional(),
 	remarks: z.string().max(500).optional(),

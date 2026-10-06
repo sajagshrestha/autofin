@@ -24,6 +24,13 @@ import {
 	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import type { Category, Transaction } from "@/hooks";
 import {
 	mapEditFormToUpdateBody,
@@ -37,15 +44,7 @@ type CategoryOption = {
 	searchLabel: string;
 };
 
-export function EditTransactionForm({
-	transaction,
-	categories,
-	onSubmit,
-	isPending,
-	onCancel,
-	open,
-	onOpenChange,
-}: {
+type EditTransactionFormProps = {
 	transaction: Transaction;
 	categories: Category[];
 	onSubmit: (body: UpdateTransactionBody) => void;
@@ -53,9 +52,25 @@ export function EditTransactionForm({
 	onCancel: () => void;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-}) {
+};
+
+export function EditTransactionForm(props: EditTransactionFormProps) {
+	if (!props.open) return null;
+	return <OpenEditTransactionForm key={props.transaction.id} {...props} />;
+}
+
+function OpenEditTransactionForm({
+	transaction,
+	categories,
+	onSubmit,
+	isPending,
+	onCancel,
+	open,
+	onOpenChange,
+}: EditTransactionFormProps) {
 	const form = useForm({
 		defaultValues: {
+			type: transaction.type,
 			merchant: transaction.merchant || "",
 			categoryId: transaction.category?.id ?? transaction.categoryId ?? "",
 			remarks: transaction.remarks || "",
@@ -112,6 +127,40 @@ export function EditTransactionForm({
 					}}
 				>
 					<FieldGroup>
+						<form.Field name="type">
+							{(field) => {
+								const isInvalid =
+									field.state.meta.isTouched && !field.state.meta.isValid;
+								return (
+									<Field data-invalid={isInvalid}>
+										<FieldLabel htmlFor={field.name}>Type</FieldLabel>
+										<Select
+											value={field.state.value}
+											onValueChange={(value) =>
+												field.handleChange(value as Transaction["type"])
+											}
+										>
+											<SelectTrigger
+												id={field.name}
+												className="w-full"
+												onBlur={field.handleBlur}
+												aria-invalid={isInvalid}
+											>
+												<SelectValue placeholder="Select type" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="debit">Debit</SelectItem>
+												<SelectItem value="credit">Credit</SelectItem>
+											</SelectContent>
+										</Select>
+										{isInvalid && (
+											<FieldError errors={field.state.meta.errors} />
+										)}
+									</Field>
+								);
+							}}
+						</form.Field>
+
 						<form.Field name="merchant">
 							{(field) => {
 								const isInvalid =

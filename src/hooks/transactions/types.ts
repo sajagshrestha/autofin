@@ -58,6 +58,7 @@ export interface ListTransactionsFilters {
 }
 
 export type UpdateTransactionBody = {
+	type?: TransactionType;
 	categoryId?: string;
 	merchant?: string;
 	remarks?: string;
@@ -67,6 +68,7 @@ export type UpdateTransactionBody = {
 
 /** Form values for editing a transaction. */
 export type EditTransactionFormValues = {
+	type: TransactionType;
 	merchant: string;
 	categoryId: string;
 	remarks: string;
@@ -78,6 +80,7 @@ export function mapEditFormToUpdateBody(
 	values: EditTransactionFormValues,
 ): UpdateTransactionBody {
 	return {
+		type: values.type,
 		merchant: values.merchant || undefined,
 		categoryId: values.categoryId || undefined,
 		remarks: values.remarks || undefined,

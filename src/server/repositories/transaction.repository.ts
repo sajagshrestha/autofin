@@ -206,7 +206,12 @@ export class TransactionRepository extends BaseRepository {
 		data: Partial<
 			Pick<
 				NewTransaction,
-				"categoryId" | "merchant" | "remarks" | "notes" | "transactionDate"
+				| "type"
+				| "categoryId"
+				| "merchant"
+				| "remarks"
+				| "notes"
+				| "transactionDate"
 			>
 		>,
 	): Promise<Transaction | null> {
