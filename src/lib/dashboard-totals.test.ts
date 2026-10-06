@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { summarizeDashboardTransactions } from "./dashboard-totals";
+import {
+	dashboardTransactionSavings,
+	summarizeDashboardTransactions,
+} from "./dashboard-totals";
 
 const transactions = [
 	{ amount: "1000", type: "credit" as const, category: { name: "Salary" } },
@@ -15,7 +18,7 @@ const transactions = [
 
 describe("dashboard tax deductions", () => {
 	it.each([true, false])(
-		"keeps savings unchanged when excluding loans (excludeTax=%s)",
+		"excludes linked debits and credits from savings when toggled (excludeTax=%s)",
 		(excludeTax) => {
 			const entries = [
 				...transactions.slice(0, 3),
@@ -30,8 +33,14 @@ describe("dashboard tax deductions", () => {
 				excludeLoans: true,
 				excludeTax,
 			});
-			expect(excluded.savings).toBe(500);
-			expect(included.savings).toBe(excluded.savings);
+			expect(excluded.savings).toBe(700);
+			expect(included.savings).toBe(500);
+			expect(excluded.savings).toBe(
+				excluded.totalIncome - excluded.totalExpenses,
+			);
+			expect(included.savings).toBe(
+				included.totalIncome - included.totalExpenses,
+			);
 			expect(included.totalIncome - excluded.totalIncome).toBe(100);
 			expect(included.totalExpenses - excluded.totalExpenses).toBe(300);
 			expect(included.transactionCount - excluded.transactionCount).toBe(2);
@@ -46,7 +55,7 @@ describe("dashboard tax deductions", () => {
 		).toEqual({
 			totalIncome: 900,
 			totalExpenses: 200,
-			savings: 670,
+			savings: 700,
 			transactionCount: 2,
 		});
 	});
@@ -59,10 +68,32 @@ describe("dashboard tax deductions", () => {
 		).toEqual({
 			totalIncome: 1000,
 			totalExpenses: 300,
-			savings: 670,
+			savings: 700,
 			transactionCount: 3,
 		});
 	});
+	it.each([true, false])(
+		"monthly savings uses the same loan filter (excludeTax=%s)",
+		(excludeTax) => {
+			const entries = [
+				...transactions,
+				{ amount: "300", type: "debit" as const, loanId: "loan" },
+				{ amount: "100", type: "credit" as const, loanId: "loan" },
+			];
+			for (const excludeLoans of [true, false]) {
+				const filters = { excludeLoans, excludeTax };
+				const monthlySavings = entries.reduce(
+					(sum, transaction) =>
+						sum + dashboardTransactionSavings(transaction, filters),
+					0,
+				);
+				expect(monthlySavings).toBe(excludeLoans ? 700 : 470);
+				expect(monthlySavings).toBe(
+					summarizeDashboardTransactions(entries, filters).savings,
+				);
+			}
+		},
+	);
 	it("honors the loan filter before calculating the tax deduction", () => {
 		expect(
 			summarizeDashboardTransactions(transactions, {
