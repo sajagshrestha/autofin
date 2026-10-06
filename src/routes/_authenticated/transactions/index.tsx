@@ -105,6 +105,7 @@ import { useGetTransactionHistory } from "@/hooks/transactions/queries";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useProgressiveList } from "@/hooks/useProgressiveList";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { MOBILE_LAYOUT_QUERY } from "@/lib/responsive-layout";
 import { isTaxCategory } from "@/lib/transaction-filters";
 import { cn } from "@/lib/utils";
 
@@ -527,7 +528,7 @@ export function TransactionsPage() {
 
 		return sorted;
 	}, [mobileSearchFilteredTransactions, sorting]);
-	const isMobile = useMediaQuery("(max-width: 767px)");
+	const isMobile = useMediaQuery(MOBILE_LAYOUT_QUERY);
 	const { visibleCount, hasMore, sentinelRef, loadMore } = useProgressiveList({
 		total: mobileSortedTransactions.length,
 		enabled: isMobile && !isLoading && !isError,

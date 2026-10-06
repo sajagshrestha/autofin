@@ -1,11 +1,12 @@
 import { useEffect } from "react";
+import { MOBILE_LAYOUT_QUERY } from "@/lib/responsive-layout";
 
 /** Keep mobile overlays inside the screen area left above the software keyboard. */
 export function useMobileViewport() {
 	useEffect(() => {
 		const viewport = window.visualViewport;
 		if (!viewport) return;
-		const mobile = window.matchMedia("(max-width: 767px)");
+		const mobile = window.matchMedia(MOBILE_LAYOUT_QUERY);
 		const style = document.documentElement.style;
 		const properties = [
 			"--mobile-viewport-height",

@@ -6,6 +6,59 @@
 
 @import 'tw-animate-css';
 
+/* Keep named breakpoints on the mobile layout for portrait touch tablets. */
+/* These conditions must match src/lib/responsive-layout.ts. */
+@custom-variant sm {
+	@media (width >= 40rem) and (orientation: landscape), (width >= 40rem) and (pointer: fine), (width >= 40rem) and (pointer: none) {
+		@slot;
+	}
+}
+@custom-variant md {
+	@media (width >= 48rem) and (orientation: landscape), (width >= 48rem) and (pointer: fine), (width >= 48rem) and (pointer: none) {
+		@slot;
+	}
+}
+@custom-variant lg {
+	@media (width >= 64rem) and (orientation: landscape), (width >= 64rem) and (pointer: fine), (width >= 64rem) and (pointer: none) {
+		@slot;
+	}
+}
+@custom-variant xl {
+	@media (width >= 80rem) and (orientation: landscape), (width >= 80rem) and (pointer: fine), (width >= 80rem) and (pointer: none) {
+		@slot;
+	}
+}
+@custom-variant 2xl {
+	@media (width >= 96rem) and (orientation: landscape), (width >= 96rem) and (pointer: fine), (width >= 96rem) and (pointer: none) {
+		@slot;
+	}
+}
+@custom-variant max-sm {
+	@media (width < 40rem), (orientation: portrait) and (pointer: coarse) {
+		@slot;
+	}
+}
+@custom-variant max-md {
+	@media (width < 48rem), (orientation: portrait) and (pointer: coarse) {
+		@slot;
+	}
+}
+@custom-variant max-lg {
+	@media (width < 64rem), (orientation: portrait) and (pointer: coarse) {
+		@slot;
+	}
+}
+@custom-variant max-xl {
+	@media (width < 80rem), (orientation: portrait) and (pointer: coarse) {
+		@slot;
+	}
+}
+@custom-variant max-2xl {
+	@media (width < 96rem), (orientation: portrait) and (pointer: coarse) {
+		@slot;
+	}
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------------------
@@ -823,14 +876,14 @@ kbd {
  background: var(--summary-accent, var(--primary));
 }
 .summary-card [class*="tabular-nums"] { letter-spacing: -0.04em; }
-@media (max-width: 639px) {
+@media (max-width: 639px), (orientation: portrait) and (pointer: coarse) {
  .summary-card > div { padding-left: 1rem; padding-right: 1rem; }
  .summary-card [class*="tabular-nums"] { font-size: 1.125rem; }
  .summary-card h3 { font-size: 0.75rem; }
 }
 .auth-page { background: radial-gradient(ellipse at top, color-mix(in srgb, var(--primary) 10%, var(--background)), var(--background) 65%); }
 .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
-@media (max-width: 767px) {
+@media (max-width: 767px), (orientation: portrait) and (pointer: coarse) {
  .app-main { padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); }
  [data-slot="dialog-content"] { overscroll-behavior: contain; }
 }
@@ -839,7 +892,7 @@ kbd {
 }
 
 /* Keep mobile money totals complete and controls comfortable to touch. */
-@media (max-width: 767px) {
+@media (max-width: 767px), (orientation: portrait) and (pointer: coarse) {
  .summary-card [class*="tabular-nums"] {
   white-space: normal;
   overflow: visible;
@@ -860,8 +913,8 @@ kbd {
  [data-slot="sheet-content"] input { font-size: 1rem; }
 }
 
-/* Phone layouts use inset surfaces, touch controls, and bottom-aligned dialogs. */
-@media (max-width: 767px) {
+/* Mobile layouts use inset surfaces, touch controls, and bottom-aligned dialogs. */
+@media (max-width: 767px), (orientation: portrait) and (pointer: coarse) {
  html { scroll-padding-top: 1rem; }
  .app-main { background: color-mix(in srgb, var(--muted) 24%, var(--background)); }
  .app-main .page-content { padding-top: 1rem; }
@@ -892,7 +945,7 @@ kbd {
  [data-slot="dialog-content"] [data-slot="select-trigger"] { min-height: 2.75rem; }
  [data-slot="dropdown-menu-item"] { min-height: 2.75rem; }
 }
-@media (max-width: 767px) and (prefers-reduced-motion: no-preference) {
+@media (max-width: 767px) and (prefers-reduced-motion: no-preference), (orientation: portrait) and (pointer: coarse) and (prefers-reduced-motion: no-preference) {
  [data-slot="dialog-content"][data-state="open"] { animation: mobile-dialog-in 180ms ease-out; }
  [data-slot="dialog-content"][data-state="closed"] { animation: mobile-dialog-out 140ms ease-in; }
 }
@@ -900,7 +953,7 @@ kbd {
 @keyframes mobile-dialog-out { from { transform: translateY(0); } to { transform: translateY(100%); } }
 
 /* The keyboard can shrink the visual viewport without changing CSS viewport units. */
-@media (max-width: 767px) {
+@media (max-width: 767px), (orientation: portrait) and (pointer: coarse) {
  [data-slot="sheet-content"] {
   top: var(--mobile-viewport-top, 0px);
   bottom: auto;

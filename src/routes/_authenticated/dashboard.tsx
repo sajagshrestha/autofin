@@ -63,6 +63,7 @@ import {
 	summarizeDashboardTransactions,
 } from "@/lib/dashboard-totals";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { DESKTOP_LAYOUT_QUERY } from "@/lib/responsive-layout";
 
 import { isTaxCategory } from "@/lib/transaction-filters";
 
@@ -107,7 +108,7 @@ export function AnalyticsDashboard() {
 		: "Includes all transactions";
 	// Chart click-to-filter is a pointer-heavy interaction; keep it desktop-only
 	// to avoid accidental navigations while scrolling on touch devices.
-	const isDesktop = useMediaQuery("(min-width: 768px)");
+	const isDesktop = useMediaQuery(DESKTOP_LAYOUT_QUERY);
 
 	const { data: transactionsData, isLoading } = useGetAllTransactions({
 		startDate,

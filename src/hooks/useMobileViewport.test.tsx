@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { MOBILE_LAYOUT_QUERY } from "@/lib/responsive-layout";
 import { useMobileViewport } from "./useMobileViewport";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -33,7 +34,10 @@ beforeEach(async () => {
 	mobile = Object.assign(new EventTarget(), { matches: true });
 	vi.stubGlobal("visualViewport", viewport);
 	vi.stubGlobal("innerHeight", 844);
-	vi.stubGlobal("matchMedia", () => mobile);
+	vi.stubGlobal(
+		"matchMedia",
+		vi.fn(() => mobile),
+	);
 	vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
 		setTimeout(callback, 16),
 	);
@@ -107,4 +111,20 @@ it("leaves desktop and pinch zoom alone and cleans up on unmount", async () => {
 	viewport.dispatchEvent(new Event("resize"));
 	flush();
 	expect(style().getPropertyValue("--mobile-viewport-height")).toBe("");
+});
+
+it("uses the shared tablet query and clears keyboard offsets on rotation", () => {
+	expect(window.matchMedia).toHaveBeenCalledWith(MOBILE_LAYOUT_QUERY);
+	viewport.height = 480;
+	viewport.dispatchEvent(new Event("resize"));
+	flush();
+	expect(style().getPropertyValue("--mobile-viewport-bottom")).toBe("364px");
+	mobile.matches = false;
+	mobile.dispatchEvent(new Event("change"));
+	flush();
+	expect(style().getPropertyValue("--mobile-viewport-bottom")).toBe("");
+	mobile.matches = true;
+	mobile.dispatchEvent(new Event("change"));
+	flush();
+	expect(style().getPropertyValue("--mobile-viewport-bottom")).toBe("364px");
 });
