@@ -18,6 +18,8 @@ export interface TransactionDto {
 	remarks: string | null;
 	notes: string | null;
 	loanId?: string | null;
+	loanDirection?: "given" | "taken" | null;
+	loanOriginTransactionId?: string | null;
 	sourceId?: string | null;
 	aiConfidence: string | null;
 	isAiCreated: boolean;
@@ -45,6 +47,8 @@ export function toTransactionDto(txn: TransactionRow): TransactionDto {
 		remarks: txn.remarks,
 		notes: txn.notes,
 		loanId: txn.loanId ?? null,
+		loanDirection: txn.loanDirection ?? null,
+		loanOriginTransactionId: txn.loanOriginTransactionId ?? null,
 		sourceId: txn.sourceId ?? null,
 		aiConfidence: txn.aiConfidence ?? null,
 		isAiCreated: txn.isAiCreated,

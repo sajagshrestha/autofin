@@ -297,7 +297,7 @@ export function AnalyticsDashboard() {
 	}, [transactionsData, excludeLoans, excludeTax]);
 
 	// Net savings per month for the current calendar year (Jan through the
-	// current month), using the same loan and tax filters as the summary cards.
+	// current month), using the same savings rules as the summary card.
 	const savingsData = useMemo(() => {
 		const transactions = yearTransactionsData?.transactions ?? [];
 		const year = new Date().getFullYear();
@@ -802,7 +802,7 @@ export function AnalyticsDashboard() {
 									<p className="text-xs text-muted-foreground">
 										{stats.savings >= 0 ? "Net positive" : "Net negative"}
 										{excludeLoans
-											? " · Excludes loan transfers"
+											? " · Includes your loan repayments"
 											: " · Includes loan transfers"}
 									</p>
 								</CardContent>

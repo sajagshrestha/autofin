@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import {
 	categories,
+	loans,
 	type NewTransaction,
 	type Transaction,
 	transactions,
@@ -17,6 +18,8 @@ export interface TransactionFilters {
 }
 
 export interface TransactionWithCategory extends Transaction {
+	loanDirection?: "given" | "taken" | null;
+	loanOriginTransactionId?: string | null;
 	category: { id: string; name: string; icon: string | null } | null;
 }
 
@@ -81,6 +84,8 @@ export class TransactionRepository extends BaseRepository {
 		const result = await this.db
 			.select({
 				loanId: transactions.loanId,
+				loanDirection: loans.direction,
+				loanOriginTransactionId: loans.transactionId,
 				sourceId: transactions.sourceId,
 				id: transactions.id,
 				userId: transactions.userId,
@@ -109,6 +114,13 @@ export class TransactionRepository extends BaseRepository {
 			})
 			.from(transactions)
 			.leftJoin(categories, eq(transactions.categoryId, categories.id))
+			.leftJoin(
+				loans,
+				and(
+					eq(transactions.loanId, loans.id),
+					eq(transactions.userId, loans.userId),
+				),
+			)
 			.where(and(...conditions))
 			.orderBy(
 				desc(transactions.transactionDate),
@@ -142,6 +154,8 @@ export class TransactionRepository extends BaseRepository {
 		const result = await this.db
 			.select({
 				loanId: transactions.loanId,
+				loanDirection: loans.direction,
+				loanOriginTransactionId: loans.transactionId,
 				sourceId: transactions.sourceId,
 				id: transactions.id,
 				userId: transactions.userId,
@@ -170,6 +184,13 @@ export class TransactionRepository extends BaseRepository {
 			})
 			.from(transactions)
 			.leftJoin(categories, eq(transactions.categoryId, categories.id))
+			.leftJoin(
+				loans,
+				and(
+					eq(transactions.loanId, loans.id),
+					eq(transactions.userId, loans.userId),
+				),
+			)
 			.where(eq(transactions.id, id))
 			.limit(1);
 

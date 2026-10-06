@@ -121,3 +121,95 @@ describe("dashboard tax deductions", () => {
 		});
 	});
 });
+
+const loanTransactions = [
+	{
+		id: "lent",
+		amount: "300",
+		type: "debit" as const,
+		loanId: "given",
+		loanDirection: "given" as const,
+		loanOriginTransactionId: "lent",
+	},
+	{
+		id: "received",
+		amount: "100",
+		type: "credit" as const,
+		loanId: "given",
+		loanDirection: "given" as const,
+		loanOriginTransactionId: "lent",
+	},
+	{
+		id: "borrowed",
+		amount: "500",
+		type: "credit" as const,
+		loanId: "taken",
+		loanDirection: "taken" as const,
+		loanOriginTransactionId: "borrowed",
+	},
+	{
+		id: "repaid",
+		amount: "150",
+		type: "debit" as const,
+		loanId: "taken",
+		loanDirection: "taken" as const,
+		loanOriginTransactionId: "borrowed",
+	},
+];
+
+describe("savings loan classification", () => {
+	it.each([true, false])(
+		"deducts own repayments while excluding other loan flows (excludeTax=%s)",
+		(excludeTax) => {
+			const filters = { excludeLoans: true, excludeTax };
+			const entries = [...transactions.slice(0, 3), ...loanTransactions];
+			const summary = summarizeDashboardTransactions(entries, filters);
+			expect(summary.savings).toBe(550);
+			expect(summary.totalIncome - summary.totalExpenses).toBe(700);
+			expect(
+				loanTransactions.map((transaction) =>
+					dashboardTransactionSavings(transaction, filters),
+				),
+			).toEqual([0, 0, 0, -150]);
+			expect(
+				entries.reduce(
+					(sum, transaction) =>
+						sum + dashboardTransactionSavings(transaction, filters),
+					0,
+				),
+			).toBe(summary.savings);
+		},
+	);
+	it("includes all loan flows when exclusion is off", () => {
+		const filters = { excludeLoans: false, excludeTax: false };
+		expect(
+			loanTransactions.map((transaction) =>
+				dashboardTransactionSavings(transaction, filters),
+			),
+		).toEqual([-300, 100, 500, -150]);
+	});
+	it("deducts repayments on loans without a recorded origin", () => {
+		expect(
+			dashboardTransactionSavings(
+				{ ...loanTransactions[3], loanOriginTransactionId: null },
+				{ excludeLoans: true, excludeTax: true },
+			),
+		).toBe(-150);
+	});
+	it("does not treat an origin changed to debit as a repayment", () => {
+		expect(
+			dashboardTransactionSavings(
+				{ ...loanTransactions[2], type: "debit" },
+				{ excludeLoans: true, excludeTax: true },
+			),
+		).toBe(0);
+	});
+	it("keeps unclassified linked transactions excluded", () => {
+		expect(
+			dashboardTransactionSavings(
+				{ ...loanTransactions[3], loanDirection: null },
+				{ excludeLoans: true, excludeTax: true },
+			),
+		).toBe(0);
+	});
+});

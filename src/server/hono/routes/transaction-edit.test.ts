@@ -36,6 +36,8 @@ beforeEach(() => {
 		amount: "100.00",
 		type: "debit",
 		loanId: "loan",
+		loanDirection: "taken",
+		loanOriginTransactionId: "origin",
 		createdAt: new Date(),
 		updatedAt: new Date(),
 	});
@@ -54,7 +56,13 @@ describe("transaction type editing", () => {
 			transactionDate: undefined,
 		});
 		expect(await response.json()).toMatchObject({
-			transaction: { type, amount: "100.00", loanId: "loan" },
+			transaction: {
+				type,
+				amount: "100.00",
+				loanId: "loan",
+				loanDirection: "taken",
+				loanOriginTransactionId: "origin",
+			},
 		});
 	});
 

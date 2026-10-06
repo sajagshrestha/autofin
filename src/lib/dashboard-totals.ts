@@ -1,9 +1,12 @@
 import { isTaxCategory } from "./transaction-filters";
 
 type DashboardTransaction = {
+	id?: string;
 	amount: string;
 	type: "debit" | "credit";
 	loanId?: string | null;
+	loanDirection?: "given" | "taken" | null;
+	loanOriginTransactionId?: string | null;
 	category?: { name: string } | null;
 };
 type DashboardFilters = { excludeLoans: boolean; excludeTax: boolean };
@@ -36,25 +39,36 @@ export function summarizeDashboardTransactions(
 	let totalIncome = 0;
 	let totalExpenses = 0;
 	let transactionCount = 0;
+	let savings = 0;
 	for (const transaction of transactions) {
 		const amounts = dashboardTransactionAmounts(transaction, filters);
 		totalIncome += amounts.income;
 		totalExpenses += amounts.expenses;
 		transactionCount += amounts.count;
+		savings += dashboardTransactionSavings(transaction, filters);
 	}
 	return {
 		totalIncome,
 		totalExpenses,
-		savings: totalIncome - totalExpenses,
+		savings,
 		transactionCount,
 	};
 }
 
-/** Apply the overview's loan and tax filters to monthly savings too. */
+/** Exclude loan transfers from savings, but retain repayments of borrowed money. */
 export function dashboardTransactionSavings(
 	transaction: DashboardTransaction,
 	filters: DashboardFilters,
 ) {
-	const amounts = dashboardTransactionAmounts(transaction, filters);
+	const isOwnLoanRepayment =
+		!!transaction.loanId &&
+		transaction.loanDirection === "taken" &&
+		transaction.type === "debit" &&
+		(!transaction.loanOriginTransactionId ||
+			transaction.id !== transaction.loanOriginTransactionId);
+	const amounts = dashboardTransactionAmounts(transaction, {
+		...filters,
+		excludeLoans: filters.excludeLoans && !isOwnLoanRepayment,
+	});
 	return amounts.income - amounts.expenses;
 }
