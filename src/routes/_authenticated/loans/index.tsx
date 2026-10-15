@@ -426,6 +426,12 @@ function LoanCard({
 							{statusBadge(loan)}
 						</div>
 						<p className="text-sm text-muted-foreground">
+							{loan.issuedDate && (
+								<>
+									{new Date(loan.issuedDate).toLocaleDateString()}
+									{" · "}
+								</>
+							)}
 							Principal{" "}
 							<span className="font-medium text-foreground">
 								{formatCurrency(Number(loan.principalAmount))}
@@ -1000,6 +1006,24 @@ function LoanDetailDialog({
 						Settled {formatCurrency(current.settledAmount)} · Remaining{" "}
 						<b>{formatCurrency(Math.max(current.remainingAmount, 0))}</b>
 					</DialogDescription>
+					<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+						{current.issuedDate && (
+							<span>
+								Loan date:{" "}
+								{new Date(current.issuedDate).toLocaleDateString()}
+							</span>
+						)}
+						{current.dueDate && (
+							<span>
+								Due: {new Date(current.dueDate).toLocaleDateString()}
+							</span>
+						)}
+					</div>
+					{current.notes && (
+						<p className="break-words text-sm text-muted-foreground">
+							{current.notes}
+						</p>
+					)}
 				</DialogHeader>
 
 				{current.status === "outstanding" && !settleOpen && (
