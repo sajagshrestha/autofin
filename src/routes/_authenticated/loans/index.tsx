@@ -1,8 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { format } from "date-fns";
 import {
 	ArrowDownLeft,
 	ArrowUpRight,
+	CalendarDays,
 	Eye,
 	GitMerge,
 	HandCoins,
@@ -10,7 +12,6 @@ import {
 	MoreVertical,
 	Plus,
 	Trash2,
-	TrendingUp,
 	Wallet,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -82,6 +83,13 @@ export const Route = createFileRoute("/_authenticated/loans/")({
 
 function todayIso(): string {
 	return new Date().toISOString();
+}
+
+function formatLoanDate(value: string | null | undefined): string | null {
+	if (!value) return null;
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return null;
+	return format(date, "PPP");
 }
 
 function directionBadge(direction: LoanDirection) {
@@ -413,106 +421,159 @@ function LoanCard({
 				)
 			: 0;
 
+	const loanDate = formatLoanDate(loan.issuedDate);
+	const dueDate = formatLoanDate(loan.dueDate);
+	const isSettled = loan.status === "settled" || loan.status === "overpaid";
+
 	return (
-		<Card className="hover:shadow-md transition-shadow">
-			<CardContent className="p-4">
+		<Card className="overflow-hidden transition-colors hover:border-foreground/20">
+			<CardContent className="space-y-4 p-4 sm:p-5">
 				<div className="flex items-start justify-between gap-3">
-					<div className="min-w-0 space-y-1">
-						<div className="flex flex-wrap items-center gap-2">
-							<span className="font-semibold truncate">
-								{loan.counterpartyName}
-							</span>
-							{directionBadge(loan.direction)}
-							{statusBadge(loan)}
+					<div className="flex min-w-0 items-center gap-3">
+						<div
+							aria-hidden="true"
+							className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${loan.direction === "given" ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "bg-violet-500/10 text-violet-600 dark:text-violet-400"}`}
+						>
+							{loan.direction === "given" ? (
+								<ArrowUpRight className="size-5" />
+							) : (
+								<ArrowDownLeft className="size-5" />
+							)}
 						</div>
-						<p className="text-sm text-muted-foreground">
-							{loan.issuedDate && (
-								<>
-									{new Date(loan.issuedDate).toLocaleDateString()}
-									{" · "}
-								</>
-							)}
-							Principal{" "}
-							<span className="font-medium text-foreground">
-								{formatCurrency(Number(loan.principalAmount))}
-							</span>{" "}
-							· Settled{" "}
-							<span className="font-medium text-foreground">
-								{formatCurrency(loan.settledAmount)}
-							</span>{" "}
-							({loan.settlementCount} payment
-							{loan.settlementCount !== 1 ? "s" : ""})
-							{loan.dueDate && (
-								<> · Due {new Date(loan.dueDate).toLocaleDateString()}</>
-							)}
-						</p>
-					</div>
-					<div className="flex items-center gap-2 shrink-0">
-						<div className="text-right">
-							<p
-								className={`font-semibold ${loan.remainingAmount <= 0 ? "text-ds-green-700 dark:text-ds-green-900" : ""}`}
+						<div className="min-w-0 space-y-1.5">
+							<h3
+								className="truncate font-semibold"
+								title={loan.counterpartyName}
 							>
-								{formatCurrency(Math.max(loan.remainingAmount, 0))}
-							</p>
-							<p className="text-xs text-muted-foreground">remaining</p>
+								{loan.counterpartyName}
+							</h3>
+							<div className="flex flex-wrap items-center gap-1.5">
+								{directionBadge(loan.direction)}
+								{statusBadge(loan)}
+							</div>
 						</div>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="icon" className="h-8 w-8">
-									<MoreVertical className="h-4 w-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								<DropdownMenuItem onClick={() => onViewDetails(loan)}>
-									<Eye aria-hidden="true" className="mr-2 h-4 w-4" />
-									View details
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									disabled={!canCombine}
-									data-demo-action
-									onClick={() => onCombine(loan)}
-								>
-									<GitMerge aria-hidden="true" className="mr-2 h-4 w-4" />
-									Combine…
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									className="text-ds-red-700 focus:text-ds-red-700"
-									data-demo-action
-									onClick={() => onDelete(loan)}
-								>
-									<Trash2 aria-hidden="true" className="mr-2 h-4 w-4" />
-									Delete
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
+					</div>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-9 w-9 shrink-0 text-muted-foreground"
+								aria-label={`Actions for ${loan.counterpartyName}`}
+							>
+								<MoreVertical aria-hidden="true" className="h-4 w-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem onClick={() => onViewDetails(loan)}>
+								<Eye aria-hidden="true" className="mr-2 h-4 w-4" />
+								View details
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								disabled={!canCombine}
+								data-demo-action
+								onClick={() => onCombine(loan)}
+							>
+								<GitMerge aria-hidden="true" className="mr-2 h-4 w-4" />
+								Combine…
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								className="text-ds-red-700 focus:text-ds-red-700"
+								data-demo-action
+								onClick={() => onDelete(loan)}
+							>
+								<Trash2 aria-hidden="true" className="mr-2 h-4 w-4" />
+								Delete
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+
+				<div className="space-y-1">
+					<p className="text-xs text-muted-foreground">
+						{isSettled
+							? "Remaining balance"
+							: loan.direction === "given"
+								? "Left to receive"
+								: "Left to repay"}
+					</p>
+					<p
+						className={`break-words text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl ${isSettled ? "text-ds-green-700 dark:text-ds-green-900" : ""}`}
+					>
+						{formatCurrency(Math.max(loan.remainingAmount, 0))}
+					</p>
+				</div>
+
+				<div className="space-y-2.5 rounded-xl bg-muted/40 p-3">
+					<dl className="grid grid-cols-2 gap-3">
+						<div className="min-w-0 space-y-1">
+							<dt className="text-xs text-muted-foreground">Principal</dt>
+							<dd className="break-words text-sm font-medium tabular-nums">
+								{formatCurrency(Number(loan.principalAmount))}
+							</dd>
+						</div>
+						<div className="min-w-0 space-y-1 text-right">
+							<dt className="text-xs text-muted-foreground">Settled</dt>
+							<dd className="break-words text-sm font-medium tabular-nums">
+								{formatCurrency(loan.settledAmount)}
+							</dd>
+						</div>
+					</dl>
+					<div
+						role="progressbar"
+						aria-label="Loan settlement progress"
+						aria-valuenow={progress}
+						aria-valuemin={0}
+						aria-valuemax={100}
+						className="h-1.5 overflow-hidden rounded-full bg-foreground/10"
+					>
+						<div
+							className={`h-full rounded-full ${isSettled ? "bg-ds-green-700" : "bg-primary"}`}
+							style={{ width: `${progress}%` }}
+						/>
+					</div>
+					<div className="flex flex-wrap items-center justify-between gap-1 text-xs text-muted-foreground">
+						<span>{progress}% settled</span>
+						<span>
+							{loan.settlementCount} payment
+							{loan.settlementCount !== 1 ? "s" : ""}
+						</span>
 					</div>
 				</div>
 
-				<div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
-					<div
-						className={`h-full rounded-full ${loan.status === "outstanding" ? "bg-primary" : "bg-ds-green-700"}`}
-						style={{ width: `${progress}%` }}
-					/>
-				</div>
-				<div className="mt-2 flex items-center justify-between">
-					<p className="text-xs text-muted-foreground">
-						{progress}% settled
-						{loan.isOverdue && (
-							<span className="ml-2 text-destructive font-medium">
-								Past due date
+				{(loanDate || dueDate) && (
+					<div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+						{loanDate && (
+							<span className="inline-flex items-center gap-1.5">
+								<CalendarDays
+									aria-hidden="true"
+									className="size-3.5 shrink-0"
+								/>
+								Loan date: {loanDate}
 							</span>
 						)}
-					</p>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => onViewDetails(loan)}
-					>
-						<TrendingUp className="mr-2 h-4 w-4" />
-						Manage settlements
-					</Button>
-				</div>
+						{dueDate && (
+							<span
+								className={loan.isOverdue ? "font-medium text-destructive" : ""}
+							>
+								Due: {dueDate}
+								{loan.isOverdue ? " · Overdue" : ""}
+							</span>
+						)}
+					</div>
+				)}
 			</CardContent>
+			<div className="border-t bg-muted/20 px-4 py-2.5 sm:px-5">
+				<Button
+					variant="ghost"
+					size="sm"
+					className="w-full justify-between text-sm"
+					onClick={() => onViewDetails(loan)}
+				>
+					{isSettled ? "View settlements" : "Manage settlements"}
+					<ArrowUpRight aria-hidden="true" className="size-4" />
+				</Button>
+			</div>
 		</Card>
 	);
 }
@@ -1006,25 +1067,35 @@ function LoanDetailDialog({
 						Settled {formatCurrency(current.settledAmount)} · Remaining{" "}
 						<b>{formatCurrency(Math.max(current.remainingAmount, 0))}</b>
 					</DialogDescription>
-					<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-						{current.issuedDate && (
-							<span>
-								Loan date:{" "}
-								{new Date(current.issuedDate).toLocaleDateString()}
-							</span>
-						)}
-						{current.dueDate && (
-							<span>
-								Due: {new Date(current.dueDate).toLocaleDateString()}
-							</span>
-						)}
-					</div>
-					{current.notes && (
-						<p className="break-words text-sm text-muted-foreground">
-							{current.notes}
-						</p>
-					)}
 				</DialogHeader>
+
+				{(() => {
+					const loanDate = formatLoanDate(current.issuedDate);
+					const dueDate = formatLoanDate(current.dueDate);
+					if (!loanDate && !dueDate && !current.notes) return null;
+					return (
+						<dl className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm">
+							{loanDate && (
+								<div className="min-w-0">
+									<dt className="text-xs text-muted-foreground">Loan date</dt>
+									<dd className="truncate font-medium">{loanDate}</dd>
+								</div>
+							)}
+							{dueDate && (
+								<div className="min-w-0">
+									<dt className="text-xs text-muted-foreground">Due date</dt>
+									<dd className="truncate font-medium">{dueDate}</dd>
+								</div>
+							)}
+							{current.notes && (
+								<div className="col-span-2 min-w-0">
+									<dt className="text-xs text-muted-foreground">Notes</dt>
+									<dd className="break-words text-sm">{current.notes}</dd>
+								</div>
+							)}
+						</dl>
+					);
+				})()}
 
 				{current.status === "outstanding" && !settleOpen && (
 					<Button
@@ -1359,7 +1430,7 @@ function SettlementRow({
 					</p>
 					<p className="text-xs text-muted-foreground">
 						{settlement.transactionDate
-							? new Date(settlement.transactionDate).toLocaleDateString()
+							? (formatLoanDate(settlement.transactionDate) ?? "No date")
 							: "No date"}
 					</p>
 					{settlement.remarks && (
