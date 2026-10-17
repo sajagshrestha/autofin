@@ -570,6 +570,7 @@ export function TransactionsPage() {
 			options={categoryFilterOptions}
 			placeholder="Filter by category"
 			className={widthClassName}
+			clearValue={ALL_CATEGORIES_FILTER}
 		/>
 	);
 	const renderTransactionActions = (

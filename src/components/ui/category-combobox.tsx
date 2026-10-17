@@ -5,7 +5,7 @@ import {
 	ComboboxOption,
 	ComboboxOptions,
 } from "@headlessui/react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 export interface CategoryComboboxOption {
@@ -20,6 +20,10 @@ interface CategoryComboboxProps {
 	options: CategoryComboboxOption[];
 	placeholder?: string;
 	className?: string;
+	/** Show an X button to reset the selection. Defaults to true. */
+	allowClear?: boolean;
+	/** Value that represents "no selection" (e.g. an "all" sentinel). Defaults to "". */
+	clearValue?: string;
 }
 
 export function CategoryCombobox({
@@ -28,6 +32,8 @@ export function CategoryCombobox({
 	options,
 	placeholder = "Select category",
 	className,
+	allowClear = true,
+	clearValue = "",
 }: CategoryComboboxProps) {
 	const [query, setQuery] = useState("");
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -39,6 +45,13 @@ export function CategoryCombobox({
 	}, [options, query]);
 
 	const selected = options.find((option) => option.id === value);
+	const showClear = allowClear && value !== clearValue;
+
+	const clear = () => {
+		onChange(clearValue);
+		setQuery("");
+		inputRef.current?.focus();
+	};
 
 	return (
 		<Combobox
@@ -53,14 +66,27 @@ export function CategoryCombobox({
 			<div className={`relative ${className}`}>
 				<ComboboxInput
 					ref={inputRef}
-					className="h-8 w-full rounded-md border border-input bg-background px-3 pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					className="h-8 w-full rounded-md border border-input bg-background px-3 pr-14 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 					placeholder={placeholder}
 					displayValue={() => selected?.label ?? ""}
 					onChange={(event) => setQuery(event.target.value)}
 				/>
-				<ComboboxButton className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted-foreground">
-					<ChevronsUpDown className="h-4 w-4" />
-				</ComboboxButton>
+				<div className="absolute inset-y-0 right-0 flex items-center pr-1.5">
+					{showClear && (
+						<button
+							type="button"
+							aria-label="Clear category"
+							title="Clear category"
+							onClick={clear}
+							className="rounded p-1 text-muted-foreground hover:text-foreground"
+						>
+							<X className="h-4 w-4" />
+						</button>
+					)}
+					<ComboboxButton className="rounded p-1 text-muted-foreground">
+						<ChevronsUpDown className="h-4 w-4" />
+					</ComboboxButton>
+				</div>
 				<ComboboxOptions
 					modal={false}
 					className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md empty:invisible"

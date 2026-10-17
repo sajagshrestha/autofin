@@ -129,6 +129,7 @@ export function SpendingLineChart({
 						options={categoryOptions}
 						placeholder="Filter by category"
 						className="w-32 shrink-0 sm:w-52"
+						clearValue={ALL_CATEGORIES}
 					/>
 				)}
 			</CardHeader>

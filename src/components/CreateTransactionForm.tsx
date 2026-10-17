@@ -6,7 +6,7 @@ import {
 	ComboboxOptions,
 } from "@headlessui/react";
 import { useForm } from "@tanstack/react-form";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
@@ -196,7 +196,7 @@ export function CreateTransactionForm({
 											<ComboboxInput
 												id={field.name}
 												name={field.name}
-												className="h-9 w-full rounded-md border border-input bg-background px-3 pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+												className="h-9 w-full rounded-md border border-input bg-background px-3 pr-14 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 												placeholder="Select a category"
 												displayValue={() =>
 													categoryOptions.find(
@@ -208,9 +208,25 @@ export function CreateTransactionForm({
 												}
 												onBlur={field.handleBlur}
 											/>
-											<ComboboxButton className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted-foreground">
-												<ChevronsUpDown className="h-4 w-4" />
-											</ComboboxButton>
+											<div className="absolute inset-y-0 right-0 flex items-center pr-1.5">
+												{field.state.value && (
+													<button
+														type="button"
+														aria-label="Clear category"
+														title="Clear category"
+														onClick={() => {
+															field.handleChange("");
+															setCategoryQuery("");
+														}}
+														className="rounded p-1 text-muted-foreground hover:text-foreground"
+													>
+														<X className="h-4 w-4" />
+													</button>
+												)}
+												<ComboboxButton className="rounded p-1 text-muted-foreground">
+													<ChevronsUpDown className="h-4 w-4" />
+												</ComboboxButton>
+											</div>
 											<ComboboxOptions className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md empty:invisible">
 												{visibleCategoryOptions.length === 0 ? (
 													<div className="px-2 py-1.5 text-sm text-muted-foreground">
@@ -303,9 +319,7 @@ export function CreateTransactionForm({
 						<form.Field name="notes">
 							{(field) => (
 								<Field>
-									<FieldLabel htmlFor={field.name}>
-										Notes (optional)
-									</FieldLabel>
+									<FieldLabel htmlFor={field.name}>Notes (optional)</FieldLabel>
 									<Input
 										id={field.name}
 										name={field.name}
