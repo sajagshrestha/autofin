@@ -13,6 +13,7 @@ import {
 	Target,
 	TrendingDown,
 	Wallet,
+	X,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { MonthPicker } from "@/components/ui/month-picker";
 import { NoData } from "@/components/ui/no-data";
 import {
 	Select,
@@ -50,9 +52,9 @@ import {
 	type BudgetInput,
 	type BudgetList,
 	type BudgetProposal,
-	budgetTransactionsSearch,
 	type BudgetRow,
 	budgetInputSchema,
+	budgetTransactionsSearch,
 	currentBudgetMonth,
 	groupBudgets,
 	shiftBudgetMonth,
@@ -247,8 +249,8 @@ export function BudgetsPage() {
 					</Button>
 				</div>
 			</div>
-			<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-3">
-				<div className="flex items-center gap-1">
+			<div className="space-y-2.5">
+				<div className="flex w-full items-center gap-1 rounded-xl border bg-card p-1.5 shadow-xs sm:w-80">
 					<Button
 						variant="ghost"
 						size="icon-sm"
@@ -262,26 +264,11 @@ export function BudgetsPage() {
 					>
 						<ChevronLeft className="size-4" />
 					</Button>
-					<label htmlFor="budget-month" className="sr-only">
-						Budget month (AD)
-					</label>
-					<Input
-						id="budget-month"
-						aria-label="Budget month (AD)"
-						type="month"
-						className="h-9 w-44 border-0 bg-transparent text-center shadow-none"
+					<MonthPicker
 						value={month}
+						onChange={setMonth}
 						min={query.data?.firstMonth}
 						max={current}
-						onChange={(e) => {
-							const value = e.target.value;
-							if (
-								value &&
-								value <= current &&
-								(!query.data?.firstMonth || value >= query.data.firstMonth)
-							)
-								setMonth(value);
-						}}
 					/>
 					<Button
 						variant="ghost"
@@ -293,15 +280,21 @@ export function BudgetsPage() {
 						<ChevronRight className="size-4" />
 					</Button>
 				</div>
-				{month !== current ? (
-					<Button variant="ghost" size="sm" onClick={() => setMonth(current)}>
-						Back to this month
-					</Button>
-				) : (
-					<span className="px-2 text-xs text-muted-foreground">
+				<div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1">
+					<p className="text-xs text-muted-foreground">
 						Resets monthly · No rollover
-					</span>
-				)}
+					</p>
+					{month !== current && (
+						<Button
+							variant="link"
+							size="sm"
+							className="h-auto p-0 text-xs"
+							onClick={() => setMonth(current)}
+						>
+							Back to this month
+						</Button>
+					)}
+				</div>
 			</div>
 			{query.isPending ? (
 				<BudgetsSkeleton showActions={month === current} />
@@ -1153,18 +1146,34 @@ function BudgetEditor({
 				{budget ? (
 					<Input id="budget-category" readOnly value={budget.name} />
 				) : (
-					<Select value={categoryId} onValueChange={setCategoryId}>
-						<SelectTrigger id="budget-category" className="w-full">
-							<SelectValue placeholder="Choose a category" />
-						</SelectTrigger>
-						<SelectContent>
-							{categories.map((c) => (
-								<SelectItem key={c.id} value={c.id}>
-									{c.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					<span className="relative block">
+						<Select value={categoryId} onValueChange={setCategoryId}>
+							<SelectTrigger id="budget-category" className="w-full pr-14">
+								<SelectValue placeholder="Choose a category" />
+							</SelectTrigger>
+							<SelectContent>
+								{categories.map((c) => (
+									<SelectItem key={c.id} value={c.id}>
+										{c.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						{categoryId && (
+							<button
+								type="button"
+								aria-label="Clear category"
+								title="Clear category"
+								onClick={(e) => {
+									e.preventDefault();
+									setCategoryId("");
+								}}
+								className="absolute inset-y-0 right-8 flex items-center rounded p-1 text-muted-foreground hover:text-foreground"
+							>
+								<X className="h-4 w-4" />
+							</button>
+						)}
+					</span>
 				)}
 			</label>
 			<label className="block space-y-2 text-sm">
