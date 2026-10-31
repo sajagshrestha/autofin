@@ -272,6 +272,7 @@ export function CategoriesPage() {
 						<Search
 							value={globalFilter}
 							onChange={(event) => setGlobalFilter(event.target.value)}
+							onClear={() => setGlobalFilter("")}
 							placeholder="Search categories…"
 						/>
 						{isLoading ? (

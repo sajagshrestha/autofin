@@ -85,20 +85,14 @@ function OpenEditTransactionForm({
 	});
 	const [categoryQuery, setCategoryQuery] = useState("");
 	const categoryOptions = useMemo<CategoryOption[]>(
-		() => [
-			{
-				id: "",
-				label: "Uncategorized",
-				searchLabel: "uncategorized no category",
-			},
-			...[...categories]
+		() =>
+			[...categories]
 				.sort((a, b) => a.name.localeCompare(b.name))
 				.map((category) => ({
 					id: category.id,
 					label: `${category.icon ? `${category.icon} ` : ""}${category.name}`,
 					searchLabel: `${category.name} ${category.icon ?? ""}`.toLowerCase(),
 				})),
-		],
 		[categories],
 	);
 	const visibleCategoryOptions = useMemo(() => {
@@ -207,9 +201,11 @@ function OpenEditTransactionForm({
 													className="h-9 w-full rounded-md border border-input bg-background px-3 pr-14 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 													placeholder="Select a category"
 													displayValue={() =>
-														categoryOptions.find(
-															(option) => option.id === field.state.value,
-														)?.label ?? ""
+														field.state.value
+															? (categoryOptions.find(
+																	(option) => option.id === field.state.value,
+																)?.label ?? "")
+															: ""
 													}
 													onChange={(event) =>
 														setCategoryQuery(event.target.value)
@@ -217,20 +213,18 @@ function OpenEditTransactionForm({
 													onBlur={field.handleBlur}
 												/>
 												<div className="absolute inset-y-0 right-0 flex items-center pr-1.5">
-													{field.state.value && (
-														<button
-															type="button"
-															aria-label="Clear category"
-															title="Clear category"
-															onClick={() => {
-																field.handleChange("");
-																setCategoryQuery("");
-															}}
-															className="rounded p-1 text-muted-foreground hover:text-foreground"
-														>
-															<X className="h-4 w-4" />
-														</button>
-													)}
+													<button
+														type="button"
+														aria-label="Clear category"
+														title="Clear category"
+														onClick={() => {
+															field.handleChange("");
+															setCategoryQuery("");
+														}}
+														className="rounded p-1 text-muted-foreground hover:text-foreground"
+													>
+														<X className="h-4 w-4" />
+													</button>
 													<ComboboxButton className="rounded p-1 text-muted-foreground">
 														<ChevronsUpDown className="h-4 w-4" />
 													</ComboboxButton>

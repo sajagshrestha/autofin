@@ -379,6 +379,7 @@ export function DataTable<TData, TValue>({
 								<Search
 									value={search.value}
 									onChange={(e) => search.onChange(e.target.value)}
+									onClear={() => search.onChange("")}
 									className="flex-1 min-w-40 max-w-sm"
 									placeholder="Search..."
 								/>

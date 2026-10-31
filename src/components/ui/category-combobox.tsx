@@ -22,8 +22,6 @@ interface CategoryComboboxProps {
 	className?: string;
 	/** Show an X button to reset the selection. Defaults to true. */
 	allowClear?: boolean;
-	/** Value that represents "no selection" (e.g. an "all" sentinel). Defaults to "". */
-	clearValue?: string;
 }
 
 export function CategoryCombobox({
@@ -33,7 +31,6 @@ export function CategoryCombobox({
 	placeholder = "Select category",
 	className,
 	allowClear = true,
-	clearValue = "",
 }: CategoryComboboxProps) {
 	const [query, setQuery] = useState("");
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -45,10 +42,10 @@ export function CategoryCombobox({
 	}, [options, query]);
 
 	const selected = options.find((option) => option.id === value);
-	const showClear = allowClear && value !== clearValue;
+	const showClear = allowClear;
 
 	const clear = () => {
-		onChange(clearValue);
+		onChange("");
 		setQuery("");
 		inputRef.current?.focus();
 	};

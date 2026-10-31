@@ -253,11 +253,6 @@ export function TransactionsPage() {
 	const categoryFilterOptions = useMemo<CategoryFilterOption[]>(
 		() => [
 			{
-				id: ALL_CATEGORIES_FILTER,
-				label: "All categories",
-				searchLabel: "all categories",
-			},
-			{
 				id: UNCATEGORIZED_FILTER,
 				label: "Uncategorized",
 				searchLabel: "uncategorized",
@@ -565,12 +560,13 @@ export function TransactionsPage() {
 
 	const renderCategoryFilterCombobox = (widthClassName: string) => (
 		<CategoryCombobox
-			value={categoryFilter}
-			onChange={handleCategoryFilterChange}
+			value={categoryFilter === ALL_CATEGORIES_FILTER ? "" : categoryFilter}
+			onChange={(value) =>
+				handleCategoryFilterChange(value || ALL_CATEGORIES_FILTER)
+			}
 			options={categoryFilterOptions}
 			placeholder="Filter by category"
 			className={widthClassName}
-			clearValue={ALL_CATEGORIES_FILTER}
 		/>
 	);
 	const renderTransactionActions = (
@@ -974,6 +970,7 @@ export function TransactionsPage() {
 							<Search
 								value={searchInput}
 								onChange={(event) => setSearchInput(event.target.value)}
+								onClear={() => setSearchInput("")}
 								placeholder="Search transactions…"
 								className="flex-1 [&_input]:h-11"
 							/>

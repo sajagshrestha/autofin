@@ -123,14 +123,12 @@ function ImportStatementPage() {
 	);
 
 	const categoryOptions = useMemo(
-		() => [
-			{ id: "", label: "Uncategorized", searchLabel: "uncategorized" },
-			...categories.map((c) => ({
+		() =>
+			categories.map((c) => ({
 				id: c.id,
 				label: `${c.icon ? `${c.icon} ` : ""}${c.name}`,
 				searchLabel: `${c.name} ${c.icon ?? ""}`.toLowerCase(),
 			})),
-		],
 		[categories],
 	);
 

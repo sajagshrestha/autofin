@@ -36,6 +36,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { MonthPicker } from "@/components/ui/month-picker";
 import { NoData } from "@/components/ui/no-data";
+import { Search } from "@/components/ui/search";
 import {
 	Select,
 	SelectContent,
@@ -642,12 +643,12 @@ export function BudgetsPage() {
 						<legend className="px-1 text-sm font-medium">
 							Categories to analyze
 						</legend>
-						<Input
-							type="search"
+						<Search
 							aria-label="Search categories"
 							placeholder="Search categories…"
 							value={categorySearch}
 							onChange={(event) => setCategorySearch(event.target.value)}
+							onClear={() => setCategorySearch("")}
 						/>
 						<div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
 							<span>
@@ -1159,20 +1160,18 @@ function BudgetEditor({
 								))}
 							</SelectContent>
 						</Select>
-						{categoryId && (
-							<button
-								type="button"
-								aria-label="Clear category"
-								title="Clear category"
-								onClick={(e) => {
-									e.preventDefault();
-									setCategoryId("");
-								}}
-								className="absolute inset-y-0 right-8 flex items-center rounded p-1 text-muted-foreground hover:text-foreground"
-							>
-								<X className="h-4 w-4" />
-							</button>
-						)}
+						<button
+							type="button"
+							aria-label="Clear category"
+							title="Clear category"
+							onClick={(e) => {
+								e.preventDefault();
+								setCategoryId("");
+							}}
+							className="absolute inset-y-0 right-8 flex items-center rounded p-1 text-muted-foreground hover:text-foreground"
+						>
+							<X className="h-4 w-4" />
+						</button>
 					</span>
 				)}
 			</label>

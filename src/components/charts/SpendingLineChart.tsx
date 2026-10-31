@@ -29,8 +29,6 @@ export type SpendingCategoryOption = {
 	icon?: string | null;
 };
 
-const ALL_CATEGORIES = "__all__";
-
 type SpendingLineChartProps = {
 	data: SpendingDataPoint[];
 	/** Optional subtitle, e.g. period label from the date filter */
@@ -93,18 +91,12 @@ export function SpendingLineChart({
 	const perLabel = granularity === "month" ? "per month" : "per day";
 
 	const categoryOptions = useMemo<CategoryComboboxOption[]>(
-		() => [
-			{
-				id: ALL_CATEGORIES,
-				label: "All categories",
-				searchLabel: "all categories",
-			},
-			...(categories ?? []).map((cat) => ({
+		() =>
+			(categories ?? []).map((cat) => ({
 				id: cat.name,
 				label: cat.icon ? `${cat.icon} ${cat.name}` : cat.name,
 				searchLabel: cat.name.toLowerCase(),
 			})),
-		],
 		[categories],
 	);
 
@@ -122,14 +114,11 @@ export function SpendingLineChart({
 				</div>
 				{categories && categories.length > 0 && (
 					<CategoryCombobox
-						value={selectedCategory || ALL_CATEGORIES}
-						onChange={(value) =>
-							onCategoryChange?.(value === ALL_CATEGORIES ? "" : value)
-						}
+						value={selectedCategory}
+						onChange={(value) => onCategoryChange?.(value)}
 						options={categoryOptions}
 						placeholder="Filter by category"
 						className="w-32 shrink-0 sm:w-52"
-						clearValue={ALL_CATEGORIES}
 					/>
 				)}
 			</CardHeader>
