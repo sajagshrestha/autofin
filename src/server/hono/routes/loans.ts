@@ -332,12 +332,22 @@ export const loansRouter = new Hono<ApiEnv>()
 
 		let originTransactionId: string | null = null;
 		if (existingOrigin) {
-			// Link the existing transaction to this loan.
+			// Link the existing transaction to this loan and mark it as a Loan
+			// movement, so the category reflects what the transaction now is.
 			await container.loanRepo.linkOriginTransaction(
 				user.id,
 				loan.id,
 				existingOrigin.id,
 			);
+			const loanCategory = await container.categoryRepo.findByNameForUser(
+				"Loan",
+				user.id,
+			);
+			if (loanCategory) {
+				await container.transactionRepo.update(existingOrigin.id, user.id, {
+					categoryId: loanCategory.id,
+				});
+			}
 			originTransactionId = existingOrigin.id;
 		} else if (body.createTransaction) {
 			originTransactionId = await createLinkedTransaction(user.id, {
