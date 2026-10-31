@@ -84,7 +84,9 @@ export function mapEditFormToUpdateBody(
 	return {
 		type: values.type,
 		merchant: values.merchant || undefined,
-		categoryId: values.categoryId || undefined,
+		// Keep an empty string: the API turns it into null to clear the
+		// category (an omitted field would leave the old category in place).
+		categoryId: values.categoryId,
 		remarks: values.remarks || undefined,
 		notes: values.notes || undefined,
 	};

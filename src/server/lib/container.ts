@@ -12,6 +12,8 @@ import type { GmailOAuthRepository } from "@/server/repositories/gmail-oauth.rep
 import { GmailOAuthRepository as GmailOAuthRepositoryImpl } from "@/server/repositories/gmail-oauth.repository";
 import type { LoanRepository } from "@/server/repositories/loan.repository";
 import { LoanRepository as LoanRepositoryImpl } from "@/server/repositories/loan.repository";
+import type { MerchantCategoryHintRepository } from "@/server/repositories/merchant-category-hint.repository";
+import { MerchantCategoryHintRepository as MerchantCategoryHintRepositoryImpl } from "@/server/repositories/merchant-category-hint.repository";
 import type { PushSubscriptionRepository } from "@/server/repositories/push-subscription.repository";
 import { PushSubscriptionRepository as PushSubscriptionRepositoryImpl } from "@/server/repositories/push-subscription.repository";
 import type { SourceRepository } from "@/server/repositories/source.repository";
@@ -51,6 +53,7 @@ export interface Container {
 	readonly counterpartyRepo: CounterpartyRepository;
 	readonly sourceRepo: SourceRepository;
 	readonly loanRepo: LoanRepository;
+	readonly merchantHintRepo: MerchantCategoryHintRepository;
 	readonly pushSubscriptionRepo: PushSubscriptionRepository;
 	readonly transactionRepo: TransactionRepository;
 	// Services
@@ -79,6 +82,8 @@ export function createContainer(db: Database): Container {
 		new CounterpartyRepositoryImpl(db);
 	const sourceRepo: SourceRepository = new SourceRepositoryImpl(db);
 	const loanRepo: LoanRepository = new LoanRepositoryImpl(db);
+	const merchantHintRepo: MerchantCategoryHintRepository =
+		new MerchantCategoryHintRepositoryImpl(db);
 	const pushSubscriptionRepo: PushSubscriptionRepository =
 		new PushSubscriptionRepositoryImpl(db);
 	const transactionRepo: TransactionRepository = new TransactionRepositoryImpl(
@@ -107,6 +112,7 @@ export function createContainer(db: Database): Container {
 		discordService,
 		pushService,
 		sourceRepo,
+		merchantHintRepo,
 	);
 	return {
 		budgetService,
@@ -118,6 +124,7 @@ export function createContainer(db: Database): Container {
 		counterpartyRepo,
 		sourceRepo,
 		loanRepo,
+		merchantHintRepo,
 		pushSubscriptionRepo,
 		transactionRepo,
 		loggerService,

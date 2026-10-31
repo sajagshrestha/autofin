@@ -120,6 +120,13 @@ export interface ExtractorOptions {
 	onStepTiming?: TimingObserver;
 	/** Free-form per-user rules appended to the categorization instructions */
 	customCategoryPrompt?: string | null;
+	/**
+	 * Resolve a learned merchant → category mapping before JEV runs. Return
+	 * null to fall through to AI categorization.
+	 */
+	merchantHintLookup?: (
+		merchantKey: string,
+	) => Promise<{ id: string; name: string } | null>;
 }
 
 /**
@@ -272,6 +279,7 @@ export class TransactionExtractorService {
 					availableCategories,
 					options?.customCategoryPrompt,
 					options?.onStepTiming,
+					options?.merchantHintLookup,
 				);
 			} catch (error) {
 				this.loggerService.error("Transaction categorization failed", error);

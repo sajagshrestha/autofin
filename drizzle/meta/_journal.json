@@ -113,6 +113,13 @@
       "when": 1790529175980,
       "tag": "0015_curved_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793445997179,
+      "tag": "0016_heavy_fat_cobra",
+      "breakpoints": true
     }
   ]
 }

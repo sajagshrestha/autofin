@@ -5,6 +5,7 @@ import {
 	measureExtractionStep,
 	type TimingObserver,
 } from "@/server/lib/extraction-timing";
+import { normalizeMerchantKey } from "@/server/lib/merchant-key";
 import type {
 	CategoryInfo,
 	TransactionData,
@@ -112,8 +113,31 @@ export async function categorizeTransaction(
 	categories: CategoryInfo[],
 	customRules?: string | null,
 	onTiming?: TimingObserver,
+	merchantHintLookup?: (
+		merchantKey: string,
+	) => Promise<{ id: string; name: string } | null>,
 ): Promise<CategorizationResult> {
 	const empty = { categoryId: null, categoryName: null, newCategory: null };
+
+	// Learned mappings beat AI for repeat merchants: the user already told us
+	// what this merchant is, so skip eligibility/classification entirely.
+	const merchantKey = normalizeMerchantKey(transaction.merchant);
+	if (merchantKey && merchantHintLookup) {
+		try {
+			const hint = await merchantHintLookup(merchantKey);
+			if (hint) {
+				return {
+					categoryId: hint.id,
+					categoryName: hint.name,
+					newCategory: null,
+				};
+			}
+		} catch (error) {
+			// A hint lookup failure must not block AI categorization.
+			console.warn("Merchant category hint lookup failed:", error);
+		}
+	}
+
 	if (
 		!(await canCategorizeRemarks(
 			transaction.remarks,

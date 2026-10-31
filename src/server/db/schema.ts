@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
 	type AnyPgColumn,
 	boolean,
+	integer,
 	jsonb,
 	numeric,
 	pgEnum,
@@ -113,6 +114,46 @@ export const categories = pgTable("categories", {
 
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
+
+/**
+ * Learned merchant → category memory.
+ *
+ * Populated only when the user assigns a category themselves (manual edit,
+ * manual create, or a reviewed statement/SMS import). The normalized
+ * merchant key then lets future transactions from the same merchant skip
+ * AI categorization entirely.
+ */
+export const merchantCategoryHints = pgTable(
+	"merchant_category_hints",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		/** Canonical key from normalizeMerchantKey() (see lib/merchant-key.ts). */
+		merchantKey: text("merchant_key").notNull(),
+		categoryId: text("category_id")
+			.notNull()
+			.references(() => categories.id, { onDelete: "cascade" }),
+		/** How many user categorizations agreed with this mapping. */
+		hits: integer("hits").default(1).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("merchant_category_hints_user_key_unique").on(
+			table.userId,
+			table.merchantKey,
+		),
+	],
+);
+
+export type MerchantCategoryHint = typeof merchantCategoryHints.$inferSelect;
+export type NewMerchantCategoryHint = typeof merchantCategoryHints.$inferInsert;
 
 /**
  * Email sources to monitor for bank alerts. One row per sender email per

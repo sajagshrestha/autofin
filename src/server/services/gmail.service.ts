@@ -6,6 +6,7 @@ import {
 import { localToUtc } from "@/server/lib/timezone";
 import type { CategoryRepository } from "@/server/repositories/category.repository";
 import type { GmailOAuthRepository } from "@/server/repositories/gmail-oauth.repository";
+import type { MerchantCategoryHintRepository } from "@/server/repositories/merchant-category-hint.repository";
 import {
 	parseFromHeader,
 	type SourceRepository,
@@ -168,6 +169,7 @@ export class GmailService extends BaseService {
 		private readonly discordService: DiscordService,
 		private readonly pushService: PushService,
 		private readonly sourceRepo: SourceRepository,
+		private readonly merchantHintRepo: MerchantCategoryHintRepository,
 	) {
 		super(db);
 	}
@@ -571,6 +573,15 @@ export class GmailService extends BaseService {
 								categoryInfoForAI,
 								{
 									customCategoryPrompt: userPreferences.categoryMappingPrompt,
+									merchantHintLookup: async (merchantKey) => {
+										const category = await this.merchantHintRepo.findCategory(
+											userId,
+											merchantKey,
+										);
+										return category
+											? { id: category.id, name: category.name }
+											: null;
+									},
 								},
 							);
 

@@ -232,4 +232,47 @@ describe("JEV transaction categorization", () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 		expect(generate).not.toHaveBeenCalled();
 	});
+
+	it("uses a learned merchant hint before JEV", async () => {
+		const lookup = vi.fn(async () => ({
+			id: "fitness-id",
+			name: "Fitness",
+		}));
+		expect(
+			await categorizeTransaction(
+				transaction,
+				categories,
+				"Gym belongs to Food",
+				undefined,
+				lookup,
+			),
+		).toEqual({
+			categoryId: "fitness-id",
+			categoryName: "Fitness",
+			newCategory: null,
+		});
+		expect(lookup).toHaveBeenCalledWith("GYM");
+		expect(fetchMock).not.toHaveBeenCalled();
+		expect(generate).not.toHaveBeenCalled();
+	});
+
+	it("falls back to JEV when the hint lookup fails", async () => {
+		vi.spyOn(console, "warn").mockImplementation(() => {});
+		answer("category_0");
+		const lookup = vi.fn(async () => {
+			throw new Error("hint store unavailable");
+		});
+		expect(
+			(
+				await categorizeTransaction(
+					transaction,
+					categories,
+					null,
+					undefined,
+					lookup,
+				)
+			).categoryId,
+		).toBe("food-id");
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
 });

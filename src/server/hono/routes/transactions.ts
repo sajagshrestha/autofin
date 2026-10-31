@@ -6,6 +6,7 @@ import type { ApiEnv } from "@/server/hono/middleware";
 import { requireUser } from "@/server/hono/middleware";
 import { getContainer } from "@/server/lib/container";
 import { toTransactionDto } from "@/server/lib/dto";
+import { normalizeMerchantKey } from "@/server/lib/merchant-key";
 import {
 	batchImportMessage,
 	singleTransactionMessage,
@@ -82,6 +83,32 @@ const bulkImportSchema = z.object({
 
 function notFound(message: string): HTTPException {
 	return new HTTPException(404, { message });
+}
+
+/**
+ * Best-effort learning from a user's own category choice. Hints are only
+ * written for user-driven assignments (manual create/edit, reviewed imports),
+ * never for AI output, so the model cannot reinforce its own guesses.
+ */
+async function rememberMerchantCategory(
+	container: ReturnType<typeof getContainer>,
+	userId: string,
+	merchant: string | null | undefined,
+	categoryId: string | null | undefined,
+): Promise<void> {
+	const merchantKey = normalizeMerchantKey(merchant);
+	if (!merchantKey) return;
+	try {
+		if (!categoryId) {
+			await container.merchantHintRepo.remove(userId, merchantKey);
+			return;
+		}
+		const category = await container.categoryRepo.findById(categoryId);
+		if (!category || (category.userId && category.userId !== userId)) return;
+		await container.merchantHintRepo.record(userId, merchantKey, categoryId);
+	} catch (error) {
+		console.warn("Failed to remember merchant category:", error);
+	}
 }
 
 function serializeDuplicate(match: DuplicateMatch) {
@@ -234,6 +261,13 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			isAiCreated: false,
 		});
 
+		await rememberMerchantCategory(
+			container,
+			user.id,
+			created.merchant,
+			body.categoryId,
+		);
+
 		const withCategory = await container.transactionRepo.findByIdWithCategory(
 			created.id,
 		);
@@ -279,7 +313,16 @@ export const transactionsRouter = new Hono<ApiEnv>()
 			await container.transactionExtractor.extractFromSms(
 				{ body: body.smsBody, sender: body.sender },
 				categoryInfoForAI,
-				{ customCategoryPrompt: prefs?.categoryMappingPrompt },
+				{
+					customCategoryPrompt: prefs?.categoryMappingPrompt,
+					merchantHintLookup: async (merchantKey) => {
+						const category = await container.merchantHintRepo.findCategory(
+							user.id,
+							merchantKey,
+						);
+						return category ? { id: category.id, name: category.name } : null;
+					},
+				},
 			);
 
 		if (
@@ -412,14 +455,28 @@ export const transactionsRouter = new Hono<ApiEnv>()
 		const userRecord = await container.userRepo.findById(user.id);
 		const userTimezone = userRecord?.timezone ?? "Asia/Kathmandu";
 
+		const { categoryId, ...updates } = body;
 		const updated = await container.transactionRepo.update(id, user.id, {
-			...body,
+			...updates,
+			...(categoryId !== undefined && {
+				// Empty string means "clear the category"; null is what the DB stores.
+				categoryId: categoryId === "" ? null : categoryId,
+			}),
 			transactionDate: body.transactionDate
 				? filterDateToUtc(body.transactionDate, userTimezone)
 				: undefined,
 		});
 
 		if (!updated) throw notFound("Transaction not found");
+
+		if (body.categoryId !== undefined) {
+			await rememberMerchantCategory(
+				container,
+				user.id,
+				updated.merchant,
+				body.categoryId || null,
+			);
+		}
 
 		const transaction =
 			await container.transactionRepo.findByIdWithCategory(id);
@@ -513,6 +570,24 @@ export const transactionsRouter = new Hono<ApiEnv>()
 				merchant: row.merchant ?? null,
 				transactionDate: row.transactionDate ?? null,
 			});
+		}
+
+		// Reviewed imports are user-confirmed categorizations: remember them
+		// so the next import/message from the same merchant skips AI.
+		const hintEntries = body.transactions.flatMap((row) => {
+			const merchantKey = normalizeMerchantKey(row.merchant);
+			const categoryId =
+				row.categoryId && validCategoryIds.has(row.categoryId)
+					? row.categoryId
+					: undefined;
+			return merchantKey && categoryId ? [{ merchantKey, categoryId }] : [];
+		});
+		if (hintEntries.length > 0) {
+			try {
+				await container.merchantHintRepo.recordMany(user.id, hintEntries);
+			} catch (error) {
+				console.warn("Failed to remember merchant categories:", error);
+			}
 		}
 
 		if (importedRows.length > 0) {

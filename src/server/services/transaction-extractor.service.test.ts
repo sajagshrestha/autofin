@@ -69,6 +69,7 @@ it("categorizes SMS even without existing categories", async () => {
 		[],
 		"Use Shopping",
 		undefined,
+		undefined,
 	);
 	const request = generate.mock.calls[0][0];
 	expect(Object.keys(request.tools)).toEqual(["submit_extraction"]);

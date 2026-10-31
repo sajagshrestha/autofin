@@ -5,9 +5,18 @@ const repo = vi.hoisted(() => ({
 	update: vi.fn(),
 	findByIdWithCategory: vi.fn(),
 }));
+const hints = vi.hoisted(() => ({
+	record: vi.fn(),
+	remove: vi.fn(),
+}));
+const categories = vi.hoisted(() => ({
+	findById: vi.fn(),
+}));
 vi.mock("@/server/lib/container", () => ({
 	getContainer: () => ({
 		transactionRepo: repo,
+		merchantHintRepo: hints,
+		categoryRepo: categories,
 		userRepo: { findById: async () => ({ timezone: "Asia/Kathmandu" }) },
 	}),
 }));
@@ -29,17 +38,26 @@ const request = (body: unknown) =>
 
 beforeEach(() => {
 	vi.resetAllMocks();
-	repo.update.mockResolvedValue({ id: "transaction" });
+	repo.update.mockResolvedValue({
+		id: "transaction",
+		merchant: "Bhatbhateni",
+	});
 	repo.findByIdWithCategory.mockResolvedValue({
 		id: "transaction",
 		userId: "owner",
 		amount: "100.00",
 		type: "debit",
+		merchant: "Bhatbhateni",
 		loanId: "loan",
 		loanDirection: "taken",
 		loanOriginTransactionId: "origin",
 		createdAt: new Date(),
 		updatedAt: new Date(),
+	});
+	categories.findById.mockResolvedValue({
+		id: "groceries",
+		userId: null,
+		name: "Groceries",
 	});
 });
 
@@ -90,5 +108,33 @@ describe("transaction type editing", () => {
 			transactionDate: undefined,
 		});
 		expect(repo.findByIdWithCategory).not.toHaveBeenCalled();
+	});
+
+	it("remembers the merchant category when the user changes it", async () => {
+		expect((await request({ categoryId: "groceries" })).status).toBe(200);
+		expect(hints.record).toHaveBeenCalledWith(
+			"owner",
+			"BHATBHATENI",
+			"groceries",
+		);
+	});
+
+	it("clears the category and forgets the merchant hint", async () => {
+		expect((await request({ categoryId: "" })).status).toBe(200);
+		expect(repo.update).toHaveBeenCalledWith("transaction", "owner", {
+			categoryId: null,
+			transactionDate: undefined,
+		});
+		expect(hints.remove).toHaveBeenCalledWith("owner", "BHATBHATENI");
+	});
+
+	it("does not remember a category the user cannot access", async () => {
+		categories.findById.mockResolvedValue({
+			id: "groceries",
+			userId: "someone-else",
+			name: "Groceries",
+		});
+		expect((await request({ categoryId: "groceries" })).status).toBe(200);
+		expect(hints.record).not.toHaveBeenCalled();
 	});
 });
