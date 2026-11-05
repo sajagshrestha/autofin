@@ -91,3 +91,42 @@ export function normalizeMerchantKey(
 	const key = tokens.join(" ").slice(0, 120).trim();
 	return key || null;
 }
+
+/**
+ * Bank reference tokens: long digit runs and long alphanumerics containing a
+ * digit (e.g. "412345678901", "L122065"). These are the parts of a narration
+ * that carry no categorizable meaning on their own.
+ */
+const REFERENCE_TOKEN_PATTERN =
+	/\b(?:\d{5,}|(?=[A-Z0-9]*\d[A-Z0-9]*)[A-Z0-9]{6,})\b/;
+
+function hasReferenceToken(value: string): boolean {
+	return REFERENCE_TOKEN_PATTERN.test(value.normalize("NFKC").toUpperCase());
+}
+
+/**
+ * True when reference-only remarks still name the merchant/counterparty.
+ *
+ * Banks often send narrations such as
+ * `CPCRM-L122065-2026 B-O UPSTEM TECHNOLOGIES PTY LTD`, where everything
+ * except the counterparty is reference noise. That explicit merchant is
+ * meaningful evidence even though the remarks do not state a purpose, so the
+ * eligibility gate must not reject it as opaque.
+ */
+export function referenceRemarksNameMerchant(
+	remarks: string | null | undefined,
+	merchant: string | null | undefined,
+): boolean {
+	if (!remarks?.trim() || !hasReferenceToken(remarks)) return false;
+
+	const merchantKey = normalizeMerchantKey(merchant);
+	const remarksKey = normalizeMerchantKey(remarks);
+	if (!merchantKey || !remarksKey) return false;
+
+	const merchantTokens = merchantKey.split(" ");
+	// Ignore initials or noise-only keys; they are not a named counterparty.
+	if (!merchantTokens.some((token) => token.length >= 3)) return false;
+
+	const remarksTokens = new Set(remarksKey.split(" "));
+	return merchantTokens.every((token) => remarksTokens.has(token));
+}

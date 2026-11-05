@@ -233,6 +233,72 @@ describe("JEV transaction categorization", () => {
 		expect(generate).not.toHaveBeenCalled();
 	});
 
+	it("classifies reference-only remarks that name the merchant without eligibility", async () => {
+		fetchMock.mockResolvedValueOnce(
+			new Response(
+				JSON.stringify({
+					answers: { category: { type: "choice", choice: "category_0" } },
+				}),
+			),
+		);
+		expect(
+			await categorizeTransaction(
+				{
+					amount: 255803.18,
+					type: "credit",
+					merchant: "UPSTEM TECHNOLOGIES PTY LTD",
+					remarks: "CPCRM-L122065-2026 B-O UPSTEM TECHNOLOGIES PTY LTD",
+				},
+				[{ id: "salary-id", name: "Salary/Income", icon: "💰" }],
+			),
+		).toEqual({
+			categoryId: "salary-id",
+			categoryName: "Salary/Income",
+			newCategory: null,
+		});
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+		expect(body.questions.eligibility).toBeUndefined();
+		expect(body.questions.category.criteria).toEqual({
+			category_0: "Salary/Income",
+			uncategorized: expect.any(String),
+		});
+		expect(generate).not.toHaveBeenCalled();
+	});
+
+	it("classifies remarks that name an existing category without eligibility", async () => {
+		fetchMock.mockResolvedValueOnce(
+			new Response(
+				JSON.stringify({
+					answers: { category: { type: "choice", choice: "category_0" } },
+				}),
+			),
+		);
+		expect(
+			await categorizeTransaction(
+				{
+					amount: 12790.16,
+					type: "debit",
+					merchant: null,
+					remarks: "5% TAX FOR CPCRM-L122065-2026",
+				},
+				[{ id: "tax-id", name: "Tax", icon: "🧾" }],
+			),
+		).toEqual({
+			categoryId: "tax-id",
+			categoryName: "Tax",
+			newCategory: null,
+		});
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+		expect(body.questions.eligibility).toBeUndefined();
+		expect(body.questions.category.criteria).toEqual({
+			category_0: "Tax",
+			uncategorized: expect.any(String),
+		});
+		expect(generate).not.toHaveBeenCalled();
+	});
+
 	it("uses a learned merchant hint before JEV", async () => {
 		const lookup = vi.fn(async () => ({
 			id: "fitness-id",

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizeMerchantKey } from "./merchant-key";
+import {
+	normalizeMerchantKey,
+	referenceRemarksNameMerchant,
+} from "./merchant-key";
 
 describe("normalizeMerchantKey", () => {
 	it("strips payment rails and reference noise", () => {
@@ -26,5 +29,40 @@ describe("normalizeMerchantKey", () => {
 		expect(normalizeMerchantKey(undefined)).toBeNull();
 		expect(normalizeMerchantKey("   ")).toBeNull();
 		expect(normalizeMerchantKey("UPI NEFT POS")).toBeNull();
+	});
+});
+
+describe("referenceRemarksNameMerchant", () => {
+	it("finds a named merchant inside reference-only remarks", () => {
+		expect(
+			referenceRemarksNameMerchant(
+				"CPCRM-L122065-2026 B-O UPSTEM TECHNOLOGIES PTY LTD",
+				"UPSTEM TECHNOLOGIES PTY LTD",
+			),
+		).toBe(true);
+		expect(
+			referenceRemarksNameMerchant(
+				"UPI/P2M/412345678901/BHATBHATENI KATHMANDU",
+				"Bhatbhateni Kathmandu",
+			),
+		).toBe(true);
+	});
+
+	it("ignores narration that is not reference-only", () => {
+		expect(referenceRemarksNameMerchant("Monthly gym membership", "Gym")).toBe(
+			false,
+		);
+	});
+
+	it("ignores reference-only remarks that do not name the merchant", () => {
+		expect(referenceRemarksNameMerchant("REF 12345", "Gym")).toBe(false);
+		expect(referenceRemarksNameMerchant("CPCRM-L122065-2026", "UPSTEM")).toBe(
+			false,
+		);
+	});
+
+	it("ignores blank input", () => {
+		expect(referenceRemarksNameMerchant(null, "Gym")).toBe(false);
+		expect(referenceRemarksNameMerchant("REF 12345", null)).toBe(false);
 	});
 });

@@ -5,7 +5,10 @@ import {
 	measureExtractionStep,
 	type TimingObserver,
 } from "@/server/lib/extraction-timing";
-import { normalizeMerchantKey } from "@/server/lib/merchant-key";
+import {
+	normalizeMerchantKey,
+	referenceRemarksNameMerchant,
+} from "@/server/lib/merchant-key";
 import type {
 	CategoryInfo,
 	TransactionData,
@@ -15,6 +18,45 @@ import type {
 const UNCATEGORIZED = "uncategorized";
 const normalize = (name: string) =>
 	name.trim().replace(/\s+/g, " ").toLowerCase();
+
+/**
+ * Category names that are catch-alls rather than evidence of a purpose. A
+ * remark mentioning one of these must still go through the eligibility gate.
+ */
+const GENERIC_CATEGORY_NAMES = new Set(["other", "others", "uncategorized"]);
+
+function words(value: string): string[] {
+	return value
+		.normalize("NFKC")
+		.toUpperCase()
+		.replace(/[^\p{L}\p{M}\p{N} ]+/gu, " ")
+		.split(/\s+/)
+		.filter(Boolean);
+}
+
+/**
+ * True when the remarks explicitly name one of the user's categories, e.g.
+ * "5% TAX FOR CPCRM-L122065-2026" mentions Tax. Naming a category is direct
+ * evidence of purpose, so reference noise elsewhere in the remark must not
+ * make the eligibility gate reject it.
+ */
+function remarksNameCategory(
+	remarks: string | null | undefined,
+	categories: CategoryInfo[],
+): boolean {
+	if (!remarks?.trim()) return false;
+
+	const remarkWords = new Set(words(remarks));
+	return categories.some((category) => {
+		if (GENERIC_CATEGORY_NAMES.has(normalize(category.name))) return false;
+		const categoryWords = words(category.name);
+		return (
+			categoryWords.length > 0 &&
+			categoryWords.every((word) => remarkWords.has(word))
+		);
+	});
+}
+
 const proposalSchema = z.object({
 	category: z
 		.object({
@@ -138,7 +180,15 @@ export async function categorizeTransaction(
 		}
 	}
 
+	// Explicit evidence should not be rejected as opaque: reference-only
+	// narrations that still name the merchant, and remarks that name an
+	// existing category (e.g. "5% TAX FOR ..."), skip the eligibility gate
+	// and go straight to classification.
+	const hasExplicitEvidence =
+		referenceRemarksNameMerchant(transaction.remarks, transaction.merchant) ||
+		remarksNameCategory(transaction.remarks, categories);
 	if (
+		!hasExplicitEvidence &&
 		!(await canCategorizeRemarks(
 			transaction.remarks,
 			customRules,
