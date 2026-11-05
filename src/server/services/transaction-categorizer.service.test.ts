@@ -299,6 +299,56 @@ describe("JEV transaction categorization", () => {
 		expect(generate).not.toHaveBeenCalled();
 	});
 
+	it("matches multi-word category names in remarks without eligibility", async () => {
+		fetchMock.mockResolvedValueOnce(
+			new Response(
+				JSON.stringify({
+					answers: { category: { type: "choice", choice: "category_0" } },
+				}),
+			),
+		);
+		expect(
+			await categorizeTransaction(
+				{
+					amount: 950,
+					type: "debit",
+					merchant: null,
+					remarks: "FOOD AND DINING 456789",
+				},
+				[{ id: "food-id", name: "Food and Dining", icon: "🍽️" }],
+			),
+		).toEqual({
+			categoryId: "food-id",
+			categoryName: "Food and Dining",
+			newCategory: null,
+		});
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(
+			JSON.parse(fetchMock.mock.calls[0][1].body).questions.eligibility,
+		).toBeUndefined();
+		expect(generate).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		["Other charges", "Other"],
+		["taxi ride", "Tax"],
+	])(
+		"keeps the eligibility gate for generic or partial matches: %s / %s",
+		async (remarks, categoryName) => {
+			answer("uncategorized", "ineligible");
+			expect(
+				await categorizeTransaction({ ...transaction, remarks }, [
+					{ id: "cat-id", name: categoryName, icon: "🏷️" },
+				]),
+			).toEqual({ categoryId: null, categoryName: null, newCategory: null });
+			expect(fetchMock).toHaveBeenCalledTimes(1);
+			expect(
+				JSON.parse(fetchMock.mock.calls[0][1].body).questions.eligibility,
+			).toBeDefined();
+			expect(generate).not.toHaveBeenCalled();
+		},
+	);
+
 	it("uses a learned merchant hint before JEV", async () => {
 		const lookup = vi.fn(async () => ({
 			id: "fitness-id",
